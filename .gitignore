@@ -4,6 +4,6 @@ bootstrap_gen.text
 main2.c
 points.txt
 todo.txt
-
+shaders/*.spv
 shaders3
 out
