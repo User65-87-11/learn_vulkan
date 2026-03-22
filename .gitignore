@@ -1,7 +1,9 @@
 array.h
 asm.asm
-bootstrap_gen.txt
+bootstrap_gen.text
 main2.c
 points.txt
 todo.txt
+
 shaders3
+out
