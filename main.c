@@ -14,6 +14,7 @@
 
 
 const uint32_t WIDTH = 800;
+
 const uint32_t HEIGHT = 600;
 
 #define PRINT_FNAME printf("Call to: %s\n",__FUNCTION__)
@@ -48,14 +49,6 @@ const char* requiredDeviceExtensions[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-// bool requiredDeviceExtensionSupport = false;
-
-// bool requiredDeviceFeaturesSupport = false;
-
-// bool transferQueueSupport = false;
-
-// bool graphicsQueueSupport = false;
- 
 bool framebufferResized = false;
 
 GLFWwindow* window = NULL;
@@ -68,17 +61,9 @@ VkPhysicalDevice physicalDevice = NULL;
 
 VkDevice device = NULL;
 
-// VkQueue bothQueue = NULL;
-
-// uint32_t bothQueueFamilyIndex = -1;
-
-
-
-
 VkQueue graphicsQueue = NULL;
 
 VkQueue transferQueue = NULL;
-
 
 uint32_t queueFamilyIndexCount = 2;
 
@@ -90,12 +75,7 @@ uint32_t queueFamilyIndeces[2] = {
 	-1,-1,
 };
 
-
-
 uint32_t presentationSupportQueueFamilyIndex = - 1;
-
-
-
 
 VkSurfaceKHR surface = NULL; 
 
@@ -131,7 +111,6 @@ uint32_t frameIndex = 0;
 
 VkCommandBuffer graphicsCommandBuffers[MAX_FRAMES_IN_FLIGHT];
 
-
 uint32_t transferCommandBuffersCount = 1;
 
 VkCommandBuffer transferCommandBuffers ;
@@ -148,8 +127,13 @@ VkFence inFlightFences [MAX_FRAMES_IN_FLIGHT];
 
 VkRenderPass renderPass = NULL;
 
+VkBuffer vertextBuffer = NULL;
 
+VkDeviceMemory vertexBufferMemory = NULL;
 
+VkBuffer indexBuffer = NULL;
+
+VkDeviceMemory indexBufferMemory = NULL;
 
 //--------------------------
 
@@ -160,15 +144,25 @@ struct Vertex{
 	vec3 col;
 };
 
-struct Vertex vertices[3] = {
-	{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}}
+// struct Vertex vertices[] = {
+// 	{{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+//     {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+//     {{-0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}}
+// };
+
+
+uint16_t indices[] = {
+	0, 1, 2, 2, 3, 0,
+};
+struct Vertex vertices[] = {
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
 };
 
-VkBuffer vertextBuffer = NULL;
 
-VkDeviceMemory deviceMemory = NULL;
+
 
 /**
 
@@ -211,6 +205,8 @@ void recreateSwapChain();
 void cleanup();
 
 void createVertexBuffer();
+
+void createIndexBuffer();
 
 uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
@@ -330,218 +326,31 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 
 	vkQueueWaitIdle(transferQueue);
 }
+void createIndexBuffer(){
 
-void createVertexStagingBuffer() {
-    VkDeviceSize bufferSize = sizeof(vertices);
-
-    VkBufferCreateInfo stagingInfo = { 
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = bufferSize, 
-		.usage =VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE 
-	};
+	VkDeviceSize bufferSize = sizeof(indices);
 
 	VkBuffer stagingBuffer;
-    // VkBuffer stagingBuffer(de, stagingInfo);
-	vkCreateBuffer(device, &stagingInfo, NULL, &stagingBuffer);
 
-    VkMemoryRequirements memRequirementsStaging;
-	vkGetBufferMemoryRequirements(device, stagingBuffer, &memRequirementsStaging);
-
-	
-    VkMemoryAllocateInfo memoryAllocateInfoStaging = 
-	{  
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = memRequirementsStaging.size, 
-		.memoryTypeIndex = findMemoryType(memRequirementsStaging.memoryTypeBits,VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) 
-	};
-
-    // VkDeviceMemory stagingBufferMemory(device, memoryAllocateInfoStaging);
-
-	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties ;
-
-	vkGetPhysicalDeviceMemoryProperties(physicalDevice,&physicalDeviceMemoryProperties);
-
-	VkDeviceMemory bufferMemory;
-
-	vkAllocateMemory(device, &memoryAllocateInfoStaging, NULL, &bufferMemory);
-
-	vkBindBufferMemory(device, stagingBuffer, bufferMemory, 0);
-
-
-	{
-			void * data = NULL;
-
-			vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
-
-			memcpy(data, vertices, sizeof(vertices));
-
-			VkMappedMemoryRange mappedMemoryRange = {
-				.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-				.memory = bufferMemory,
-				.offset = 0,
-				.size = bufferSize,
-				
-			};
-
-			vkFlushMappedMemoryRanges(device, 1, &mappedMemoryRange);
-
-			vkUnmapMemory(device, bufferMemory);
-	}
-
-
-    // stagingBuffer.bindMemory(stagingBufferMemory, 0);
-    // void* dataStaging = stagingBufferMemory.mapMemory(0, stagingInfo.size);
-    // memcpy(dataStaging, vertices.data(), stagingInfo.size);
-    // stagingBufferMemory.unmapMemory();
-
-	 VkBufferCreateInfo bufferInfo = {
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = bufferSize,
-		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-
-	};
-	
-	vkCreateBuffer(
-		device, 
-		&bufferInfo,
-		NULL,
-		&vertextBuffer
-	);
-
-    // VkBufferCreateInfo bufferInfo{ .size = bufferSize,  .usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, .sharingMode = vk::SharingMode::eExclusive };
-    // vertexBuffer = vk::raii::Buffer(device, bufferInfo);
-
-	VkMemoryRequirements memRequirements;
-
-	vkGetBufferMemoryRequirements(
-		device, 
-		vertextBuffer, 
-		&memRequirements
-	);
-
-	VkMemoryAllocateInfo memoryAllocateInfo = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
-	};
-
-	vkAllocateMemory(device, &memoryAllocateInfo, NULL, &deviceMemory);
-
-    // vk::MemoryRequirements memRequirements = vertexBuffer.getMemoryRequirements();
-    // vk::MemoryAllocateInfo memoryAllocateInfo{  .allocationSize = memRequirements.size, .memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal) };
-    // vertexBufferMemory = vk::raii::DeviceMemory( device, memoryAllocateInfo );
-
-    // vertexBuffer.bindMemory( *vertexBufferMemory, 0 );
-
-	vkBindBufferMemory(device, vertextBuffer, deviceMemory, 0);
-
-    copyBuffer(stagingBuffer, vertextBuffer,  bufferSize);
-
-
-
-	vkDestroyBuffer(device, stagingBuffer, NULL);
-
-	vkFreeMemory(device, bufferMemory, NULL);
-}
-
-void createVertexBuffer(){
-
-	VkDeviceSize bufferSize = sizeof(vertices);
-
-	/**
-
-	Change the sharingMode of resources to be VK_SHARING_MODE_CONCURRENT and specify both the graphics and transfer queue families
-
-
-	.usage = vk::BufferUsageFlagBits::eVertexBuffer, .sharingMode = vk::SharingMode::eExclusive
-	
-	*/
-	// VkBufferCreateInfo bufferCreateInfo = {
-	// 	.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-	// 	.size = sizeof(vertices),
-	// 	.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-	// 	// .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-	// 	.sharingMode = VK_SHARING_MODE_CONCURRENT,
-	// 	.pQueueFamilyIndices = queueFamilyIndeces,
-	// 	.queueFamilyIndexCount = queueFamilyIndexCount,
-		
-	// };
-
-	// vkCreateBuffer(device, &bufferCreateInfo, NULL, &vertextBuffer);
-
-
-	// VkMemoryRequirements memoryRequirements;
-	
-
-	// vkGetBufferMemoryRequirements(device, vertextBuffer, &memoryRequirements);
-	
-
-	// VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties ;
-
-	// vkGetPhysicalDeviceMemoryProperties(physicalDevice,&physicalDeviceMemoryProperties);
-
-	
-	
-	// /**
-	//     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT = 0x00000002,
-    // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT = 0x00000004,
-	// */
-
-	// printf("\nmemoryRequirements.memoryTypeBits: %x\n",memoryRequirements.memoryTypeBits);
-
-
-	// VkMemoryPropertyFlags memoryProperyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-	
-	// int memoryTypeIndex = -1;
-
-	// for(int i=0;i<physicalDeviceMemoryProperties.memoryTypeCount;i++)
-	// {
-	// 	printf("physicalDeviceMemoryProperties.memoryTypes[%d].propertyFlags: %x\n",i,physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags);
-		
-	// 	if((memoryRequirements.memoryTypeBits & (1 << i)) && 
-	// 	(physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & memoryProperyFlags) == memoryProperyFlags){
-	// 		memoryTypeIndex = i;
-	// 		break;
-	// 	}
-	// }
-	// if(memoryTypeIndex == -1)
-	// {
-	// 	EXIT_CLEAN("failed to find suitable memory type!");
-	// }
-	
-	// VkMemoryAllocateInfo memoryAllocateInfo = {
-	// 	.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-	// 	.memoryTypeIndex = memoryTypeIndex,
-	// 	.allocationSize = memoryRequirements.size,
-		
-		
-	// };
-	// vkAllocateMemory(device, &memoryAllocateInfo, NULL, &deviceMemory);
-	
-
-	// vkBindBufferMemory(device, vertextBuffer, deviceMemory, 0);
-
+    VkDeviceMemory bufferMemory;
 
 	createBuffer(
-		bufferSize, 
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-		&vertextBuffer, 
-		&deviceMemory
+		bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT ,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&stagingBuffer,
+		&bufferMemory
 	);
-
 
 	void * data = NULL;
 
-	vkMapMemory( device, deviceMemory, 0, bufferSize, 0, &data);
+	vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
 
-	memcpy(data, vertices, sizeof(vertices));
+	memcpy(data, indices, sizeof(indices));
 
 	VkMappedMemoryRange mappedMemoryRange = {
 		.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-		.memory = deviceMemory,
+		.memory = bufferMemory,
 		.offset = 0,
 		.size = bufferSize,
 		
@@ -549,9 +358,77 @@ void createVertexBuffer(){
 
 	vkFlushMappedMemoryRanges(device, 1, &mappedMemoryRange);
 
-	vkUnmapMemory(device, deviceMemory);
+	vkUnmapMemory(device, bufferMemory);
 	
+
+	
+	createBuffer(
+		bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		&indexBuffer,
+		&indexBufferMemory
+	);
+
+    copyBuffer(stagingBuffer, indexBuffer,  bufferSize);
+
+	vkDestroyBuffer(device, stagingBuffer, NULL);
+
+	vkFreeMemory(device, bufferMemory, NULL);
+
 }
+void createVertexBuffer() {
+
+    VkDeviceSize bufferSize = sizeof(vertices);
+
+	VkBuffer stagingBuffer;
+	
+    VkDeviceMemory bufferMemory;
+
+
+	createBuffer(
+		bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT ,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&stagingBuffer,
+		&bufferMemory
+	);
+
+
+	void * data = NULL;
+
+	vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
+
+	memcpy(data, vertices, sizeof(vertices));
+
+	VkMappedMemoryRange mappedMemoryRange = {
+		.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+		.memory = bufferMemory,
+		.offset = 0,
+		.size = bufferSize,
+		
+	};
+
+	vkFlushMappedMemoryRanges(device, 1, &mappedMemoryRange);
+
+	vkUnmapMemory(device, bufferMemory);
+
+
+	
+	createBuffer(bufferSize,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT|VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		&vertextBuffer,
+		&vertexBufferMemory
+	);
+
+    copyBuffer(stagingBuffer, vertextBuffer,  bufferSize);
+
+	vkDestroyBuffer(device, stagingBuffer, NULL);
+
+	vkFreeMemory(device, bufferMemory, NULL);
+}
+
 
 static void framebufferResizeCallback(GLFWwindow *win,int w,int h)
 {
@@ -663,73 +540,7 @@ void createCommandPool(){
 }
 
 void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
-	// PRINT_FNAME;;
 
-	/**
-	
-	commandBuffer.begin({});
-
-    // Transition the image layout for rendering
-    transition_image_layout(
-        imageIndex,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eColorAttachmentOptimal,
-        {},
-        vk::AccessFlagBits2::eColorAttachmentWrite,
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput
-    );
-
-    // Set up the color attachment
-    vk::ClearValue clearColor = vk::ClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
-    vk::RenderingAttachmentInfo attachmentInfo = {
-        .imageView = swapChainImageViews[imageIndex],
-        .imageLayout = vk::ImageLayout::eColorAttachmentOptimal,
-        .loadOp = vk::AttachmentLoadOp::eClear,
-        .storeOp = vk::AttachmentStoreOp::eStore,
-        .clearValue = clearColor
-    };
-
-    // Set up the rendering info
-    vk::RenderingInfo renderingInfo = {
-        .renderArea = { .offset = { 0, 0 }, .extent = swapChainExtent },
-        .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &attachmentInfo
-    };
-
-    // Begin rendering
-    commandBuffer.beginRendering(renderingInfo);
-
-    // Rendering commands will go here
-
-    // End rendering
-    commandBuffer.endRendering();
-
-    // Transition the image layout for presentation
-    transition_image_layout(
-        imageIndex,
-        vk::ImageLayout::eColorAttachmentOptimal,
-        vk::ImageLayout::ePresentSrcKHR,
-        vk::AccessFlagBits2::eColorAttachmentWrite,
-        {},
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        vk::PipelineStageFlagBits2::eBottomOfPipe
-    );
-
-    commandBuffer.end();
-	
-	*/
-
-/*
-.flags 
-	VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
-
-	VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
-
-	VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command buffer can be resubmitted while it is also already pending execution.
-
-*/
 	VkCommandBufferBeginInfo beginInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pInheritanceInfo = NULL,	
@@ -738,45 +549,6 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	vkBeginCommandBuffer(graphicsCommandBuffers[frameIndex], &beginInfo );
 
 
-	/**
-	 transition_image_layout(
-        imageIndex,
-        vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eColorAttachmentOptimal,
-        {},
-        vk::AccessFlagBits2::eColorAttachmentWrite,
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        vk::PipelineStageFlagBits2::eColorAttachmentOutput
-    );
-
-	    uint32_t imageIndex,
-    vk::ImageLayout oldLayout,
-    vk::ImageLayout newLayout,
-    vk::AccessFlags2 srcAccessMask,
-    vk::AccessFlags2 dstAccessMask,
-    vk::PipelineStageFlags2 srcStageMask,
-    vk::PipelineStageFlags2 dstStageMask
-
-	 vk::ImageMemoryBarrier2 barrier = {
-        .srcStageMask = srcStageMask,
-        .srcAccessMask = srcAccessMask,
-        .dstStageMask = dstStageMask,
-        .dstAccessMask = dstAccessMask,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = swapChainImages[imageIndex],
-        .subresourceRange = {
-            .aspectMask = vk::ImageAspectFlagBits::eColor,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-        }
-    };
-	
-	*/
 	VkImageMemoryBarrier2 imageMemoryBarrier = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 
@@ -847,9 +619,6 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	VkViewport viewPort = {
 		.x = 0,
 		.y = 0,
-		// .width = surfaceCapabilities.currentExtent.width,
-		// .height = surfaceCapabilities.currentExtent.height,
-
 		.width = imageExtent.width,
 		.height = imageExtent.height,
 		
@@ -858,41 +627,28 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 
 	VkRect2D scissor = {
 		.extent = imageExtent,
-			// .extent = surfaceCapabilities.currentExtent,
 		.offset = {},
 	};
 
 	vkCmdSetScissor(graphicsCommandBuffers[frameIndex], 0, 1, &scissor);
 
 
-
 	vkCmdBindPipeline(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-	VkDeviceSize offset = 0;
+	 VkDeviceSize offset = 0;
 
 	vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &vertextBuffer, &offset);
 
-// 	commandBuffers[frameIndex].bindPipeline(vk::PipelineBindPoint::eGraphics, *graphicsPipeline);
-
-// commandBuffers[frameIndex].bindVertexBuffers(0, *vertexBuffer, {0});
+	vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
 
-	vkCmdDraw(graphicsCommandBuffers[frameIndex], 3, 1, 0, 0);
+	uint32_t indicesCount = sizeof(indices) / sizeof(uint16_t);
+
+
+	vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesCount, 1, 0, 0, 0);
 
 	vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
 
-	/**
-	transition_image_layout(
-    imageIndex,
-    vk::ImageLayout::eColorAttachmentOptimal,
-    vk::ImageLayout::ePresentSrcKHR,
-    vk::AccessFlagBits2::eColorAttachmentWrite,             // srcAccessMask
-    {},                                                     // dstAccessMask
-    vk::PipelineStageFlagBits2::eColorAttachmentOutput,     // srcStage
-    vk::PipelineStageFlagBits2::eBottomOfPipe               // dstStage
-);
-	
-	*/
 
 	 imageMemoryBarrier = (VkImageMemoryBarrier2){
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -937,21 +693,6 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 
 
 void drawFrame() {
-	// PRINT_FNAME;;
-
-	/**
-	
-	Wait for the previous frame to finish
-
-	Acquire an image from the swap chain
-
-	Record a command buffer which draws the scene onto that image
-
-	Submit the recorded command buffer
-
-	Present the swap chain image
-	
-	*/
 
 
 	VkResult result = vkWaitForFences(
@@ -982,14 +723,12 @@ void drawFrame() {
 	}else if(result != VK_SUCCESS && result!= VK_SUBOPTIMAL_KHR)
 	{
 		assert(result == VK_TIMEOUT || result == VK_NOT_READY);
-		// printf("failed to acquire swap chain image!\n");
 		EXIT_CLEAN("failed to acquire swap chain image!");
 	}
 
 	
 
 	vkResetFences(device, 1, &inFlightFences[frameIndex]);
-	// auto fenceResult = device.waitForFences(*drawFence, vk::True, UINT64_MAX);
 
 	recordCommandBuffer(imageIndex,frameIndex);
 
@@ -1024,7 +763,6 @@ void drawFrame() {
 		
 	};
 
-	// assert(false);
 
 	result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
 
@@ -1044,8 +782,7 @@ void drawFrame() {
 }
 void createSyncObjects(){
 	
-	PRINT_FNAME;;
-
+	PRINT_FNAME;
 
 
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -1067,7 +804,6 @@ void createSyncObjects(){
 		vkCreateFence(device, &createInfo, NULL,  &inFlightFences[i]);
 	}
 	
-    
 }
 
 void queueFamilyCheck(){
@@ -1076,8 +812,11 @@ void queueFamilyCheck(){
 	
 
 	uint32_t queueFamilyPropertieCount = 0;
+
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropertieCount, NULL);
+
 	VkQueueFamilyProperties queueFamilyProperties[queueFamilyPropertieCount];
+
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropertieCount, queueFamilyProperties);
 	
 	/**
@@ -1240,19 +979,6 @@ void  createLogicalDevice(){
 
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &physicalDeviceQueueFamilyPropertieCount, queueFamilyProperties);
 
-
-	// bothQueueFamilyIndex = -1;
-	
-	// for(int index = 0; index<physicalDeviceQueueFamilyPropertieCount; index++ ){
-	// 	VkBool32 supported = VK_FALSE;
-	// 	vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, index, surface, &supported);
-
-	// 	if((queueFamilyProperties[index].queueFlags & VK_QUEUE_GRAPHICS_BIT) && supported){
-	// 		bothQueueFamilyIndex = index;
-	// 		break;
-	// 	}
-	// }
-
 	VkBool32 supported = VK_FALSE;
 	
 	presentationSupportQueueFamilyIndex = - 1;
@@ -1288,15 +1014,8 @@ void  createLogicalDevice(){
 
 
 	};
-	// VkPhysicalDeviceExtendedDynamicStateFeaturesEXT physicalDeviceExtendedDynamicStateFeaturesEXT={
-	// 	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
-	// 	.extendedDynamicState = VK_TRUE
-	// };
-
 	
 	physicalDeviceFeatures2.pNext = &physicalDeviceFeatures13;
-	// physicalDeviceFeatures13.pNext = &physicalDeviceExtendedDynamicStateFeaturesEXT;
-	
 
 	VkDeviceCreateInfo deviceCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -1314,10 +1033,7 @@ void  createLogicalDevice(){
 		EXIT_CLEAN("failed to create logical device");
 	}
 
-	
-	
-	exit:
-	
+
 }
 
 void createPhysicalDevice()
@@ -2182,28 +1898,6 @@ void createGraphicsPipeline() {
 		&graphicsPipeline
 	);
 
-	/*
-	VK_SUBPASS_EXTERNAL, 
-	{},
-	vk::PipelineStageFlagBits::eColorAttachmentOutput, 
-	vk::PipelineStageFlagBits::eColorAttachmentOutput,
-	{}, 
-	vk::AccessFlagBits::eColorAttachmentWrite
-
-	last: VK_DEPENDENCY_BY_REGION_BIT ?
-
-	    uint32_t                srcSubpass;
-    uint32_t                dstSubpass;
-    VkPipelineStageFlags    srcStageMask;
-    VkPipelineStageFlags    dstStageMask;
-    VkAccessFlags           srcAccessMask;
-    VkAccessFlags           dstAccessMask;
-    VkDependencyFlags       dependencyFlags;
-
-	*/
-
-
-
 }
 
 
@@ -2292,11 +1986,9 @@ void initVulkan(){
 
 	createCommandPool();
 
-	createVertexStagingBuffer();
+	createVertexBuffer();
 
-	// createVertexBuffer();
-
-	
+	createIndexBuffer();
 
 	createSyncObjects();
 
@@ -2389,9 +2081,12 @@ void cleanup(){
 	vkDestroyShaderModule(device,shaderModuleVert,NULL);
 
 	vkDestroyBuffer(device,vertextBuffer,NULL);
-	
 
-	vkFreeMemory(device, deviceMemory, NULL);
+	vkFreeMemory(device, vertexBufferMemory, NULL);
+
+	vkDestroyBuffer(device,indexBuffer,NULL);
+
+	vkFreeMemory(device, indexBufferMemory, NULL);
 
 	vkDestroyDevice(device, NULL);
 

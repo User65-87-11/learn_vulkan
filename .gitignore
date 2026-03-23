@@ -7,3 +7,4 @@ todo.txt
 shaders/*.spv
 shaders3
 out
+bootstrap_gen.text
