@@ -1,7 +1,14 @@
-#include "cglm/types.h"
+
+
+
+
+// 
+
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +16,15 @@
 #include <string.h>
 #include <assert.h>
 
+#include <time.h>
+
+
+#include "cglm/types.h"
 #include "cglm/cglm.h"
+#include "cglm/cam.h"
+#include "cglm/mat4.h"
+#include "cglm/util.h"
+#include "cglm/affine-pre.h"
 
 
 
@@ -101,6 +116,8 @@ VkShaderModule shaderModuleFrag = NULL;
 
 VkShaderModule shaderModuleVert = NULL;
 
+VkDescriptorSetLayout descriptorSetLayout = NULL;
+
 VkPipelineLayout pipelineLayout = NULL;
 
 VkPipeline graphicsPipeline = NULL;
@@ -135,6 +152,16 @@ VkBuffer indexBuffer = NULL;
 
 VkDeviceMemory indexBufferMemory = NULL;
 
+VkBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT] = {NULL,NULL};
+
+VkDeviceMemory uniformBuffersMemory[MAX_FRAMES_IN_FLIGHT]= {NULL,NULL};
+
+void * uniformBuffersMapped[MAX_FRAMES_IN_FLIGHT]= {NULL,NULL};
+
+VkDescriptorPool descriptorPool = NULL;
+
+VkDescriptorSet descriptorSets [MAX_FRAMES_IN_FLIGHT];
+
 //--------------------------
 
 
@@ -162,6 +189,27 @@ struct Vertex vertices[] = {
 };
 
 
+
+/**
+
+Scalars have to be aligned by N (= 4 bytes given 32-bit floats).
+
+A float2 must be aligned by 2N (= 8 bytes)
+
+A float3 or float4 must be aligned by 4N (= 16 bytes)
+
+A nested structure must be aligned by the base alignment of its members rounded up to a multiple of 16.
+
+A float4x4 matrix must have the same alignment as a float4.
+*/
+
+struct UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+};
+
+double  start_time = 0.0f;
 
 
 /**
@@ -198,7 +246,7 @@ g:::::gg   gg:::::g
 
 
 
-
+void createUniformBuffers();
 
 void recreateSwapChain();
 
@@ -207,6 +255,192 @@ void cleanup();
 void createVertexBuffer();
 
 void createIndexBuffer();
+
+void clearUniformBuffers();
+
+void createDescriptorSetLayout();
+
+void createDescriptorSets();
+
+
+/*
+
+
+
+
+
+
+
+
+
+
+
+
+*/
+
+
+
+
+
+
+
+void createDescriptorSets(){
+	PRINT_FNAME;
+
+
+	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT]={
+		//C99 designated initializer
+		 [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
+	};
+
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+		.pSetLayouts = layouts,
+		
+	};
+	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets);
+
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		VkDescriptorBufferInfo bufferInfo = { 
+			.buffer = uniformBuffers[i], 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UniformBufferObject) 
+		};
+
+
+
+		VkWriteDescriptorSet   descriptorWrite = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = descriptorSets[i], 
+			.dstBinding = 0, 
+			.dstArrayElement = 0, 
+			.descriptorCount = 1, 
+			// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+			.pBufferInfo = &bufferInfo
+		};
+		vkUpdateDescriptorSets(device,1, &descriptorWrite, 0, NULL);
+		
+	}
+
+}
+
+void createBuffer(
+	VkDeviceSize size,
+	VkBufferUsageFlags usage,
+	VkMemoryPropertyFlags properties,
+	VkBuffer *buffer,
+	VkDeviceMemory *bufferMemory);
+
+uint32_t findMemoryType(
+	uint32_t typeFilter, 
+	VkMemoryPropertyFlags properties);
+
+
+
+void clearUniformBuffers(){
+	
+	PRINT_FNAME;
+
+	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++){
+		if(uniformBuffersMapped[i] != NULL)
+		{
+			vkUnmapMemory(device,uniformBuffersMemory[i]);
+			uniformBuffersMapped[i] = NULL;
+		}
+		if(uniformBuffers[i] != NULL){
+			vkDestroyBuffer(device, uniformBuffers[i], NULL);
+			uniformBuffers[i] = NULL;
+		}
+		if(uniformBuffersMemory[i] != NULL){
+			vkFreeMemory(device, uniformBuffersMemory[i], NULL);
+			uniformBuffersMemory[i] = NULL;
+		}
+	
+		
+	}
+}
+
+void createUniformBuffers(){
+
+	clearUniformBuffers();
+
+	VkDeviceSize bufferSize = sizeof(struct UniformBufferObject);
+
+	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
+
+		VkBuffer buffer;
+		VkDeviceMemory bufferMemory;
+
+		createBuffer(
+			bufferSize, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			&buffer, &bufferMemory
+		);
+		uniformBuffers[i] = buffer;
+		uniformBuffersMemory[i] = bufferMemory;
+
+		void * memptr = NULL;
+		
+
+		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+		uniformBuffersMapped[i] = memptr;
+	}
+}
+
+void createDescriptorPool() {
+
+	VkDescriptorPoolSize poolSize={
+		.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+	}; 
+
+	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+		.maxSets = MAX_FRAMES_IN_FLIGHT,
+		.poolSizeCount = 1,
+		.pPoolSizes = &poolSize,
+	};
+
+	vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, NULL, &descriptorPool);
+};
+
+void createDescriptorSetLayout(){
+
+	// uniform buffer object
+	/*
+	// .descriptorCount > 1 is used for transformation for each of the bones in a skeleton for skeletal animation
+	
+	*/
+	
+	VkDescriptorSetLayoutBinding descriptorSetLayoutBinding = {
+		
+		.binding = 0,
+		.descriptorCount = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+		.pImmutableSamplers = NULL,
+	};
+
+	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = 1,
+		.pBindings = &descriptorSetLayoutBinding,
+	};
+
+	VkResult res= vkCreateDescriptorSetLayout(device,&descriptorSetLayoutCreateInfo,NULL,&descriptorSetLayout);
+
+	if(res != VK_SUCCESS){
+		EXIT_CLEAN("vkCreateDescriptorSetLayout failed");
+	}
+}
 
 uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
@@ -642,8 +876,17 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
 
-	uint32_t indicesCount = sizeof(indices) / sizeof(uint16_t);
+	vkCmdBindDescriptorSets(
+		graphicsCommandBuffers[frameIndex],
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		pipelineLayout, 
+		0,
+		1, 
+		&descriptorSets[frameIndex], 
+		0, 
+		NULL);
 
+	uint32_t indicesCount = sizeof(indices) / sizeof(uint16_t);
 
 	vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesCount, 1, 0, 0, 0);
 
@@ -690,7 +933,37 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
 
 }
+void updateUniformBuffer(uint32_t currentImage){
 
+	double current_time;
+
+	current_time = glfwGetTime();
+
+	double time = current_time - start_time;
+
+	// printf("time %f\n",time);
+
+	struct UniformBufferObject ubo = {};
+	// mat4 model;
+	// vec3 rotation = {0.f,0.f,1.f};
+
+	glm_mat4_identity(ubo.model);
+	
+	glm_rotate_z(ubo.model, time*glm_rad(90.0f), ubo.model);
+
+	glm_lookat((vec3){2.0f,2.0f,2.0f}, (vec3){.0f,.0f,.0f}, (vec3){.0f,.0f,1.0f}, ubo.view);
+
+	
+	glm_perspective(glm_rad(45.0f), (float)imageExtent.width / imageExtent.height, 0.1f, 10.0f , ubo.proj);
+
+	ubo.proj[1][1] *= -1.f;
+
+	memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+
+	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
+
+
+};
 
 void drawFrame() {
 
@@ -717,6 +990,9 @@ void drawFrame() {
 		&imageIndex
 	);
 
+	
+
+
 	if(result == VK_ERROR_OUT_OF_DATE_KHR){
 		recreateSwapChain();
 		return;
@@ -729,6 +1005,10 @@ void drawFrame() {
 	
 
 	vkResetFences(device, 1, &inFlightFences[frameIndex]);
+
+
+	updateUniformBuffer(frameIndex);
+
 
 	recordCommandBuffer(imageIndex,frameIndex);
 
@@ -1745,10 +2025,11 @@ void createGraphicsPipeline() {
 		.rasterizerDiscardEnable = VK_FALSE,
 		.polygonMode = VK_POLYGON_MODE_FILL,
 		.cullMode = VK_CULL_MODE_BACK_BIT,
-		.frontFace = VK_FRONT_FACE_CLOCKWISE,
+		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		.depthBiasEnable = VK_FALSE,
 		.depthBiasSlopeFactor = 1.0f,
 		.lineWidth = 1.0f,
+		
 	};
 
 	/*
@@ -1791,11 +2072,11 @@ void createGraphicsPipeline() {
 		.pAttachments = &colorBlendAttachmentState,
 	};
 
-	// (void)pipelineLayout;
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = 0,
+		.setLayoutCount = 1,
+		.pSetLayouts = &descriptorSetLayout,
 		.pushConstantRangeCount  = 0,
 	};
 
@@ -1982,6 +2263,8 @@ void initVulkan(){
 
 	createQueue();
 
+	createDescriptorSetLayout();
+
 	createGraphicsPipeline();
 
 	createCommandPool();
@@ -1990,11 +2273,19 @@ void initVulkan(){
 
 	createIndexBuffer();
 
+	createUniformBuffers();
+
+	createDescriptorPool();
+
+	createDescriptorSets();
+
 	createSyncObjects();
 
 }
 void mainLoop(){
 	PRINT_FNAME;
+
+	start_time = glfwGetTime();
 
 	while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -2067,6 +2358,9 @@ void cleanup(){
 	}
 	
 	
+	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
+
+	vkDestroyDescriptorPool(device, descriptorPool, NULL);
 
 	vkDestroyCommandPool(device, graphicsCommnadPool,NULL);
 
@@ -2087,6 +2381,8 @@ void cleanup(){
 	vkDestroyBuffer(device,indexBuffer,NULL);
 
 	vkFreeMemory(device, indexBufferMemory, NULL);
+
+	clearUniformBuffers();
 
 	vkDestroyDevice(device, NULL);
 

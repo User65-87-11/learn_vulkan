@@ -31,7 +31,7 @@ $(BUILD_DIR)/asm.o: asm.asm
 $(BUILD_DIR)/main.elf: $(BUILD_DIR)/main.o $(BUILD_DIR)/asm.o
 							
 	
-	gcc  -o $@ $^ -lglfw -lvulkan 
+	gcc  -o $@ $^ -lglfw -lvulkan -lm
 # 	ld -o $@ $^ 
 
 
