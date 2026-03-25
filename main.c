@@ -27,6 +27,7 @@
 #include "stb/stb_image.h"
 
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "cglm/types.h"
 #include "cglm/cglm.h"
 #include "cglm/cam.h"
@@ -41,6 +42,8 @@ const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
 #define PRINT_FNAME printf("Call to: %s\n",__FUNCTION__)
+
+#define ARR_LEN(A) sizeof(A)/sizeof(*A)
 
 #define EXIT_CLEAN(msg){\
 		printf("ERROR: %s\n",msg);\
@@ -104,7 +107,7 @@ VkSurfaceKHR surface = NULL;
 
 VkSurfaceCapabilitiesKHR surfaceCapabilities ;
 
-VkExtent2D imageExtent ;
+VkExtent2D swapChainExtent ;
 
 uint32_t swapchainSurfaceFormat = -1;
 
@@ -177,6 +180,13 @@ VkDeviceMemory textureImageMemory = NULL;
 VkImageView textureImageView = NULL;
 
 VkSampler textureSampler = NULL;
+
+VkImage depthImage = NULL;
+
+VkDeviceMemory depthImageMemory = NULL;
+
+VkImageView depthImageView = NULL;
+
 //--------------------------
 
 
@@ -184,7 +194,7 @@ VkSampler textureSampler = NULL;
 
 struct Vertex{
 
-	vec2 pos;
+	vec3 pos;
 	vec3 col;
 	vec2 texCoords;
 };
@@ -206,7 +216,7 @@ void vertexGetAttributeDescriptions(VkVertexInputAttributeDescription bindingDes
 
  
 
-	bindingDescription[0] = (VkVertexInputAttributeDescription){0,0,VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex, pos)};
+	bindingDescription[0] = (VkVertexInputAttributeDescription){0,0,VK_FORMAT_R32G32B32_SFLOAT,  offsetof(struct Vertex, pos)};
 	bindingDescription[1] = (VkVertexInputAttributeDescription){1,0,VK_FORMAT_R32G32B32_SFLOAT,  offsetof(struct Vertex, col)};
 	bindingDescription[2] = (VkVertexInputAttributeDescription){2,0,VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex, texCoords)};
  
@@ -225,7 +235,8 @@ void vertexGetAttributeDescriptions(VkVertexInputAttributeDescription bindingDes
 
 
 uint16_t indices[] = {
-	0, 1, 2, 2, 3, 0,
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4
 };
 // struct Vertex vertices[] = {
 // 	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -235,10 +246,15 @@ uint16_t indices[] = {
 // };
 
 struct Vertex vertices[] = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
 
 
@@ -346,15 +362,36 @@ void beginSingleTimeCommands(VkCommandBuffer *commandBuffer);
 
 void endSingleTimeCommands(VkCommandBuffer *commandBuffer);
 
-void transitionImageLayout(VkImage *image, VkImageLayout oldLayout, VkImageLayout newLayout);
+// void transitionImageLayout(VkImage *image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlagBits aspectFlags);
+
+void transitionImageLayout(
+	VkImage *image, 
+
+	VkImageLayout oldLayout, 
+	VkImageLayout newLayout, 
+
+	VkAccessFlags srcAccessMask,
+	VkAccessFlags dstAccessMask,
+
+	VkPipelineStageFlags srcStageMask,
+	VkPipelineStageFlags dstStageMask,
+
+	VkImageAspectFlagBits aspectFlags
+);
 
 void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_t height);
 
-
-void createImageView(VkImageView *imageView, VkImage* image, VkFormat format);
+void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, VkImageAspectFlagBits aspectFlags);
 
 void createTextureSampler();
 
+void createDepthResources();
+
+VkFormat findSupportedFormat(VkFormat *formats, uint32_t len, VkImageTiling tiling, VkFormatFeatureFlags features);
+
+VkFormat findDepthFormat();
+
+bool hasStencilComponent(VkFormat format);
 /*
 
 
@@ -371,6 +408,64 @@ void createTextureSampler();
                                                                                      
 
 */
+
+bool hasStencilComponent(VkFormat format) {
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+VkFormat findDepthFormat(){
+
+	VkFormat formats[]={VK_FORMAT_D32_SFLOAT,VK_FORMAT_D32_SFLOAT_S8_UINT,VK_FORMAT_D24_UNORM_S8_UINT };
+
+	return findSupportedFormat(
+		formats, 
+		ARR_LEN(formats),
+		VK_IMAGE_TILING_OPTIMAL,VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+	);
+}
+VkFormat findSupportedFormat(VkFormat *formats,uint32_t len, VkImageTiling tiling, VkFormatFeatureFlags features ){
+
+ 
+	for(int i=0;i<len;i++)
+	{
+
+		VkFormatProperties props;
+		
+		vkGetPhysicalDeviceFormatProperties(physicalDevice, formats[i], &props);
+		
+		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+		 
+			return   formats[i];
+		}
+		if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+
+		 
+			return   formats[i];
+		}
+	}
+	EXIT_CLEAN("failed to find supported format!");
+	
+}
+
+void createDepthResources() {
+
+	VkFormat depthFormat = findDepthFormat();
+
+	createImage(
+		swapChainExtent.width, 
+		swapChainExtent.height, 
+		depthFormat, 
+		VK_IMAGE_TILING_OPTIMAL, 
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		&depthImage, &depthImageMemory
+	);
+	// depthImageView = 
+	
+	createImageView(&depthImageView,&depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+
+}
 
 void createTextureSampler(){
 
@@ -407,7 +502,7 @@ void createTextureSampler(){
 
 }
 
-void createImageView(VkImageView *imageView, VkImage* image, VkFormat format){
+void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, VkImageAspectFlagBits aspectFlags){
 
 		// VkImageViewCreateInfo viewInfo = {
 		// .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -420,14 +515,14 @@ void createImageView(VkImageView *imageView, VkImage* image, VkFormat format){
 			.image = *image,
 			.viewType = VK_IMAGE_VIEW_TYPE_2D,
 			.format = format,
-			.subresourceRange  = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+			.subresourceRange  = { aspectFlags, 0, 1, 0, 1 },
 		};
 		vkCreateImageView(device, &viewInfo,  NULL, imageView);
 }
 
 void createTextureImageView(){
 
-	createImageView(&textureImageView,&textureImage,VK_FORMAT_R8G8B8A8_SRGB);
+	createImageView(&textureImageView,&textureImage,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
 }
 
@@ -455,7 +550,22 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 
     endSingleTimeCommands(&commandBuffer);
 }
-void transitionImageLayout(VkImage *image, VkImageLayout oldLayout, VkImageLayout newLayout) {
+void transitionImageLayout(
+	VkImage *image, 
+	
+	VkImageLayout oldLayout, 
+	VkImageLayout newLayout, 
+
+	VkAccessFlags srcAccessMask,
+	VkAccessFlags dstAccessMask,
+
+	VkPipelineStageFlags srcStageMask,
+	VkPipelineStageFlags dstStageMask,
+
+	VkImageAspectFlagBits aspectFlags
+) {
+
+
     VkCommandBuffer commandBuffer;
 	beginSingleTimeCommands(&commandBuffer);
 
@@ -464,47 +574,51 @@ void transitionImageLayout(VkImage *image, VkImageLayout oldLayout, VkImageLayou
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 		.oldLayout = oldLayout,
 		.newLayout = newLayout,
+
 		.image = *image,
 		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.aspectMask = aspectFlags,
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
             .layerCount = 1
 		},
+		.srcAccessMask = srcAccessMask,
+		.dstAccessMask = dstAccessMask,
 	}; 
 
-	VkPipelineStageFlags sourceStage ;
-	VkPipelineStageFlags destinationStage;
+	// VkPipelineStageFlags sourceStage ;
+	// VkPipelineStageFlags destinationStage;
 
 
-	if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-	{
-		imageMemoryBarriers.srcAccessMask = 0;
-		imageMemoryBarriers.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	// if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	// {
+	// 	imageMemoryBarriers.srcAccessMask = 0;
+	// 	imageMemoryBarriers.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	// 	// sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	// 	// destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-	}else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-	{
 
-		imageMemoryBarriers.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		imageMemoryBarriers.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	// }else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	// {
 
-		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	// 	imageMemoryBarriers.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	// 	imageMemoryBarriers.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-	}else
-	{
-		EXIT_CLEAN("unsupported layout transition!");
-	}
+	// 	// sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	// 	// destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+	// }else
+	// {
+	// 	EXIT_CLEAN("unsupported layout transition!");
+	// }
 
 
 	vkCmdPipelineBarrier(
 		commandBuffer, 
-		sourceStage, 
-		destinationStage, 
+		srcStageMask, 
+		dstStageMask, 
 		0, 
 		0, (VkMemoryBarrier* )NULL,
 		0, (VkBufferMemoryBarrier*) NULL, 
@@ -654,12 +768,56 @@ void createTextureImage(){
 		&textureImageMemory
 	);
 
+	/*
+		// 	imageMemoryBarriers.srcAccessMask = 0;
+	// 	imageMemoryBarriers.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-	transitionImageLayout(&textureImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+	// 	// sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	// 	// destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	*/
+
+	transitionImageLayout(
+		&textureImage, 
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		0,
+		VK_ACCESS_2_TRANSFER_WRITE_BIT,
+		VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT
 	
+	);
+	/**
+		// if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	// {
+	// 	imageMemoryBarriers.srcAccessMask = 0;
+	// 	imageMemoryBarriers.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+	// 	// sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	// 	// destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+
+	// }else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	// {
+
+	// 	imageMemoryBarriers.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	// 	imageMemoryBarriers.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+	// 	// sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	// 	// destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	*/
 	copyBufferToImage(&stagingBuffer, &textureImage, texWidth, texHeight);
 
-	transitionImageLayout(&textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	transitionImageLayout(
+		&textureImage, 
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_ACCESS_2_TRANSFER_WRITE_BIT,
+		VK_ACCESS_2_SHADER_READ_BIT,
+		VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT
+	);
 
 	// vkFreeMemory(device, textureImageMemoryTemp, NULL);
 
@@ -1240,43 +1398,104 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	vkBeginCommandBuffer(graphicsCommandBuffers[frameIndex], &beginInfo );
 
 
-	VkImageMemoryBarrier2 imageMemoryBarrier = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+	/**
+	transition_image_layout(
+		    swapChainImages[imageIndex],
+		    vk::ImageLayout::eUndefined,
+		    vk::ImageLayout::eColorAttachmentOptimal,
+		    {},                                                        // srcAccessMask (no need to wait for previous operations)
+		    vk::AccessFlagBits2::eColorAttachmentWrite,                // dstAccessMask
+		    vk::PipelineStageFlagBits2::eColorAttachmentOutput,        // srcStage
+		    vk::PipelineStageFlagBits2::eColorAttachmentOutput,        // dstStage
+		    vk::ImageAspectFlagBits::eColor);
+		// Transition depth image to depth attachment optimal layout
+		transition_image_layout(
+		    *depthImage,
+		    vk::ImageLayout::eUndefined,
+		    vk::ImageLayout::eDepthAttachmentOptimal,
+		    vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+		    vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+		    vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+		    vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+		    vk::ImageAspectFlagBits::eDepth);
 
-		.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	*/
+	
+	transitionImageLayout(
+		&swapchainImages[imageIndex], 
+		VK_IMAGE_LAYOUT_UNDEFINED, 
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
+		0, 
+		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 
+		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
+		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
+		VK_IMAGE_ASPECT_COLOR_BIT
+	);
 
-		.srcAccessMask = 0,
-		.dstAccessMask= VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+	transitionImageLayout(
+		&depthImage, 
+		VK_IMAGE_LAYOUT_UNDEFINED, 
+		VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
+		VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
+		VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
+		VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
+		VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
+		VK_IMAGE_ASPECT_DEPTH_BIT
+	);
+	// transitionImageLayout(depthImage, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlagBits aspectFlags)
+
+
+
+	// VkImageMemoryBarrier2 imageMemoryBarrier = {
+	// 	.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+
+	// 	.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	// 	.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+
+	// 	.srcAccessMask = 0,
+	// 	.dstAccessMask= VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 		
-		.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-		.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 	.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 	.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 
-		.image = swapchainImages[imageIndex],
+	// 	.image = swapchainImages[imageIndex],
 
-		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-		},
-	};
+	// 	.subresourceRange = {
+	// 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    //         .baseMipLevel = 0,
+    //         .levelCount = 1,
+    //         .baseArrayLayer = 0,
+    //         .layerCount = 1
+	// 	},
+	// };
 
-	 VkDependencyInfo dependencyInfo = {
-		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .dependencyFlags = {},
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &imageMemoryBarrier
-    };
+	//  VkDependencyInfo dependencyInfo = {
+	// 	.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+    //     .dependencyFlags = {},
+    //     .imageMemoryBarrierCount = 1,
+    //     .pImageMemoryBarriers = &imageMemoryBarrier
+    // };
 
-	vkCmdPipelineBarrier2(graphicsCommandBuffers[frameIndex], &dependencyInfo);
+	// vkCmdPipelineBarrier2(graphicsCommandBuffers[frameIndex], &dependencyInfo);
 
 
 	VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+
+	VkClearValue clearDepth = {1.0f, 0.0f};
+	
+
+	 VkRenderingAttachmentInfo deapthAttachmentInfo = {
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = depthImageView,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        .loadOp =VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .clearValue = clearDepth
+    };
+
 
     VkRenderingAttachmentInfo attachmentInfo = {
 		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -1293,11 +1512,13 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
         .renderArea = { 
 			.offset = { 0, 0 }, 
 			//.extent = surfaceCapabilities.currentExtent,
-			.extent = imageExtent,
+			.extent = swapChainExtent,
 		},
         .layerCount = 1,
         .colorAttachmentCount = 1,
-        .pColorAttachments = &attachmentInfo
+        .pColorAttachments = &attachmentInfo,
+		.pDepthAttachment = &deapthAttachmentInfo,
+		
     };
 
 	vkCmdBeginRendering(graphicsCommandBuffers[frameIndex], &renderingInfo);
@@ -1310,14 +1531,14 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	VkViewport viewPort = {
 		.x = 0,
 		.y = 0,
-		.width = imageExtent.width,
-		.height = imageExtent.height,
+		.width = swapChainExtent.width,
+		.height = swapChainExtent.height,
 		
 	};
 	vkCmdSetViewport(graphicsCommandBuffers[frameIndex], 0, 1, &viewPort);
 
 	VkRect2D scissor = {
-		.extent = imageExtent,
+		.extent = swapChainExtent,
 		.offset = {},
 	};
 
@@ -1350,41 +1571,63 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
 
 
-	 imageMemoryBarrier = (VkImageMemoryBarrier2){
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+	/**
+	transition_image_layout(
+		    swapChainImages[imageIndex],
+		    vk::ImageLayout::eColorAttachmentOptimal,
+		    vk::ImageLayout::ePresentSrcKHR,
+		    vk::AccessFlagBits2::eColorAttachmentWrite,                // srcAccessMask
+		    {},                                                        // dstAccessMask
+		    vk::PipelineStageFlagBits2::eColorAttachmentOutput,        // srcStage
+		    vk::PipelineStageFlagBits2::eBottomOfPipe,                 // dstStage
+		    vk::ImageAspectFlagBits::eColor);
+	
+	*/
+	transitionImageLayout(
+		&swapchainImages[imageIndex], 
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 
+		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 
+		0, 
+		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
+		VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 
+		VK_IMAGE_ASPECT_COLOR_BIT);
 
-		.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+	// imageMemoryBarrier = (VkImageMemoryBarrier2){
+	// 	.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 
-		.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-		.dstAccessMask= {},
+	// 	.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	// 	.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+
+	// 	.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+	// 	.dstAccessMask= {},
 		
-		.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-		.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+	// 	.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 	.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
 
-		.image = swapchainImages[imageIndex],
+	// 	.image = swapchainImages[imageIndex],
 
-		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-		},
-	};
+	// 	.subresourceRange = {
+	// 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    //         .baseMipLevel = 0,
+    //         .levelCount = 1,
+    //         .baseArrayLayer = 0,
+    //         .layerCount = 1
+	// 	},
+	// };
 
 
-	 dependencyInfo = (VkDependencyInfo){
-		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .dependencyFlags = {},
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &imageMemoryBarrier
-    };
+	//  dependencyInfo = (VkDependencyInfo){
+	// 	.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+    //     .dependencyFlags = {},
+    //     .imageMemoryBarrierCount = 1,
+    //     .pImageMemoryBarriers = &imageMemoryBarrier
+    // };
 
-	vkCmdPipelineBarrier2(graphicsCommandBuffers[frameIndex], &dependencyInfo);
+	// vkCmdPipelineBarrier2(graphicsCommandBuffers[frameIndex], &dependencyInfo);
 
 
 	vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
@@ -1411,7 +1654,7 @@ void updateUniformBuffer(uint32_t currentImage){
 	glm_lookat((vec3){2.0f,2.0f,2.0f}, (vec3){.0f,.0f,.0f}, (vec3){.0f,.0f,1.0f}, ubo.view);
 
 	
-	glm_perspective(glm_rad(45.0f), (float)imageExtent.width / imageExtent.height, 0.1f, 10.0f , ubo.proj);
+	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 10.0f , ubo.proj);
 
 	ubo.proj[1][1] *= -1.f;
 
@@ -1469,7 +1712,7 @@ void drawFrame() {
 
 	recordCommandBuffer(imageIndex,frameIndex);
 
-	VkPipelineStageFlags waitDestinationStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT ;
+	VkPipelineStageFlags waitDestinationStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ;
 
 	VkSubmitInfo submitInfo = {
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -2048,13 +2291,13 @@ typedef enum VkCompositeAlphaFlagBitsKHR {
 } VkCompositeAlphaFlagBitsKHR;
 	*/
 
-	imageExtent = surfaceCapabilities.currentExtent;
+	swapChainExtent = surfaceCapabilities.currentExtent;
 
-	if(imageExtent.width > surfaceCapabilities.maxImageExtent.width 
-		&& imageExtent.height > surfaceCapabilities.maxImageExtent.height 
+	if(swapChainExtent.width > surfaceCapabilities.maxImageExtent.width 
+		&& swapChainExtent.height > surfaceCapabilities.maxImageExtent.height 
 	){
-		imageExtent = surfaceCapabilities.maxImageExtent;
-		imageExtent = (VkExtent2D){
+		swapChainExtent = surfaceCapabilities.maxImageExtent;
+		swapChainExtent = (VkExtent2D){
 			.width = WIDTH,
 			.height = HEIGHT,
 		};
@@ -2069,7 +2312,7 @@ typedef enum VkCompositeAlphaFlagBitsKHR {
 		height <= surfaceCapabilities.maxImageExtent.height
 		)
 		{
-			imageExtent = (VkExtent2D){
+			swapChainExtent = (VkExtent2D){
 			.width = width,
 			.height = height,
 			};
@@ -2080,7 +2323,7 @@ typedef enum VkCompositeAlphaFlagBitsKHR {
 		.minImageCount = surfaceCapabilities.minImageCount  == 0? 1: surfaceCapabilities.minImageCount,
 		.imageFormat = swapchainSurfaceFormat,
 		.imageColorSpace = swapchainSurfaceColorSpace,
-		.imageExtent = imageExtent,
+		.imageExtent = swapChainExtent,
 		.imageArrayLayers = 1,
 		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -2118,7 +2361,7 @@ void createImageViews(){
 
 		// printf("img: %p\n",swapchainImages[i]);
 
-		createImageView(&swapchainImageViews[i], &swapchainImages[i], VK_FORMAT_B8G8R8A8_SRGB);
+		createImageView(&swapchainImageViews[i], &swapchainImages[i], VK_FORMAT_B8G8R8A8_SRGB,VK_IMAGE_ASPECT_COLOR_BIT);
 	}
 
 	
@@ -2171,6 +2414,7 @@ void recreateSwapChain(){
 	while(width == 0 || height == 0)
 	{
 		glfwGetFramebufferSize(window, &width, &height);
+
 		glfwWaitEvents();
 	}
 
@@ -2506,8 +2750,8 @@ void createGraphicsPipeline() {
 		.y = 0,
 		// .height = surfaceCapabilities.currentExtent.height,
 		// .width= surfaceCapabilities.currentExtent.width,
-		.height = imageExtent.height,
-		.width = imageExtent.width,
+		.height = swapChainExtent.height,
+		.width = swapChainExtent.width,
 		.minDepth = 0.0f,
 		.maxDepth = 1.0f,
 	};
@@ -2555,7 +2799,13 @@ void createGraphicsPipeline() {
 	};
 
 	//for now?
-	VkPipelineDepthStencilStateCreateInfo* depthStencil  = NULL;
+	VkPipelineDepthStencilStateCreateInfo depthStencil={
+		.depthTestEnable =  VK_TRUE,
+		.depthWriteEnable = VK_TRUE,
+		.depthCompareOp = VK_COMPARE_OP_LESS,
+		.depthBoundsTestEnable = VK_FALSE,
+		.stencilTestEnable = VK_FALSE,
+	};
 
 
 	//Color blending
@@ -2597,11 +2847,15 @@ void createGraphicsPipeline() {
 		 .colorAttachmentCount = 1, .pColorAttachmentFormats = &swapChainImageFormat 
 	
 	*/
+	VkFormat depthFormat = findDepthFormat();
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
 		.colorAttachmentCount = 1,
 		.pColorAttachmentFormats = &swapchainSurfaceFormat,
+		.depthAttachmentFormat = depthFormat,
+		
+		
 	};
 	
 	/**
@@ -2618,10 +2872,10 @@ void createGraphicsPipeline() {
 	VkSubpassDependency subpassDependency = {
 		.srcSubpass = VK_SUBPASS_EXTERNAL,
 		.dstSubpass = 0,
-		.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+		.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 		.srcAccessMask = 0 ,
-		.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 		// .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT ,
 	};
 	VkAttachmentDescription colorAttachment = {
@@ -2632,6 +2886,9 @@ void createGraphicsPipeline() {
 		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 	};
+
+
+
 	VkAttachmentReference colorRef = {
     	.attachment = 0,
 		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
@@ -2676,8 +2933,7 @@ void createGraphicsPipeline() {
 		.renderPass = VK_NULL_HANDLE,
 		.basePipelineHandle = VK_NULL_HANDLE,
 		.basePipelineIndex = - 1,
-		
-		
+		.pDepthStencilState = &depthStencil,
 		
 	};
 
@@ -2769,6 +3025,8 @@ void initVulkan(){
 
 	createCommandPool();
 
+	createDepthResources();
+
 	createTextureImage();
 
 	createTextureImageView();
@@ -2833,6 +3091,12 @@ void cleanup(){
 	}
 	
 	vkDestroyImageView(device, textureImageView,  NULL);
+	
+	vkDestroyImage(device, depthImage, NULL);
+
+	vkDestroyImageView(device,depthImageView, NULL);
+
+	vkFreeMemory(device, depthImageMemory, NULL);
 
 	vkDestroySampler(device, textureSampler, NULL);
 
