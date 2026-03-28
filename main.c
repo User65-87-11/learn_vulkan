@@ -28,14 +28,18 @@
 
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include "cglm/types.h"
 #include "cglm/cglm.h"
 #include "cglm/cam.h"
+#include "cglm/types.h"
 #include "cglm/mat4.h"
 #include "cglm/util.h"
 #include "cglm/affine-pre.h"
 
+// #define TINYOBJ_LOADER_C_IMPLEMENTATION
+// #include "obj_loader/tinyobj_loader_c.h"
 
+#define CGLTF_IMPLEMENTATION 
+#include "cgltf/cgltf.h"
 
 const uint32_t WIDTH = 800;
 
@@ -187,9 +191,10 @@ VkDeviceMemory depthImageMemory = NULL;
 
 VkImageView depthImageView = NULL;
 
+
+// VkImageLayout currentSwapchainLayouts[MAX_IMAGE_VIEWS];
+
 //--------------------------
-
-
 
 
 struct Vertex{
@@ -208,7 +213,9 @@ void vertexGetBindingDescription(VkVertexInputBindingDescription *bindingDescrip
     	VkVertexInputRate    inputRate;
 	*/
 	*bindingDescription = (VkVertexInputBindingDescription){
-		0, sizeof(struct Vertex), VK_VERTEX_INPUT_RATE_VERTEX
+		.binding = 0,
+		.stride = sizeof(struct Vertex),
+		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 	};
  
 }
@@ -234,28 +241,38 @@ void vertexGetAttributeDescriptions(VkVertexInputAttributeDescription bindingDes
 // };
 
 
-uint16_t indices[] = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
-// struct Vertex vertices[] = {
-// 	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-//     {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-//     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-//     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-// };
+// UP TO DAETH BUFFERING
+	// uint16_t indices[] = {
+	// 	0, 1, 2, 2, 3, 0,
+	// 	4, 5, 6, 6, 7, 4
+	// };
 
-struct Vertex vertices[] = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+	// struct Vertex vertices[] = {
+	// 	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+	// 	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+	// 	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+	// 	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
 
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
+	// 	{{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+	// 	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+	// 	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+	// 	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+	// };
+//END UP TO DAETH BUFFERING
+
+
+char * model_path_gltf	= 	"models_gltf/viking_room3.gltf";
+char * model_path_bin	= 	"models_gltf/viking_room3.bin";
+char * model_path_text	= 	"models_gltf/viking_room.png";
+
+
+uint32_t indicesNum = 0;
+uint32_t* indices = NULL;
+
+uint32_t verticesNum = 0;
+struct Vertex* vertices = NULL;
+
+
 
 
 
@@ -312,9 +329,9 @@ g:::::gg   gg:::::g
 
 
 
+uint32_t createShaderFromFile(const char * path, uint8_t** buffer);
 
-
-
+void loadModel(char *fname) ;
 
 void createUniformBuffers();
 
@@ -343,7 +360,7 @@ void createDescriptorSetLayout();
 
 void createDescriptorSets();
 
-void createTextureImage();
+void createTextureImage(char * path);
 
 void createTextureImageView();
 
@@ -392,6 +409,8 @@ VkFormat findSupportedFormat(VkFormat *formats, uint32_t len, VkImageTiling tili
 VkFormat findDepthFormat();
 
 bool hasStencilComponent(VkFormat format);
+
+void appendstr(void * dst, char* src);
 /*
 
 
@@ -409,18 +428,374 @@ bool hasStencilComponent(VkFormat format);
 
 */
 
+void appendstr(void * dst, char* src){
+	char * last = dst;
+	char * beg = src;
+	while(*last != 0)
+	{
+		last ++;
+	}
+	while(*beg != 0){
+		
+		*last = *beg;
+		last ++;
+		beg ++;
+	}
+	*last = 0;
+}
+
+
+void loadModel(char *fname){
+	PRINT_FNAME;
+
+	printf("load model: %s\n",fname);
+	/*
+	cgltf_load_buffers(const cgltf_options *options, cgltf_data *data, const char *gltf_path) -> cgltf_result
+	
+	*/
+	const cgltf_options options={};
+	cgltf_data *data;
+	uint32_t data_size;
+	const char * gltf_path = fname;
+	
+	cgltf_result res;
+
+	/**
+cgltf_result cgltf_parse_file(const cgltf_options* options, const
+ * char* path, cgltf_data** out_data)
+  */
+
+  	res = cgltf_parse_file(&options,fname,&data);
+
+
+	// res = cgltf_load_buffers(&options,data,gltf_path);	
+
+	if(res != cgltf_result_success)
+	{
+		printf("res %d\n",res);
+		EXIT_CLEAN("Cant load buffers :(");
+	}
+
+	for(int i=0;i<data->buffers_count;i++){
+		printf("Buffer:%s\n",data->buffers[i].uri);
+		printf("Buffer.size:%ld\n",data->buffers[i].size);
+		printf("Buffer.name:%s\n",data->buffers[i].name);
+		printf("Buffer.uri:%s\n",data->buffers[i].uri);
+		printf("Buffer.data:%p\n",data->buffers[i].data);
+	}
+
+	/*
+	typedef enum cgltf_buffer_view_type
+{
+	cgltf_buffer_view_type_invalid,
+	cgltf_buffer_view_type_indices,
+	cgltf_buffer_view_type_vertices,
+	cgltf_buffer_view_type_max_enum
+} cgltf_buffer_view_type;
+	*/
+
+
+	// for(int i=0;i<data->buffer_views_count;i++){
+	// 	printf("Buffer views:");
+	// 	printf(" .buffer ptr:%p\n",data->buffer_views[i].buffer);
+	// 	printf(" .data:%p\n",data->buffer_views[i].data);
+	// 	printf(" .type:%d\n",data->buffer_views[i].type);
+	// 	printf(" .size:%ld\n",data->buffer_views[i].size);
+	// 	printf(" .offset:%ld\n",data->buffer_views[i].offset);
+	// 	printf(" .stride:%ld\n",data->buffer_views[i].stride);
+	// 	printf(" .data:%p\n",data->buffer_views[i].data);
+	// }
+	
+	for(int i=0;i<data->meshes_count;i++){
+	
+		printf("Meshes :");
+		printf(" .name:%s\n",data->meshes[i].name);
+	
+		printf(" .primitives_count:%ld\n",data->meshes[i].primitives_count);
+		
+
+		for(int j=0;j<data->meshes[i].primitives_count;j++){
+
+			printf(" Primitives :\n");
+			printf("  .attributes_count:%ld\n",data->meshes[i].primitives[j].attributes_count);
+			printf("  .material:%p\n",data->meshes[i].primitives[j].material);
+
+			//prim->indices → pointer to a cgltf_accessor
+			printf("  .indices:%p\n",data->meshes[i].primitives[j].indices);
+
+			if(data->meshes[i].primitives[j].indices)
+			{
+				cgltf_accessor * accessor = data->meshes[i].primitives[j].indices;
+				printf("    .cnt:%ld\n",accessor->count);
+				printf("    .type:%d\n",accessor->type);
+				printf("    .buffer offset:%ld\n",accessor->buffer_view->offset);
+				printf("    .offset:%ld\n",accessor->offset);
+				printf("    .stride:%ld\n",accessor->stride);
+			}
+
+			for(int k=0;k<data->meshes[i].primitives[j].attributes_count;k++)
+			{
+				printf("  Attributes :");
+				printf("   .name:%s\n",data->meshes[i].primitives[j].attributes[k].name);
+				printf("   .data:%p\n",data->meshes[i].primitives[j].attributes[k].data);
+				printf("   .type:%d\n",data->meshes[i].primitives[j].attributes[k].type);
+				printf("   .index:%d\n",data->meshes[i].primitives[j].attributes[k].index);
+
+				cgltf_accessor * accessor = data->meshes[i].primitives[j].attributes[k].data;
+				cgltf_attribute_type attribType =  data->meshes[i].primitives[j].attributes[k].type;
+
+				if(attribType == cgltf_attribute_type_position)
+				{
+					printf("  .vertex position\n");
+					printf("    .count:%ld\n",accessor->count);
+					printf("    .buffer_view->buffer:%p\n",accessor->buffer_view->buffer);
+					printf("    .buffer_view->offset:%ld\n",accessor->buffer_view->offset);
+					printf("    .accessor->offset:%ld\n",accessor->offset);
+					printf("    .stride:%ld\n",accessor->stride);
+					printf("    .cgltf_type:%d\n",accessor->type);
+				}
+
+				if(attribType == cgltf_attribute_type_texcoord)
+				{
+					printf("  .tex coords\n");
+					printf("    .count:%ld\n",accessor->count);
+					printf("    .buffer_view->buffer:%p\n",accessor->buffer_view->buffer);
+					printf("    .buffer_view->offset:%ld\n",accessor->buffer_view->offset);
+					printf("    .accessor->offset:%ld\n",accessor->offset);
+					printf("    .stride:%ld\n",accessor->stride);
+					printf("    .cgltf_type:%d\n",accessor->type);
+				}
+
+				
+			}
+			printf(" .primitives_count:%ld\n",data->meshes[i].primitives_count);
+		}
+		break;
+	}
+
+	if(data->buffers_count > 0){
+
+		const char url_path[256] = "models_gltf/";
+		printf("Buffer.path:%s\n",url_path);
+		appendstr((char *)url_path, data->buffers[0].uri);
+
+		printf("Buffer.path:%s\n",url_path);
+		 
+		cgltf_load_buffers(&options,data,url_path);
+
+		printf("Buffer.data:%p\n",data->buffers[0].data);
+		printf("Buffer.size:%ld\n",data->buffers[0].size);
+		
+	}
+	
+	printf("data.data_extensions_count. %ld\n",data->data_extensions_count);
+	printf("data.buffer_views_count %ld\n",data->buffer_views_count);
+	printf("data.animations_count %ld\n",data->animations_count);
+	printf("data.images_count %ld\n",data->images_count);
+	printf("data.materials_count %ld\n",data->materials_count);
+	printf("data.nodes_count %ld\n",data->nodes_count);
+	printf("data.buffers_count %ld\n",data->buffers_count);
+	printf("data.lights_count %ld\n",data->lights_count);
+	printf("data.meshes_count %ld\n",data->meshes_count);
+ 
+
+
+	//LOAD MODEL
+
+	/**
+	typedef enum cgltf_attribute_type
+{
+	cgltf_attribute_type_invalid,
+	cgltf_attribute_type_position,
+	cgltf_attribute_type_normal,
+	cgltf_attribute_type_tangent,
+	cgltf_attribute_type_texcoord,
+	cgltf_attribute_type_color,
+	cgltf_attribute_type_joints,
+	cgltf_attribute_type_weights,
+	cgltf_attribute_type_custom,
+	cgltf_attribute_type_max_enum
+} cgltf_attribute_type;
+
+typedef enum cgltf_type
+{
+	cgltf_type_invalid,
+	cgltf_type_scalar,
+	cgltf_type_vec2,
+	cgltf_type_vec3,
+	cgltf_type_vec4,
+	cgltf_type_mat2,
+	cgltf_type_mat3,
+	cgltf_type_mat4,
+	cgltf_type_max_enum
+} cgltf_type;
+
+	*/
+	cgltf_primitive *primitive = &data->meshes[0].primitives[0];
+	 
+
+	cgltf_accessor *acc_idx = primitive->indices;
+	cgltf_accessor *acc_vert = NULL; 
+ 	
+	for(int i=0;i<primitive->attributes_count;i++){
+
+		cgltf_attribute attr =  primitive->attributes[i];
+		if(attr.type == cgltf_attribute_type_position)
+		{
+
+			cgltf_accessor* accessor = attr.data;
+		
+			cgltf_buffer_view* view = accessor->buffer_view;
+
+			uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
+			size_t stride = accessor->stride ? accessor->stride : sizeof(float) * 3;
+
+			verticesNum = accessor->count;
+			vertices = malloc(sizeof(struct Vertex) * verticesNum);
+
+			printf("verticesNum: %d\n",verticesNum);
+			printf("stride: %ld\n",stride);
+		 
+			for (size_t d = 0; d < verticesNum; d++) {
+				float* data = (float*)(base + d * stride);
+
+			
+				vertices[d].pos[0] = data[0];
+				vertices[d].pos[1] = data[1];
+				vertices[d].pos[2] = data[2];
+
+				
+			 
+				vertices[d].col[0] = 1.0f;
+				vertices[d].col[1] = 1.0f;
+				vertices[d].col[2] = 0.5f;
+			}
+
+		 
+			break;
+		}
+
+		
+	}
+
+ 
+	for(int i=0;i<primitive->attributes_count;i++){
+
+		cgltf_attribute attr =  primitive->attributes[i];
+		
+		if(attr.type == cgltf_attribute_type_texcoord)
+		{
+			assert(attr.data->type == cgltf_type_vec2);
+			assert(attr.data->component_type == cgltf_component_type_r_32f);
+
+			cgltf_accessor* accessor = attr.data;
+			cgltf_buffer_view* view = accessor->buffer_view;
+
+			uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
+			size_t stride = accessor->stride ? accessor->stride : sizeof(float) * 2;
+
+			// verticesNum = accessor->count;
+
+			for (size_t d = 0; d < verticesNum; d++) {
+				float* data = (float*)(base + d * stride);
+
+				vertices[d].texCoords[0] = data[0];
+				vertices[d].texCoords[1] = data[1];
+			}
+			break;
+		}
+	}
+
+	if(primitive->indices)
+	{
+		int offset = primitive->indices->offset;
+		
+		// printf("primitive->indices->component_type %d\n",primitive->indices->component_type);
+		// assert(primitive->indices->component_type == cgltf_component_type_r_16u);
+
+
+		cgltf_accessor* accessor = primitive->indices;
+		cgltf_buffer_view* view = accessor->buffer_view;
+
+
+		uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
+
+		size_t stride = accessor->stride;
+
+		if (stride == 0) {
+			stride = cgltf_component_size(accessor->component_type);
+		}
+
+		indicesNum = primitive->indices->count;
+
+		indices = malloc(sizeof(uint32_t)* indicesNum);
+
+		for(int d=0;d<indicesNum;d++){
+
+			uint8_t* ptr = base + d * stride;
+
+			 switch (accessor->component_type) {
+				case cgltf_component_type_r_16u:
+					indices[d] = *(uint16_t*)ptr;
+					break;
+				case cgltf_component_type_r_32u:
+					indices[d] = *(uint32_t*)ptr;
+					break;
+				case cgltf_component_type_r_8u:
+					indices[d] = *(uint8_t*)ptr;
+					break;
+				default:{
+						printf("datatype: %d\n",accessor->component_type);
+						EXIT_CLEAN("UNSUPPORTED INDEX DATA TYPE");
+					}
+					break;
+			}
+			
+		}
+		
+	}
+
+ 
+
+	cgltf_free(data);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
 VkFormat findDepthFormat(){
 
-	VkFormat formats[]={VK_FORMAT_D32_SFLOAT,VK_FORMAT_D32_SFLOAT_S8_UINT,VK_FORMAT_D24_UNORM_S8_UINT };
+	VkFormat formats[]={
+		VK_FORMAT_D32_SFLOAT,
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
+		VK_FORMAT_D24_UNORM_S8_UINT 
+	};
 
 	return findSupportedFormat(
 		formats, 
 		ARR_LEN(formats),
-		VK_IMAGE_TILING_OPTIMAL,VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
 	);
 }
 VkFormat findSupportedFormat(VkFormat *formats,uint32_t len, VkImageTiling tiling, VkFormatFeatureFlags features ){
@@ -458,12 +833,23 @@ void createDepthResources() {
 		VK_IMAGE_TILING_OPTIMAL, 
 		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		&depthImage, &depthImageMemory
+		&depthImage, 
+		&depthImageMemory
 	);
 	// depthImageView = 
 	
 	createImageView(&depthImageView,&depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
 
+	 transitionImageLayout(
+        &depthImage,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        0,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        VK_IMAGE_ASPECT_DEPTH_BIT
+    );
 
 }
 
@@ -544,6 +930,7 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 	vkCmdCopyBufferToImage(commandBuffer, *buffer, *image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
 
     endSingleTimeCommands(&commandBuffer);
+	
 }
 void transitionImageLayout(
 	VkImage *image, 
@@ -597,6 +984,7 @@ void transitionImageLayout(
 }
 
 void  beginSingleTimeCommands(VkCommandBuffer *commandBuffer){
+
 	VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		.commandPool = graphicsCommnadPool,
@@ -622,6 +1010,8 @@ void endSingleTimeCommands(VkCommandBuffer *commandBuffer){
 	};
 	vkQueueSubmit(graphicsQueue, 1, &submitInfo, NULL);
 	vkQueueWaitIdle(graphicsQueue);
+
+	vkFreeCommandBuffers(device, graphicsCommnadPool, 1, commandBuffer);
 }
 
 void createImage(
@@ -675,7 +1065,97 @@ void createImage(
 }
 
 
-void createTextureImage(){
+void createTextureImage(char * path){
+	/**
+	Staging is the process of getting image data into the GPU’s memory.
+	
+	*/
+	PRINT_FNAME;
+
+	int texWidth, texHeight, texChannels;
+
+	// stbi_set_flip_vertically_on_load(true);
+	stbi_uc* pixels  = stbi_load(path,  &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+	VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+	if( ! pixels){
+		EXIT_CLEAN("failed to load texture image!");
+	}
+
+
+	VkBuffer stagingBuffer;
+
+	VkDeviceMemory stagingBufferMemory;
+
+	createBuffer(imageSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&stagingBuffer,
+		&stagingBufferMemory
+	);
+	
+	void* data = NULL;
+
+	vkMapMemory(device, 
+		stagingBufferMemory,
+		0, 
+		imageSize, 
+		0, 
+		&data
+	);
+	memcpy(data, pixels, imageSize);
+
+	vkUnmapMemory(device, stagingBufferMemory);
+	
+	stbi_image_free(pixels);
+
+ 
+	createImage(
+		texWidth, 
+		texHeight, 
+		VK_FORMAT_R8G8B8A8_SRGB, 
+		VK_IMAGE_TILING_OPTIMAL, 
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		&textureImage, 
+		&textureImageMemory
+	);
+
+
+	transitionImageLayout(
+		&textureImage, 
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		0,
+		VK_ACCESS_2_TRANSFER_WRITE_BIT,
+		VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT
+	
+	);
+
+	copyBufferToImage(&stagingBuffer, &textureImage, texWidth, texHeight);
+
+	transitionImageLayout(
+		&textureImage, 
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_ACCESS_2_TRANSFER_WRITE_BIT,
+		VK_ACCESS_2_SHADER_READ_BIT,
+		VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT
+	);
+
+	// vkFreeMemory(device, textureImageMemoryTemp, NULL);
+
+	vkDestroyBuffer(device,stagingBuffer,  NULL);
+	
+	vkFreeMemory(device, stagingBufferMemory,  NULL);
+}
+
+void createTextureImage2(){
 	/**
 	Staging is the process of getting image data into the GPU’s memory.
 	
@@ -764,7 +1244,6 @@ void createTextureImage(){
 	
 	vkFreeMemory(device, stagingBufferMemory,  NULL);
 }
-
 
 void createDescriptorSets(){
 	PRINT_FNAME;
@@ -1038,7 +1517,7 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 }
 void createIndexBuffer(){
 
-	VkDeviceSize bufferSize = sizeof(indices);
+	VkDeviceSize bufferSize = sizeof(uint32_t) * indicesNum;
 
 	VkBuffer stagingBuffer;
 
@@ -1056,7 +1535,7 @@ void createIndexBuffer(){
 
 	vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
 
-	memcpy(data, indices, sizeof(indices));
+	memcpy(data, indices, bufferSize);
 
 	VkMappedMemoryRange mappedMemoryRange = {
 		.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
@@ -1089,7 +1568,7 @@ void createIndexBuffer(){
 }
 void createVertexBuffer() {
 
-    VkDeviceSize bufferSize = sizeof(vertices);
+    VkDeviceSize bufferSize = sizeof(struct Vertex) * verticesNum;
 
 	VkBuffer stagingBuffer;
 	
@@ -1109,7 +1588,7 @@ void createVertexBuffer() {
 
 	vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
 
-	memcpy(data, vertices, sizeof(vertices));
+	memcpy(data, vertices, sizeof(struct Vertex)*verticesNum);
 
 	VkMappedMemoryRange mappedMemoryRange = {
 		.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
@@ -1154,7 +1633,7 @@ void createSurface(){
 	
 }
 
-uint32_t createShaderFromFile(char * path, uint8_t** buffer){
+uint32_t createShaderFromFile(const char * path, uint8_t** buffer){
 
 	PRINT_FNAME;
 
@@ -1186,57 +1665,57 @@ uint32_t createShaderFromFile(char * path, uint8_t** buffer){
 
 	return size;
 }
-bool isDeviceSuitable(VkPhysicalDevice device)
-{
-	PRINT_FNAME;;
+// bool isDeviceSuitable(VkPhysicalDevice device)
+// {
+// 	PRINT_FNAME;
  
-	VkPhysicalDeviceFeatures2 physicalDeviceFeatures2;
+// 	VkPhysicalDeviceFeatures2 physicalDeviceFeatures2;
 
-	VkPhysicalDeviceProperties physicalDeviceProperties;
+// 	VkPhysicalDeviceProperties physicalDeviceProperties;
 
 
-	vkGetPhysicalDeviceFeatures2(device,&physicalDeviceFeatures2);
+// 	vkGetPhysicalDeviceFeatures2(device,&physicalDeviceFeatures2);
 
-	vkGetPhysicalDeviceProperties(device, &physicalDeviceProperties);
+// 	vkGetPhysicalDeviceProperties(device, &physicalDeviceProperties);
 
 	
-	VkPhysicalDeviceFeatures2 *features2 = &physicalDeviceFeatures2;
-	uint32_t feature_cnt = 0 ;
-	while(features2 != NULL){
-		switch(features2->sType)
-		{
-			case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
-			break;
+// 	VkPhysicalDeviceFeatures2 *features2 = &physicalDeviceFeatures2;
+// 	uint32_t feature_cnt = 0 ;
+// 	while(features2 != NULL){
+// 		switch(features2->sType)
+// 		{
+// 			case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
+// 			break;
 
-			// case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
-			// break;
+// 			// case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
+// 			// break;
 			
 
-			// case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
-			// break;
+// 			// case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
+// 			// break;
 			
 
-			// case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
-			// break;
+// 			// case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2:
+// 			// break;
 			
 
 
-			default:
-				break;
-		}
-	}
+// 			default:
+// 				break;
+// 		}
+// 	}
 
-    // if (physicalDeviceProperties.deviceType > VK_PHYSICAL_DEVICE_TYPE_OTHER && 
-	// 	physicalDeviceFeatures2. &&
-	// 	physicalDeviceFeatures2.samplerAnisotropy
+//     // if (physicalDeviceProperties.deviceType > VK_PHYSICAL_DEVICE_TYPE_OTHER && 
+// 	// 	physicalDeviceFeatures2. &&
+// 	// 	physicalDeviceFeatures2.samplerAnisotropy
 		
 		
-	// ) {
-    //     return true;
-    // }
+// 	// ) {
+//     //     return true;
+//     // }
 
-    return false;
-}
+//     return false;
+// }
 void createCommandPool(){
 	PRINT_FNAME;
 
@@ -1293,7 +1772,8 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	
 	transitionImageLayout(
 		&swapchainImages[imageIndex], 
-		VK_IMAGE_LAYOUT_UNDEFINED, 
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		// currentSwapchainLayouts[imageIndex], 
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
 		0, 
 		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 
@@ -1301,6 +1781,8 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
 		VK_IMAGE_ASPECT_COLOR_BIT
 	);
+
+	//  currentSwapchainLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	transitionImageLayout(
 		&depthImage, 
@@ -1315,26 +1797,27 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 
 	VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
-	VkClearValue clearDepth = {1.0f, 0.0f};
-	
-
-	 VkRenderingAttachmentInfo deapthAttachmentInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = depthImageView,
-        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        .loadOp =VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .clearValue = clearDepth
-    };
+	 VkClearValue clearDepth = {1.0f, 0};
 
 
-    VkRenderingAttachmentInfo attachmentInfo = {
+
+
+    VkRenderingAttachmentInfo colorAttachmentInfo = {
 		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = swapchainImageViews[imageIndex],
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp =VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .clearValue = clearColor
+    };
+
+	VkRenderingAttachmentInfo deapthAttachmentInfo = {
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = depthImageView,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .loadOp =VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .clearValue = clearDepth
     };
 
     // Set up the rendering info
@@ -1347,7 +1830,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 		},
         .layerCount = 1,
         .colorAttachmentCount = 1,
-        .pColorAttachments = &attachmentInfo,
+        .pColorAttachments = &colorAttachmentInfo,
 		.pDepthAttachment = &deapthAttachmentInfo,
 		
     };
@@ -1364,6 +1847,8 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 		.y = 0,
 		.width = swapChainExtent.width,
 		.height = swapChainExtent.height,
+		.minDepth = 0.0f,  // Explicitly set
+    	.maxDepth = 1.0f   // Explicitly set
 		
 	};
 	vkCmdSetViewport(graphicsCommandBuffers[frameIndex], 0, 1, &viewPort);
@@ -1376,15 +1861,15 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	vkCmdSetScissor(graphicsCommandBuffers[frameIndex], 0, 1, &scissor);
 
 
-	vkCmdBindPipeline(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+	// vkCmdBindPipeline(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-	 VkDeviceSize offset = 0;
+	VkDeviceSize offset = 0;
 
 	vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &vertextBuffer, &offset);
 
-	vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+	vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-
+	 
 	vkCmdBindDescriptorSets(
 		graphicsCommandBuffers[frameIndex],
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -1395,15 +1880,13 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 		0, 
 		NULL);
 
-	uint32_t indicesCount = sizeof(indices) / sizeof(uint16_t);
+	// uint32_t indicesCount = sizeof(indices) / sizeof(uint32_t);
 
-	vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesCount, 1, 0, 0, 0);
+	vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, 1, 0, 0, 0);
 
 	vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
 
-
-	
-
+ 
 	
 	transitionImageLayout(
 		&swapchainImages[imageIndex], 
@@ -1413,9 +1896,10 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 		0, 
 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
 		VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 
-		VK_IMAGE_ASPECT_COLOR_BIT);
+		VK_IMAGE_ASPECT_COLOR_BIT
+	);
 
-	
+	// currentSwapchainLayouts[imageIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 	vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
 
@@ -1436,14 +1920,19 @@ void updateUniformBuffer(uint32_t currentImage){
 
 	glm_mat4_identity(ubo.model);
 	
-	glm_rotate_z(ubo.model, time*glm_rad(90.0f), ubo.model);
 
-	glm_lookat((vec3){2.0f,2.0f,2.0f}, (vec3){.0f,.0f,.0f}, (vec3){.0f,.0f,1.0f}, ubo.view);
+
+	glm_rotate_y(ubo.model, time*glm_rad(90.0f), ubo.model);
+
+
+	 
+
+	glm_lookat((vec3){2.0f,2.0f,2.0f}, (vec3){.0f,.0f,.0f}, (vec3){.0f,1.0f,0.0f}, ubo.view);
 
 	
 	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 10.0f , ubo.proj);
 
-	ubo.proj[1][1] *= -1.f;
+	ubo.proj[1][1] *= -1;
 
 	memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 
@@ -1476,13 +1965,13 @@ void drawFrame() {
 		NULL, 
 		&imageIndex
 	);
-
-	
-
-
+ 
 	if(result == VK_ERROR_OUT_OF_DATE_KHR){
+
 		recreateSwapChain();
+
 		return;
+
 	}else if(result != VK_SUCCESS && result!= VK_SUBOPTIMAL_KHR)
 	{
 		assert(result == VK_TIMEOUT || result == VK_NOT_READY);
@@ -1490,11 +1979,11 @@ void drawFrame() {
 	}
 
 	
+	updateUniformBuffer(frameIndex);
 
 	vkResetFences(device, 1, &inFlightFences[frameIndex]);
 
-
-	updateUniformBuffer(frameIndex);
+	// vkResetCommandBuffer(graphicsCommandBuffers[frameIndex],VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
 
 	recordCommandBuffer(imageIndex,frameIndex);
@@ -1521,6 +2010,7 @@ void drawFrame() {
 
 
 	VkPresentInfoKHR presentInfo = {
+
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		.waitSemaphoreCount = 1,
 		.pWaitSemaphores = &renderFinishedSemaphore[frameIndex],
@@ -2116,7 +2606,9 @@ void createImageViews(){
 
 		// printf("img: %p\n",swapchainImages[i]);
 
-		createImageView(&swapchainImageViews[i], &swapchainImages[i], VK_FORMAT_B8G8R8A8_SRGB,VK_IMAGE_ASPECT_COLOR_BIT);
+		createImageView(&swapchainImageViews[i], &swapchainImages[i], swapchainSurfaceFormat,VK_IMAGE_ASPECT_COLOR_BIT);
+
+		// currentSwapchainLayouts[i] = VK_IMAGE_LAYOUT_UNDEFINED;  
 	}
 
 
@@ -2299,7 +2791,7 @@ void createInstance(){
 				printf("\tlayer extensions: %s\n",expr[i].extensionName);
 			}
 
-			if(strcmp(layers[i].layerName, validationLayers[0])){
+			if(strcmp(layers[i].layerName, validationLayers[0]) ==0){
 				validationLayerSupported = true;
 			}
 		}
@@ -2479,6 +2971,7 @@ void createGraphicsPipeline() {
 		.rasterizerDiscardEnable = VK_FALSE,
 		.polygonMode = VK_POLYGON_MODE_FILL,
 		.cullMode = VK_CULL_MODE_BACK_BIT,
+		// .cullMode = VK_CULL_MODE_NONE,
 		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		.depthBiasEnable = VK_FALSE,
 		.depthBiasSlopeFactor = 1.0f,
@@ -2499,6 +2992,7 @@ void createGraphicsPipeline() {
 
 	//for now?
 	VkPipelineDepthStencilStateCreateInfo depthStencil={
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		.depthTestEnable =  VK_TRUE,
 		.depthWriteEnable = VK_TRUE,
 		.depthCompareOp = VK_COMPARE_OP_LESS,
@@ -2541,6 +3035,8 @@ void createGraphicsPipeline() {
 
 
 	VkFormat depthFormat = findDepthFormat();
+
+	printf("depthFormat %d\n",depthFormat);
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
@@ -2711,11 +3207,13 @@ void initVulkan(){
 
 	createDepthResources();
 
-	createTextureImage();
+	createTextureImage(model_path_text);
 
 	createTextureImageView();
 
 	createTextureSampler();
+
+	loadModel(model_path_gltf);
 
 	createVertexBuffer();
 
@@ -2827,6 +3325,9 @@ void cleanup(){
 
     glfwTerminate();
 
+
+	free(vertices);
+	free(indices);
 
 }
 void initWindow(){

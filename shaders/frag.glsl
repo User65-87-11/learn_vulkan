@@ -5,10 +5,12 @@ layout(location = 1) in vec2 texCoord;
 
 layout(location = 0) out vec4 outColor;
 
-layout(binding=1) uniform sampler2D  tex;
+layout(binding = 1) uniform sampler2D  tex;
 
 void main() {
-	vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
+	// vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
+
+	vec4 texColor = texture(tex, texCoord);
 
     outColor = texColor;
 }
