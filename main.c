@@ -1217,205 +1217,124 @@ void createTextureImage(char * path){
 
 void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
 
-    VkCommandBuffer commandBuffer = {};
-	
-	beginSingleTimeCommands(&commandBuffer);
- 
+    PRINT_FNAME;
+    VkCommandBuffer commandBuffer;
+    beginSingleTimeCommands(&commandBuffer);
 
-	VkFormatProperties2 formatProperties = {
-		.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
-	};
-	
-	vkGetPhysicalDeviceFormatProperties2(physicalDevice, imageFormat, &formatProperties);
-// vk::FormatFeatureFlagBits::eSampledImageFilterLinear
-	if (!(formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-    	// throw std::runtime_error("texture image format does not support linear blitting!");
+    // Check linear blitting support
+    VkFormatProperties2 formatProperties = {
+        .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
+    };
+    vkGetPhysicalDeviceFormatProperties2(physicalDevice, imageFormat, &formatProperties);
+    
+    if (!(formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+        EXIT_CLEAN("texture image format does not support linear blitting!");
+    }
 
-		EXIT_CLEAN("texture image format does not support linear blitting!");
-	}
+    int32_t mipWidth = texWidth;
+    int32_t mipHeight = texHeight;
 
-
-    VkImageMemoryBarrier2 barrier ={
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-
-		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = *image,
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    // Transition base mip level from TRANSFER_DST_OPTIMAL → TRANSFER_SRC_OPTIMAL
+    VkImageMemoryBarrier2 barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = *image,
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
             .layerCount = 1,
-		},
-		.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+        },
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        .srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+        .srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
         .dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+    };
 
-		.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		.newLayout =VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    VkDependencyInfo dependencyInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier,
+    };
 
-		.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-		.dstAccessMask =VK_ACCESS_2_TRANSFER_READ_BIT,
-	};
-	
- 
-	int32_t mipWidth = texWidth;
-	int32_t mipHeight = texHeight;
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
-	VkDependencyInfo dependencyInfo = {
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.dependencyFlags = 0,
-			.imageMemoryBarrierCount = 1,
-			.pImageMemoryBarriers = &barrier,
-			
-	};	
-	 
+    // Generate mip levels
+    for (uint32_t i = 1; i < mipLevels; i++) {
+        // Blit from mip i-1 to mip i
+        VkImageBlit2 blit = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
+            .srcOffsets = {{0, 0, 0}, {mipWidth, mipHeight, 1}},
+            .dstOffsets = {{0, 0, 0}, {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1}},
+            .srcSubresource = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = i - 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .dstSubresource = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = i,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+        };
 
-	for (uint32_t i = 1; i < mipLevels; i++) {
-		barrier.subresourceRange.baseMipLevel = i - 1;
+        VkBlitImageInfo2 blitInfo = {
+            .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
+            .srcImage = *image,
+            .srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .dstImage = *image,
+            .dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .filter = VK_FILTER_LINEAR,
+            .regionCount = 1,
+            .pRegions = &blit,
+        };
 
-		// When transitioning mip level to SHADER_READ_ONLY_OPTIMAL:
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-		barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-	
-		barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-		barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;  // or ALL_GRAPHICS_BIT
-				
- 
+        vkCmdBlitImage2(commandBuffer, &blitInfo);
 
-		vkCmdPipelineBarrier2(
-			commandBuffer, 
-			&dependencyInfo
-		 
-		);
+        // Transition mip i-1 to SHADER_READ_ONLY_OPTIMAL (no longer needed as source)
+        barrier.subresourceRange.baseMipLevel = i - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
-		// VkOffset3D offsets[2];
-		// VkOffset3D dstOffsets[2];
-	 
-		// offsets[0] = (VkOffset3D){0,0,0};
-		// offsets[1] = (VkOffset3D){mipWidth,mipHeight,1};
+        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
-		// dstOffsets[0] =  (VkOffset3D){0,0,0};
-		// dstOffsets[1] =  (VkOffset3D){mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
+        // Transition mip i to TRANSFER_SRC_OPTIMAL for next iteration (if not last)
+        if (i < mipLevels - 1) {
+            barrier.subresourceRange.baseMipLevel = i;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+            barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
-		VkImageBlit2 imageBlit2 = {
-			.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
-			.srcOffsets = {
-				{0, 0, 0},
-				{mipWidth, mipHeight, 1}
-			},
-			.dstOffsets = {
-				{0, 0, 0},
-				{mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1}
-			},
-			.srcSubresource = (VkImageSubresourceLayers){
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.mipLevel = i - 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-			.dstSubresource = (VkImageSubresourceLayers){
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.mipLevel = i,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-		};
-		/**
-		    VkStructureType        sType;
-    const void*            pNext;
-    VkImage                srcImage;
-    VkImageLayout          srcImageLayout;
-    VkImage                dstImage;
-    VkImageLayout          dstImageLayout;
-    uint32_t               regionCount;
-    const VkImageBlit2*    pRegions;
-    VkFilter               filter;
+            vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
+        }
 
+        if (mipWidth > 1) mipWidth /= 2;
+        if (mipHeight > 1) mipHeight /= 2;
+    }
 
-	{blit}, vk::Filter::eLinear
-		*/
-		VkBlitImageInfo2 blitImageInfo2 = {
-			.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
-			.srcImage = *image,
-			.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			.dstImage = *image,
-			.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.filter = VK_FILTER_LINEAR,
-			.pRegions = &imageBlit2,
-			.regionCount = 1,
-		};
+    // Transition final mip level to SHADER_READ_ONLY_OPTIMAL
+    barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
-		vkCmdBlitImage2(commandBuffer, &blitImageInfo2);
-
-
-		/*
-		barrier.oldLayout     = vk::ImageLayout::eTransferSrcOptimal;
-			barrier.newLayout     = vk::ImageLayout::eShaderReadOnlyOptimal;
-			barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
-			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-		*/
-
-
-		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		barrier.newLayout =VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-		barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-		barrier.dstAccessMask =VK_ACCESS_2_SHADER_READ_BIT;
-
-
-
-		/**
-		commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, barrier);
-		*/
-
-		
-		// VkDependencyInfo dependencyInfo = {
-		// 	.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-		// 	.dependencyFlags = 0,
-		// 	.imageMemoryBarrierCount = 1,
-		// 	.pImageMemoryBarriers = &barrier,
-		// };	
-	 
-		vkCmdPipelineBarrier2(
-			commandBuffer, 
-			&dependencyInfo
-		 
-		);
-
-
-		if (mipWidth > 1)
-			mipWidth /= 2;
-		if (mipHeight > 1)
-			mipHeight /= 2;
-	}
-
-	/**
-	barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-		barrier.oldLayout                     = vk::ImageLayout::eTransferDstOptimal;
-		barrier.newLayout                     = vk::ImageLayout::eShaderReadOnlyOptimal;
-		barrier.srcAccessMask                 = vk::AccessFlagBits::eTransferWrite;
-		barrier.dstAccessMask                 = vk::AccessFlagBits::eShaderRead;
-
-	
-	*/
-
-
-	barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-	barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-	barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;  
-
-	vkCmdPipelineBarrier2(
-		commandBuffer, 
-		&dependencyInfo
-		
-	);
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
     endSingleTimeCommands(&commandBuffer);
 }
