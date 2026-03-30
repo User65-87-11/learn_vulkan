@@ -171,8 +171,6 @@ VkSemaphore renderFinishedSemaphore[MAX_FRAMES_IN_FLIGHT];
 
 VkFence inFlightFences [MAX_FRAMES_IN_FLIGHT];
 
-VkFence transferFence;
-
 VkBuffer vertextBuffer = NULL;
 
 VkDeviceMemory vertexBufferMemory = NULL;
@@ -205,8 +203,9 @@ VkDeviceMemory depthImageMemory = NULL;
 
 VkImageView depthImageView = NULL;
 
-uint32_t mipLevels;
 
+uint32_t mipLevels;
+VkImage* textureImageMip;
 
 // VkImageLayout currentSwapchainLayouts[MAX_IMAGE_VIEWS];
 
@@ -432,7 +431,7 @@ VkFormat findDepthFormat();
 
 bool hasStencilComponent(VkFormat format);
 
- 
+void appendstr(void * dst, char* src);
 /*
 
 
@@ -449,7 +448,24 @@ bool hasStencilComponent(VkFormat format);
                                                                                      
 
 */
- 
+
+void appendstr(void * dst, char* src){
+	char * last = dst;
+	char * beg = src;
+	while(*last != 0)
+	{
+		last ++;
+	}
+	while(*beg != 0){
+		
+		*last = *beg;
+		last ++;
+		beg ++;
+	}
+	*last = 0;
+}
+
+
 void loadModel(char *fname){
 	PRINT_FNAME;
 
@@ -580,17 +596,9 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 
 	if(data->buffers_count > 0){
 
-
-		char url_path[256] ;
-	 
-		uint32_t n = snprintf(url_path, sizeof(url_path), "models_gltf/%s", data->buffers[0].uri);
-
-		if (n >= (uint32_t)sizeof(url_path)) {
-			
-		 
-			EXIT_CLEAN("url_path Overflow!");
-		}
-
+		const char url_path[256] = "models_gltf/";
+		printf("Buffer.path:%s\n",url_path);
+		appendstr((char *)url_path, data->buffers[0].uri);
 
 		printf("Buffer.path:%s\n",url_path);
 		 
@@ -836,7 +844,7 @@ VkFormat findSupportedFormat(VkFormat *formats,uint32_t len, VkImageTiling tilin
 }
 
 void createDepthResources() {
-	PRINT_FNAME;
+
 	VkFormat depthFormat = findDepthFormat();
 
 	createImage(
@@ -854,7 +862,7 @@ void createDepthResources() {
 	
 	createImageView(&depthImageView,&depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,1);
 
-	transitionImageLayout(
+	 transitionImageLayout(
         &depthImage,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -865,8 +873,6 @@ void createDepthResources() {
         VK_IMAGE_ASPECT_DEPTH_BIT,
 		1
     );
-
-	
 
 }
 
@@ -939,8 +945,8 @@ void createTextureImageView(){
 
 void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_t height) {
 	PRINT_FNAME;
-    // VkCommandBuffer commandBuffer ;
-	beginSingleTimeCommands(&transferCommandBuffers);
+    VkCommandBuffer commandBuffer ;
+	beginSingleTimeCommands(&commandBuffer);
 
 
 	
@@ -958,10 +964,10 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 		.imageExtent = {width,height,1},
 	};
 
-	vkCmdCopyBufferToImage(transferCommandBuffers, *buffer, *image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
+	vkCmdCopyBufferToImage(commandBuffer, *buffer, *image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
 	
 
-    endSingleTimeCommands(&transferCommandBuffers);
+    endSingleTimeCommands(&commandBuffer);
 	
 }
 void transitionImageLayout(
@@ -981,16 +987,10 @@ void transitionImageLayout(
 ) {
 
 	// PRINT_FNAME;
-    // VkCommandBuffer commandBuffer;
-	beginSingleTimeCommands(&transferCommandBuffers);
-	
+    VkCommandBuffer commandBuffer;
+	beginSingleTimeCommands(&commandBuffer);
 
-	// TODO
-	VkImageMemoryBarrier2 imageMemoryBarrier2 = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-		
-	};
-	
+
 	VkImageMemoryBarrier imageMemoryBarriers = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 		.oldLayout = oldLayout,
@@ -1011,7 +1011,7 @@ void transitionImageLayout(
 
 
 	vkCmdPipelineBarrier(
-		transferCommandBuffers, 
+		commandBuffer, 
 		srcStageMask, 
 		dstStageMask, 
 		0, 
@@ -1019,29 +1019,18 @@ void transitionImageLayout(
 		0, (VkBufferMemoryBarrier*) NULL, 
 		1, &imageMemoryBarriers);
 
-    endSingleTimeCommands(&transferCommandBuffers);
+    endSingleTimeCommands(&commandBuffer);
 }
 
 void  beginSingleTimeCommands(VkCommandBuffer *commandBuffer){
 
-	/*
-		 allocInfo = (VkCommandBufferAllocateInfo){ 
+	VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.commandPool =  transferCommnadPool,
+		.commandPool = graphicsCommnadPool,
 		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		.commandBufferCount = transferCommandBuffersCount  ,
-		
+		.commandBufferCount = 1,
 	};
-	*/
-	vkResetCommandBuffer(*commandBuffer, 0);
-
-	// VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
-	// 	.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-	// 	.commandPool = graphicsCommnadPool,
-	// 	.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-	// 	.commandBufferCount = 1,
-	// };
-	// vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffer);
+	vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffer);
 
 	VkCommandBufferBeginInfo beginInfo  = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1058,21 +1047,10 @@ void endSingleTimeCommands(VkCommandBuffer *commandBuffer){
 		.commandBufferCount = 1,
 		.pCommandBuffers = commandBuffer,
 	};
-	// vkQueueSubmit(graphicsQueue, 1, &submitInfo, NULL);
-	// vkQueueWaitIdle(graphicsQueue);
+	vkQueueSubmit(graphicsQueue, 1, &submitInfo, NULL);
+	vkQueueWaitIdle(graphicsQueue);
 
-	// 1. Ensure the fence is ready to be used again
-    // vkWaitForFences(device, 1, &transferFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device, 1, &transferFence);
-
-    // 2. Submit WITH the dedicated fence
-    vkQueueSubmit(graphicsQueue, 1, &submitInfo, transferFence);
-
-    // 3. Wait for THIS specific fence, not the whole queue
-    vkWaitForFences(device, 1, &transferFence, VK_TRUE, UINT64_MAX);
-
-
-	// vkFreeCommandBuffers(device, graphicsCommnadPool, 1, commandBuffer);
+	vkFreeCommandBuffers(device, graphicsCommnadPool, 1, commandBuffer);
 }
 
 void createImage(
@@ -1240,8 +1218,8 @@ void createTextureImage(char * path){
 void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
 
     PRINT_FNAME;
-    // VkCommandBuffer commandBuffer;
-    beginSingleTimeCommands(&transferCommandBuffers);
+    VkCommandBuffer commandBuffer;
+    beginSingleTimeCommands(&commandBuffer);
 
     // Check linear blitting support
     VkFormatProperties2 formatProperties = {
@@ -1283,7 +1261,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
         .pImageMemoryBarriers = &barrier,
     };
 
-    vkCmdPipelineBarrier2(transferCommandBuffers, &dependencyInfo);
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
     // Generate mip levels
     for (uint32_t i = 1; i < mipLevels; i++) {
@@ -1317,7 +1295,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
             .pRegions = &blit,
         };
 
-        vkCmdBlitImage2(transferCommandBuffers, &blitInfo);
+        vkCmdBlitImage2(commandBuffer, &blitInfo);
 
         // Transition mip i-1 to SHADER_READ_ONLY_OPTIMAL (no longer needed as source)
         barrier.subresourceRange.baseMipLevel = i - 1;
@@ -1328,7 +1306,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
         barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
         barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
-        vkCmdPipelineBarrier2(transferCommandBuffers, &dependencyInfo);
+        vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
         // Transition mip i to TRANSFER_SRC_OPTIMAL for next iteration (if not last)
         if (i < mipLevels - 1) {
@@ -1340,7 +1318,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
             barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
             barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
-            vkCmdPipelineBarrier2(transferCommandBuffers, &dependencyInfo);
+            vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
         }
 
         if (mipWidth > 1) mipWidth /= 2;
@@ -1356,9 +1334,9 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 
-    vkCmdPipelineBarrier2(transferCommandBuffers, &dependencyInfo);
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
-    endSingleTimeCommands(&transferCommandBuffers);
+    endSingleTimeCommands(&commandBuffer);
 }
 
 void createDescriptorSets(){
@@ -1587,16 +1565,7 @@ void createBuffer(
 		
 	};
 	 
-	VkResult res = vkCreateBuffer(device, &bufferCreateInfo, NULL, buffer);
-
-
-	if (res != VK_SUCCESS) { 
-
-		printf("VkDeviceSize :%ld, VkBufferUsageFlags %d, properties %d\n",size, usage,properties);
-
-		EXIT_CLEAN("Cannot create buffer! vkCreateBuffer");
-	}
-
+	vkCreateBuffer(device, &bufferCreateInfo, NULL, buffer);
 
 	VkMemoryRequirements memoryRequirements={
 		
@@ -1625,19 +1594,19 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 	PRINT_FNAME;
 
 
-	// VkCommandBuffer commandCopyBuffer ;
+	VkCommandBuffer commandCopyBuffer ;
 
 
-	beginSingleTimeCommands(&transferCommandBuffers);
+	beginSingleTimeCommands(&commandCopyBuffer);
 
 	VkBufferCopy bufferCopy = {
 		.size = size,
 		.dstOffset = 0,
 		.srcOffset = 0
 	};
-	vkCmdCopyBuffer(transferCommandBuffers,  srcBuffer, dstBuffer, 1, &bufferCopy);
+	vkCmdCopyBuffer(commandCopyBuffer,  srcBuffer, dstBuffer, 1, &bufferCopy);
 
-	endSingleTimeCommands(&transferCommandBuffers);
+	endSingleTimeCommands(&commandCopyBuffer);
 
 }
 void createIndexBuffer(){
@@ -1662,7 +1631,15 @@ void createIndexBuffer(){
 
 	memcpy(data, indices, bufferSize);
 
+	VkMappedMemoryRange mappedMemoryRange = {
+		.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+		.memory = bufferMemory,
+		.offset = 0,
+		.size = bufferSize,
+		
+	};
 
+	vkFlushMappedMemoryRanges(device, 1, &mappedMemoryRange);
 
 	vkUnmapMemory(device, bufferMemory);
 	
@@ -1834,7 +1811,6 @@ uint32_t createShaderFromFile(const char * path, uint8_t** buffer){
 //     return false;
 // }
 void createCommandPool(){
-	 
 	PRINT_FNAME;
 
 	VkCommandPoolCreateInfo commandPoolCreateInfo = {
@@ -1844,7 +1820,7 @@ void createCommandPool(){
 	};
 	
 	vkCreateCommandPool(device, &commandPoolCreateInfo, NULL, &graphicsCommnadPool);
- 
+
 	VkCommandBufferAllocateInfo allocInfo = { 
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		.commandPool =  graphicsCommnadPool,
@@ -1853,7 +1829,7 @@ void createCommandPool(){
 	};
 
 	vkAllocateCommandBuffers(device, &allocInfo, graphicsCommandBuffers);
- 
+
 
 	// --
 	commandPoolCreateInfo = (VkCommandPoolCreateInfo){
@@ -1863,7 +1839,7 @@ void createCommandPool(){
 	};
 	
 	vkCreateCommandPool(device, &commandPoolCreateInfo, NULL, &transferCommnadPool);
- 
+
 	 allocInfo = (VkCommandBufferAllocateInfo){ 
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		.commandPool =  transferCommnadPool,
@@ -1880,8 +1856,6 @@ void createCommandPool(){
 
 void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 
-	
-	
 	VkCommandBufferBeginInfo beginInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pInheritanceInfo = NULL,	
@@ -1919,7 +1893,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 
 	VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
-	VkClearValue clearDepth = {1.0f, 0};
+	 VkClearValue clearDepth = {1.0f, 0};
 
 
 
@@ -1943,7 +1917,6 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
     };
 
     // Set up the rendering info
-	
     VkRenderingInfo renderingInfo = {
 		.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = { 
@@ -2081,8 +2054,6 @@ void drawFrame() {
 	}
 
 	uint32_t imageIndex =  -1;
-
-	 
 	result = vkAcquireNextImageKHR(
 		device, 
 		swapchain, 
@@ -2101,7 +2072,7 @@ void drawFrame() {
 	}else if(result != VK_SUCCESS && result!= VK_SUBOPTIMAL_KHR)
 	{
 		assert(result == VK_TIMEOUT || result == VK_NOT_READY);
-		EXIT_CLEAN("failed to acquire swapchain image!");
+		EXIT_CLEAN("failed to acquire swap chain image!");
 	}
 
 	
@@ -2114,58 +2085,25 @@ void drawFrame() {
 
 	recordCommandBuffer(imageIndex,frameIndex);
 
-	// VkPipelineStageFlags waitDestinationStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ;
+	VkPipelineStageFlags waitDestinationStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ;
 
+	VkSubmitInfo submitInfo = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		
-	// VkSubmitInfo submitInfo = {
-	// 	.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &presentCompleteSemaphore[frameIndex],
 		
-	// 	.waitSemaphoreCount = 1,
-	// 	.pWaitSemaphores = &presentCompleteSemaphore[frameIndex],
+		.pWaitDstStageMask = &waitDestinationStageMask,
 		
-	// 	.pWaitDstStageMask = &waitDestinationStageMask,
-		
-	// 	.commandBufferCount = 1,
-	// 	.pCommandBuffers = &graphicsCommandBuffers[frameIndex],
+		.commandBufferCount = 1,
+		.pCommandBuffers = &graphicsCommandBuffers[frameIndex],
 
-	// 	.signalSemaphoreCount = 1,
-	// 	.pSignalSemaphores =  &renderFinishedSemaphore[frameIndex],
+		.signalSemaphoreCount = 1,
+		.pSignalSemaphores =  &renderFinishedSemaphore[frameIndex],
 
-	// };
-
-
-
-	VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-	VkSubmitInfo2 submitInfo2 ={
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-
-		.waitSemaphoreInfoCount = 1,
-		.pWaitSemaphoreInfos = &(VkSemaphoreSubmitInfo){
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.semaphore = presentCompleteSemaphore[frameIndex],
-			.stageMask = stageMask,
-			.value = 0,
-			.deviceIndex = 1,
-		},
-
-		.commandBufferInfoCount = 1,
-		.pCommandBufferInfos = &(VkCommandBufferSubmitInfo){
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-			.commandBuffer = graphicsCommandBuffers[frameIndex],
-			
-		},
-		.signalSemaphoreInfoCount = 1,
-		.pSignalSemaphoreInfos = &(VkSemaphoreSubmitInfo) {
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-			.semaphore = renderFinishedSemaphore[frameIndex],
-			.stageMask = stageMask,
-			
-		},
 	};
 
-	vkQueueSubmit2(graphicsQueue, 1, &submitInfo2, inFlightFences[frameIndex]);
-	// vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[frameIndex]);
+	vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[frameIndex]);
 
 
 	VkPresentInfoKHR presentInfo = {
@@ -2179,7 +2117,7 @@ void drawFrame() {
 		
 	};
 
-	
+
 	result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
 
 	if(
@@ -2219,14 +2157,7 @@ void createSyncObjects(){
 
 		vkCreateFence(device, &createInfo, NULL,  &inFlightFences[i]);
 	}
-
-	VkFenceCreateInfo fenceInfo = {
-		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-		// Note: Do NOT use VK_FENCE_CREATE_SIGNALED_BIT here. 
-		// We want it to start unsignaled.
-	};
-	vkCreateFence(device, &fenceInfo, NULL, &transferFence);
-		
+	
 }
 
 void queueFamilyCheck(){
@@ -2446,10 +2377,10 @@ void  createLogicalDevice(){
 	{
 		EXIT_CLEAN("vkGetPhysicalDeviceSurfaceSupportKHR == false");
 	}
-	
+
 
 	float queuePriority = 0.5f;
-	
+
 	VkDeviceQueueCreateInfo deviceQueueCreateInfo = {
 
 		.sType =  VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -3385,8 +3316,6 @@ void initVulkan(){
 
 	createCommandPool();
 
-	createSyncObjects();
-
 	createDepthResources();
 
 	createTextureImage(model_path_text);
@@ -3407,7 +3336,7 @@ void initVulkan(){
 
 	createDescriptorSets();
 
-	
+	createSyncObjects();
 
 }
 void mainLoop(){
@@ -3454,8 +3383,6 @@ void cleanup(){
 		vkDestroyFence(device,inFlightFences[i],NULL);
 	}
 	
-	vkDestroyFence(device, transferFence, NULL);
-
 	vkDestroyImageView(device, textureImageView,  NULL);
 	
 	vkDestroyImage(device, depthImage, NULL);
@@ -3470,13 +3397,6 @@ void cleanup(){
 
 	vkDestroyDescriptorPool(device, descriptorPool, NULL);
 
-
-	vkFreeCommandBuffers(device, graphicsCommnadPool, commandBufferCount, graphicsCommandBuffers);
-	
-	vkFreeCommandBuffers(device, transferCommnadPool, 1, &transferCommandBuffers);
-
-
-
 	vkDestroyCommandPool(device, graphicsCommnadPool,NULL);
 
 	vkDestroyCommandPool(device, transferCommnadPool,NULL);
@@ -3490,8 +3410,6 @@ void cleanup(){
 	vkDestroyShaderModule(device,shaderModuleVert,NULL);
 
 	vkDestroyBuffer(device,vertextBuffer,NULL);
-
-	
 
 	vkFreeMemory(device, vertexBufferMemory, NULL);
 
