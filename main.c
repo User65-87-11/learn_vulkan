@@ -1043,6 +1043,7 @@ void  beginSingleTimeCommands(VkCommandBuffer *commandBuffer){
 	// };
 	// vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffer);
 
+	
 	VkCommandBufferBeginInfo beginInfo  = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
@@ -1053,26 +1054,25 @@ void  beginSingleTimeCommands(VkCommandBuffer *commandBuffer){
 void endSingleTimeCommands(VkCommandBuffer *commandBuffer){
 
 	vkEndCommandBuffer(*commandBuffer);
-	VkSubmitInfo submitInfo = {
-		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		.commandBufferCount = 1,
-		.pCommandBuffers = commandBuffer,
-	};
-	// vkQueueSubmit(graphicsQueue, 1, &submitInfo, NULL);
-	// vkQueueWaitIdle(graphicsQueue);
 
-	// 1. Ensure the fence is ready to be used again
-    // vkWaitForFences(device, 1, &transferFence, VK_TRUE, UINT64_MAX);
+	VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+
+	VkSubmitInfo2 submitInfo2 ={
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+		.commandBufferInfoCount = 1,
+		.pCommandBufferInfos = &(VkCommandBufferSubmitInfo){
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+			.commandBuffer = transferCommandBuffers,
+		},
+
+	};
+
     vkResetFences(device, 1, &transferFence);
 
-    // 2. Submit WITH the dedicated fence
-    vkQueueSubmit(graphicsQueue, 1, &submitInfo, transferFence);
-
-    // 3. Wait for THIS specific fence, not the whole queue
+	vkQueueSubmit2(transferQueue, 1, &submitInfo2, transferFence);
+   
     vkWaitForFences(device, 1, &transferFence, VK_TRUE, UINT64_MAX);
-
-
-	// vkFreeCommandBuffers(device, graphicsCommnadPool, 1, commandBuffer);
+ 
 }
 
 void createImage(
@@ -1087,40 +1087,52 @@ void createImage(
 	VkDeviceMemory* imageMemory
 ) 
 {
-
+	
 	
 	VkImageCreateInfo imageCreateInfo ={
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
-		// .format = VK_FORMAT_R8G8B8A8_SRGB,
 		.format  = format,
-		// .extent = {imageExtent.width,imageExtent.height,1},
-		.extent = {width,height,1},
+		.extent = (VkExtent3D)
+		{
+			.width= width,
+			.height = height,
+			.depth = 1
+		},
 		.mipLevels = mipLevels,
 		.arrayLayers = 1,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
-		// .tiling = VK_IMAGE_TILING_OPTIMAL,
 		.tiling = tiling,
-		// .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		.usage  = usage ,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-		
 	};
 
 	vkCreateImage(device, &imageCreateInfo, NULL, image);
  
 
-    VkMemoryRequirements memRequirements ;
-
-	vkGetImageMemoryRequirements(device, *image, &memRequirements);
-	
-    VkMemoryAllocateInfo allocInfo ={
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = memRequirements.size,
-		.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties),
-		
+	VkImageMemoryRequirementsInfo2 imageMemoryRequirementsInfo2 ={
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2,
+		.image = *image,
 	};
 
+	VkMemoryRequirements2  memoryRequirements2={
+		.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
+	};
+ 
+	vkGetImageMemoryRequirements2(
+		device,
+		&imageMemoryRequirementsInfo2,
+		&memoryRequirements2
+	);
+	
+
+    VkMemoryAllocateInfo allocInfo ={
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.allocationSize = memoryRequirements2.memoryRequirements.size,
+		.memoryTypeIndex = findMemoryType(memoryRequirements2.memoryRequirements.memoryTypeBits, properties),
+		
+	};
+	
 	vkAllocateMemory(device, &allocInfo,  NULL, imageMemory);
 	
  	vkBindImageMemory(device, *image, *imageMemory,0);
@@ -1470,7 +1482,8 @@ void createUniformBuffers(){
 			bufferSize, 
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-			&buffer, &bufferMemory
+			&buffer, 
+			&bufferMemory
 		);
 		uniformBuffers[i] = buffer;
 		uniformBuffersMemory[i] = bufferMemory;
@@ -1631,11 +1644,23 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 	beginSingleTimeCommands(&transferCommandBuffers);
 
 	VkBufferCopy bufferCopy = {
+		
 		.size = size,
 		.dstOffset = 0,
 		.srcOffset = 0
 	};
-	vkCmdCopyBuffer(transferCommandBuffers,  srcBuffer, dstBuffer, 1, &bufferCopy);
+	VkCopyBufferInfo2 copyBufferInfo2 = {
+		.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+		.dstBuffer = dstBuffer,
+		.srcBuffer = srcBuffer,
+		.pRegions = &(VkBufferCopy2){
+			.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+			.size = size,
+		},
+		.regionCount = 1,
+	};
+	vkCmdCopyBuffer2(transferCommandBuffers, &copyBufferInfo2);
+	// vkCmdCopyBuffer(transferCommandBuffers,  srcBuffer, dstBuffer, 1, &bufferCopy);
 
 	endSingleTimeCommands(&transferCommandBuffers);
 
@@ -1662,11 +1687,9 @@ void createIndexBuffer(){
 
 	memcpy(data, indices, bufferSize);
 
-
-
 	vkUnmapMemory(device, bufferMemory);
 	
-
+	
 	
 	createBuffer(
 		bufferSize,
@@ -1721,7 +1744,8 @@ void createVertexBuffer() {
 
 
 	
-	createBuffer(bufferSize,
+	createBuffer(
+		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT|VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		&vertextBuffer,
