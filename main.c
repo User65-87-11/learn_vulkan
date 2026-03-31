@@ -86,11 +86,12 @@ const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
 
-const uint32_t requiredDeviceExtensionCount = 1;
+const uint32_t requiredDeviceExtensionCount = 2;
 
 const char* requiredDeviceExtensions[] = {
 
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME
 };
 
 bool framebufferResized = false;
@@ -961,8 +962,11 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 	vkCmdCopyBufferToImage(transferCommandBuffers, *buffer, *image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
 	
 
+	
     endSingleTimeCommands(&transferCommandBuffers);
 	
+	
+
 }
 void transitionImageLayout(
 	VkImage *image, 
