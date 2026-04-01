@@ -4,6 +4,7 @@
 
 // 
 
+#include "cglm/vec3.h"
 #include <vulkan/vulkan_core.h>
 
 
@@ -45,6 +46,10 @@
 
 #include <math.h>
 
+#include <stdio.h>
+#include <unistd.h>   // for getcwd
+#include <limits.h>   // for PATH_MAX
+
 
 /**
 
@@ -63,10 +68,18 @@ const uint32_t HEIGHT = 600;
 
 #define ARR_LEN(A) sizeof(A)/sizeof(*A)
 
-#define EXIT_CLEAN(msg){\
+#define EXIT_CLEAN(msg)\
+	{\
 		printf("ERROR: %s\n",msg);\
 		cleanup();\
 		exit(1);\
+	}while(0)\
+
+#define GLM_VEC3_COPY(dst,src)\
+	{\
+		dst[0]=src[0];\
+		dst[1]=src[1];\
+		dst[2]=src[2];\
 	}while(0)\
 
 #ifdef NDEBUG
@@ -213,6 +226,20 @@ uint32_t mipLevels;
 
 //--------------------------
 
+bool firstMouse = true;
+float yaw   = -90.0f;	
+float pitch =  0.0f;
+float lastX =  800.0f / 2.0;
+float lastY =  600.0 / 2.0;
+float fov   =  45.0f;
+
+
+// camera
+vec3 cameraPos   = {0.0f, 0.0f, 3.0f};
+vec3 cameraFront = {0.0f, 0.0f, -1.0f};
+vec3 cameraUp    = {0.0f, 1.0f, 0.0f};
+
+
 
 struct Vertex{
 
@@ -312,7 +339,9 @@ struct UniformBufferObject {
     mat4 proj;
 };
 
-double  start_time = 0.0f;
+float startTime = 0.0f;
+float deltaTime = 0.0f;
+float lastTime = 0.0f;
 
 
 /**
@@ -346,6 +375,8 @@ g:::::gg   gg:::::g
 
 
 
+void mouseCallback(GLFWwindow* window, double xposIn, double yposIn);
+
 uint32_t createShaderFromFile(const char * path, uint8_t** buffer);
 
 void loadModel(char *fname) ;
@@ -357,11 +388,13 @@ void createBuffer(
 	VkBufferUsageFlags usage,
 	VkMemoryPropertyFlags properties,
 	VkBuffer *buffer,
-	VkDeviceMemory *bufferMemory);
+	VkDeviceMemory *bufferMemory
+);
 
 uint32_t findMemoryType(
 	uint32_t typeFilter, 
-	VkMemoryPropertyFlags properties);
+	VkMemoryPropertyFlags properties
+);
 
 void recreateSwapChain();
 
@@ -382,7 +415,13 @@ void createTextureImage(char * path);
 void createTextureImageView();
 
 
-void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) ;
+void generateMipmaps(
+	VkImage* image, 
+	VkFormat imageFormat, 
+	int32_t texWidth, 
+	int32_t texHeight, 
+	uint32_t mipLevels
+) ;
 
 void createImage(
 	uint32_t width, 
@@ -433,6 +472,7 @@ VkFormat findDepthFormat();
 
 bool hasStencilComponent(VkFormat format);
 
+void processInput(GLFWwindow *window);
  
 /*
 
@@ -450,7 +490,84 @@ bool hasStencilComponent(VkFormat format);
                                                                                      
 
 */
+
  
+
+
+void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
+
+ 
+	float xpos =  xposIn;
+    float ypos =  yposIn;
+
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f; // change this value to your liking
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    // make sure that when pitch is out of bounds, screen doesn't get flipped
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+	vec3 front;
+	
+	front[0] = cos(glm_rad(yaw)) * cos(glm_rad(pitch));
+    front[1] = sin(glm_rad(pitch));
+    front[2] = sin(glm_rad(yaw)) * cos(glm_rad(pitch));
+
+	
+	GLM_VEC3_COPY(cameraFront,front);
+}
+ 
+void processInput(GLFWwindow *window){
+
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    float cameraSpeed = 2.5 * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	{
+		 
+		glm_vec3_muladds(cameraFront, cameraSpeed, cameraPos);
+		
+	}
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	{
+		glm_vec3_mulsubs(cameraFront, cameraSpeed, cameraPos);
+		 
+	}
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
+		vec3 temp;
+		glm_vec3_crossn(cameraFront, cameraUp, temp);
+		glm_vec3_mulsubs(temp,cameraSpeed,cameraPos);
+		
+	}
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
+		vec3 temp;
+		glm_vec3_crossn(cameraFront, cameraUp, temp);
+		glm_vec3_muladds(temp, cameraSpeed, cameraPos);
+		
+	}
+}
 void loadModel(char *fname){
 	PRINT_FNAME;
 
@@ -940,7 +1057,15 @@ void createTextureImageView(){
 
 void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_t height) {
 	PRINT_FNAME;
-    // VkCommandBuffer commandBuffer ;
+  
+	
+	/*
+		vkCopyMemoryToImage 1.4
+		@VK_EXT_host_image_copy 
+	
+	*/
+
+
 	beginSingleTimeCommands(&transferCommandBuffers);
 
 
@@ -1021,7 +1146,9 @@ void transitionImageLayout(
 		0, 
 		0, (VkMemoryBarrier* )NULL,
 		0, (VkBufferMemoryBarrier*) NULL, 
-		1, &imageMemoryBarriers);
+		1, 
+		&imageMemoryBarriers
+	);
 
     endSingleTimeCommands(&transferCommandBuffers);
 }
@@ -1213,6 +1340,12 @@ void createTextureImage(char * path){
 		&textureImageMemory
 	);
 
+	/*
+		Rendering to it → VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		Sampling from it → VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		Transfer destination → VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+			
+	*/
 
 	transitionImageLayout(
 		&textureImage, 
@@ -1226,31 +1359,42 @@ void createTextureImage(char * path){
 		mipLevels
 	);
 
-	copyBufferToImage(&stagingBuffer, &textureImage, texWidth, texHeight);
+	copyBufferToImage(
+		&stagingBuffer, 
+		&textureImage, 
+		texWidth, 
+		texHeight
+	);
 
 	 
 	// transitionImageLayout(
 	// 	&textureImage, 
 	// 	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 	// 	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	// 	VK_ACCESS_2_TRANSFER_WRITE_BIT,   // src: transfer just wrote
-	// 	VK_ACCESS_2_SHADER_READ_BIT,      // dst: shader will read
-	// 	VK_PIPELINE_STAGE_2_TRANSFER_BIT, // src stage
-	// 	VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,  // ✅ dst stage: shader (NOT transfer!)
+	// 	VK_ACCESS_2_TRANSFER_WRITE_BIT,    
+	// 	VK_ACCESS_2_SHADER_READ_BIT,       
+	// 	VK_PIPELINE_STAGE_2_TRANSFER_BIT,  
+	// 	VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,   
 	// 	VK_IMAGE_ASPECT_COLOR_BIT,
 	// 	mipLevels
 	// );
 
 	// vkFreeMemory(device, textureImageMemoryTemp, NULL);
 
-	vkDestroyBuffer(device,stagingBuffer,  NULL);
+	vkDestroyBuffer(device, stagingBuffer,  NULL);
 	
 	vkFreeMemory(device, stagingBufferMemory,  NULL);
 
 
 	// generateMipmaps(*textureImage, vk::Format::eR8G8B8A8Srgb, texWidth, texHeight, mipLevels);
 
-	generateMipmaps(&textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
+	generateMipmaps(
+		&textureImage, 
+		VK_FORMAT_R8G8B8A8_SRGB, 
+		texWidth, 
+		texHeight, 
+		mipLevels
+	);
 }
 
 void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
@@ -1272,7 +1416,18 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     int32_t mipWidth = texWidth;
     int32_t mipHeight = texHeight;
 
-    // Transition base mip level from TRANSFER_DST_OPTIMAL → TRANSFER_SRC_OPTIMAL
+
+	/*
+		SELECT operations
+		WHERE stage ∈ srcStageMask
+		AND access ∈ srcAccessMask
+
+		wait for them to complete
+
+		expected operation to follow 
+		.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+	*/
+    
     VkImageMemoryBarrier2 barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -1292,13 +1447,13 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
         .srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
         .dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
     };
-
+	
     VkDependencyInfo dependencyInfo = {
         .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         .imageMemoryBarrierCount = 1,
         .pImageMemoryBarriers = &barrier,
     };
-
+	// performs the transition
     vkCmdPipelineBarrier2(transferCommandBuffers, &dependencyInfo);
 
     // Generate mip levels
@@ -1763,7 +1918,9 @@ void createVertexBuffer() {
 	vkFreeMemory(device, bufferMemory, NULL);
 }
 
+static void keyCallback(GLFWwindow * win, int, int, int, int){
 
+}
 static void framebufferResizeCallback(GLFWwindow *win,int w,int h)
 {
 	framebufferResized = true;
@@ -1781,6 +1938,17 @@ void createSurface(){
 uint32_t createShaderFromFile(const char * path, uint8_t** buffer){
 
 	PRINT_FNAME;
+
+
+	char cwd[256];
+
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+		printf("Current working directory:\n");
+        printf("%s\n", cwd);
+    } else {
+        perror("getcwd() error");
+    }
+
 
 	FILE *file = fopen(path, "rb");  // open file in read mode
 
@@ -2058,11 +2226,6 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 }
 void updateUniformBuffer(uint32_t currentImage){
 
-	double current_time;
-
-	current_time = glfwGetTime();
-
-	double time = current_time - start_time;
 
 	// printf("time %f\n",time);
 
@@ -2074,12 +2237,16 @@ void updateUniformBuffer(uint32_t currentImage){
 	
 
 
-	glm_rotate_x(ubo.model, time*glm_rad(90.0f), ubo.model);
+	glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
 
 
-	 
+	// glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-	glm_lookat((vec3){2.0f,2.0f,2.0f}, (vec3){.0f,.0f,.0f}, (vec3){.0f,1.0f,0.0f}, ubo.view);
+	vec3 cameraCenter;
+	glm_vec3_add(cameraPos, cameraFront, cameraCenter);
+
+	glm_lookat(cameraPos, cameraCenter, cameraUp, ubo.view);
+
 
 	
 	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 10.0f , ubo.proj);
@@ -2328,6 +2495,7 @@ void physicalDeviceExtensionCheck(){
 	// bool found = false;
 	int supportedCnt = 0;
 	// bool requiredDeviceExtensionSupport = false;
+	 
 	for(int i=0;i<deviceExtensionPropertieCount; i++){
 
 		// printf("\tphys device extension: %s\n",exp_props[i].extensionName);
@@ -2335,6 +2503,7 @@ void physicalDeviceExtensionCheck(){
 		for(int k = 0;k < requiredDeviceExtensionCount ; k++)
 		{
 			if(strcmp(exp_props[i].extensionName, requiredDeviceExtensions[k]) == 0){
+				printf("\tExtension found %s\n",requiredDeviceExtensions[k]);
 				supportedCnt ++;
 				break;
 			}
@@ -2984,7 +3153,7 @@ void createInstance(){
 	// printf("glfwExtensionsExtra [%d]:\n",glfwExtensionCountExtra);
 	for(int i=0;i<glfwExtensionCountExtra;i++){
 
-		printf("extensions extra: %s\n",glfwExtensionsExtra[i]);
+		printf("\tglfw required extensions: %s\n",glfwExtensionsExtra[i]);
 	}
 
 	{
@@ -3071,7 +3240,8 @@ void createGraphicsPipeline() {
 	
 	//--- FRAGMENT
 
-
+ 
+		
 
 	if(dataSize == 0)
 	{
@@ -3100,6 +3270,7 @@ void createGraphicsPipeline() {
 
 	dataSize = createShaderFromFile(path, &data);
 	
+	 
 	if(dataSize == 0)
 	{
 		printf("Shader path: %s\n",path);
@@ -3441,10 +3612,19 @@ void initVulkan(){
 void mainLoop(){
 	PRINT_FNAME;
 
-	start_time = glfwGetTime();
+	startTime = glfwGetTime();
 
 	while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+		
+		float currentTime =   glfwGetTime();
+		deltaTime = currentTime - lastTime;
+		lastTime = currentTime;
+
+
+		processInput(window);
+
 		drawFrame();
     }
 
@@ -3552,23 +3732,33 @@ void cleanup(){
 
 }
 void initWindow(){
+
 	printf("%s %d %d\n",__FUNCTION__, WIDTH, HEIGHT );
 
+
+
+
 	glfwInit();
+ 
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
  	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
-	
-	
 	
 	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", NULL, NULL);
 
- 
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	glfwSetCursorPosCallback(window, mouseCallback);
+	
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 int main(){
+
 	printf("%s\n", __FUNCTION__ );
 	initWindow();
 	initVulkan();
