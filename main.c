@@ -226,6 +226,7 @@ uint32_t mipLevels;
 
 //--------------------------
 
+bool leftPressed = false;
 bool firstMouse = true;
 float yaw   = -90.0f;	
 float pitch =  0.0f;
@@ -233,6 +234,7 @@ float lastX =  800.0f / 2.0;
 float lastY =  600.0 / 2.0;
 float fov   =  45.0f;
 
+float prevX, prevY;
 
 // camera
 vec3 cameraPos   = {0.0f, 0.0f, 3.0f};
@@ -373,7 +375,7 @@ g:::::gg   gg:::::g
        gggggg                                                                                                                                                                                                                                  
 */
 
-
+void procMouseInput(GLFWwindow* window);
 
 void mouseCallback(GLFWwindow* window, double xposIn, double yposIn);
 
@@ -491,12 +493,56 @@ void processInput(GLFWwindow *window);
 
 */
 
- 
 
+void procMouseInput(GLFWwindow* window){
+
+	double xpos,ypos;
+	double dx,dy;
+	glfwGetCursorPos(window, &xpos, &ypos);
+
+	
+
+	dx = xpos - prevX;
+	dy = ypos - prevY;
+
+
+	printf("dx:%f, dy:%f\n",dx,dy);
+
+	prevX = xpos;
+	prevY = ypos;
+	
+	glfwSetCursorPos(window, WIDTH >> 1, HEIGHT >> 1);
+
+
+
+	float sensitivity = 0.1f; // change this value to your liking
+    dx *= sensitivity;
+    dy *= sensitivity;
+
+    yaw += dx;
+    pitch += dy;
+
+    // make sure that when pitch is out of bounds, screen doesn't get flipped
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+	vec3 front;
+	
+	front[0] = cos(glm_rad(yaw)) * cos(glm_rad(pitch));
+    front[1] = sin(glm_rad(pitch));
+    front[2] = sin(glm_rad(yaw)) * cos(glm_rad(pitch));
+
+	
+	GLM_VEC3_COPY(cameraFront,front);
+
+}
 
 void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
 
- 
+
+
 	float xpos =  xposIn;
     float ypos =  yposIn;
 
@@ -511,6 +557,9 @@ void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
     float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
     lastX = xpos;
     lastY = ypos;
+
+
+	if(leftPressed == false) return;
 
     float sensitivity = 0.1f; // change this value to your liking
     xoffset *= sensitivity;
@@ -539,6 +588,14 @@ void processInput(GLFWwindow *window){
 
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+	leftPressed = false;
+	
+	if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ){
+		leftPressed = true;
+		
+	}
+
 
     float cameraSpeed = 2.5 * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -2237,7 +2294,7 @@ void updateUniformBuffer(uint32_t currentImage){
 	
 
 
-	glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
+	// glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
 
 
 	// glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
@@ -3622,6 +3679,7 @@ void mainLoop(){
 		deltaTime = currentTime - lastTime;
 		lastTime = currentTime;
 
+		
 
 		processInput(window);
 
@@ -3738,7 +3796,9 @@ void initWindow(){
 
 
 
+
 	glfwInit();
+ 
  
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -3749,8 +3809,13 @@ void initWindow(){
 	
 	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", NULL, NULL);
 
+	prevX = WIDTH >> 1;
+	prevY = HEIGHT >> 1;
 
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	
+
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	glfwSetCursorPosCallback(window, mouseCallback);
 	
