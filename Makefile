@@ -24,11 +24,8 @@ $(BUILD_DIR)/main.o: main.c
 
 
 
-$(BUILD_DIR)/asm.o: asm.asm
-	nasm  -f elf64 -o $@ $^ 
 
-
-$(BUILD_DIR)/main.elf: $(BUILD_DIR)/main.o $(BUILD_DIR)/asm.o
+$(BUILD_DIR)/main.elf: $(BUILD_DIR)/main.o 
 							
 	
 	gcc  -o $@ $^ -lglfw -lvulkan -lm
