@@ -9,3 +9,6 @@ shaders3
 out
 bootstrap_gen.text
 .clangd
+build
+assets
+.vscode
