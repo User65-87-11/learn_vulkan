@@ -47,7 +47,12 @@
 #include <math.h>
 
 #include <stdio.h>
+#ifdef _WIN32
+#include <direct.h>
+#include <stdlib.h>
+#else
 #include <unistd.h>   // for getcwd
+#endif
 #include <limits.h>   // for PATH_MAX
 
 
@@ -99,12 +104,12 @@ const char* validationLayers[] = {
         "VK_LAYER_KHRONOS_validation"
 };
 
-const uint32_t requiredDeviceExtensionCount = 2;
+const uint32_t requiredDeviceExtensionCount = 1;
 
 const char* requiredDeviceExtensions[] = {
 
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		// VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME
 };
 
 bool framebufferResized = false;
@@ -525,6 +530,7 @@ void procMouseInput(GLFWwindow* window){
     // make sure that when pitch is out of bounds, screen doesn't get flipped
     if (pitch > 89.0f)
         pitch = 89.0f;
+	
     if (pitch < -89.0f)
         pitch = -89.0f;
 
@@ -541,6 +547,7 @@ void procMouseInput(GLFWwindow* window){
 
 void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
 
+	printf("%f %f\n",xposIn,yposIn);
 
 
 	float xpos =  xposIn;
@@ -586,6 +593,7 @@ void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
  
 void processInput(GLFWwindow *window){
 
+	
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -658,7 +666,7 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 
 	for(int i=0;i<data->buffers_count;i++){
 		printf("Buffer:%s\n",data->buffers[i].uri);
-		printf("Buffer.size:%ld\n",data->buffers[i].size);
+		printf("Buffer.size:%lld\n",data->buffers[i].size);
 		printf("Buffer.name:%s\n",data->buffers[i].name);
 		printf("Buffer.uri:%s\n",data->buffers[i].uri);
 		printf("Buffer.data:%p\n",data->buffers[i].data);
@@ -825,7 +833,7 @@ typedef enum cgltf_type
 	cgltf_accessor *acc_idx = primitive->indices;
 	cgltf_accessor *acc_vert = NULL; 
  	
-	for(int i=0;i<primitive->attributes_count;i++){
+	for(int i=0;i < primitive->attributes_count;i++){
 
 		cgltf_attribute attr =  primitive->attributes[i];
 		if(attr.type == cgltf_attribute_type_position)
@@ -896,8 +904,7 @@ typedef enum cgltf_type
 
 	if(primitive->indices)
 	{
-		int offset = primitive->indices->offset;
-		
+	
 		// printf("primitive->indices->component_type %d\n",primitive->indices->component_type);
 		// assert(primitive->indices->component_type == cgltf_component_type_r_16u);
 
@@ -2319,14 +2326,14 @@ void updateUniformBuffer(uint32_t currentImage){
 
 void drawFrame() {
 
-
+ 
 	VkResult result = vkWaitForFences(
 		device, 
 		1, 
 		&inFlightFences[frameIndex],
 		VK_TRUE, UINT64_MAX
 	);
-
+	
 	if(result != VK_SUCCESS)
 	{
 		EXIT_CLEAN("failed to wait for fence!");
@@ -2343,7 +2350,7 @@ void drawFrame() {
 		NULL, 
 		&imageIndex
 	);
- 
+ 	
 	if(result == VK_ERROR_OUT_OF_DATE_KHR){
 
 		recreateSwapChain();
@@ -2355,15 +2362,15 @@ void drawFrame() {
 		assert(result == VK_TIMEOUT || result == VK_NOT_READY);
 		EXIT_CLEAN("failed to acquire swapchain image!");
 	}
-
+	
 	
 	updateUniformBuffer(frameIndex);
-
+	
 	vkResetFences(device, 1, &inFlightFences[frameIndex]);
 
 	// vkResetCommandBuffer(graphicsCommandBuffers[frameIndex],VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
-
+	
 	recordCommandBuffer(imageIndex,frameIndex);
 
 	// VkPipelineStageFlags waitDestinationStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ;
@@ -2388,7 +2395,7 @@ void drawFrame() {
 
 
 	VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
+	
 	VkSubmitInfo2 submitInfo2 ={
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
 
@@ -2398,7 +2405,7 @@ void drawFrame() {
 			.semaphore = presentCompleteSemaphore[frameIndex],
 			.stageMask = stageMask,
 			.value = 0,
-			.deviceIndex = 1,
+			.deviceIndex = 0,
 		},
 
 		.commandBufferInfoCount = 1,
@@ -2415,10 +2422,11 @@ void drawFrame() {
 			
 		},
 	};
-
+	
+	 
 	vkQueueSubmit2(graphicsQueue, 1, &submitInfo2, inFlightFences[frameIndex]);
-	// vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[frameIndex]);
-
+	
+	
 
 	VkPresentInfoKHR presentInfo = {
 
@@ -2446,7 +2454,7 @@ void drawFrame() {
 		assert(result == VK_SUCCESS);
 	}
 	frameIndex = (frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
-
+	
 }
 void createSyncObjects(){
 	
@@ -2553,7 +2561,7 @@ void physicalDeviceExtensionCheck(){
 	int supportedCnt = 0;
 	// bool requiredDeviceExtensionSupport = false;
 	 
-	for(int i=0;i<deviceExtensionPropertieCount; i++){
+	for(int i=0;i < deviceExtensionPropertieCount; i++){
 
 		// printf("\tphys device extension: %s\n",exp_props[i].extensionName);
 
@@ -2577,11 +2585,11 @@ void physicalDeviceExtensionCheck(){
 		printf("No suported extensions\n");
 		printf("supportedCnt: %d of %d\n",supportedCnt, requiredDeviceExtensionCount);
 
-		for(int i=0;i<deviceExtensionPropertieCount; i++){
+		for(int i=0;i < deviceExtensionPropertieCount; i++){
 
 			printf("\tfound: %s\n",exp_props[i].extensionName);
 		}
-		for(int i=0;i<requiredDeviceExtensionCount; i++){
+		for(int i=0;i < requiredDeviceExtensionCount; i++){
 
 			printf("\trequired: %s\n",requiredDeviceExtensions[i]);
 		}
@@ -3815,7 +3823,7 @@ void initWindow(){
 	
 
 
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glfwSetCursorPosCallback(window, mouseCallback);
 	

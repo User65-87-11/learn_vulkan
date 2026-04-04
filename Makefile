@@ -2,7 +2,7 @@ BUILD_DIR = out
 SRC_DIR = printf
 
 
-CC = clang
+CC = gcc
 CFLAGS = -std=c23 -g 
  
 LD_FLAGS = ""
@@ -28,7 +28,7 @@ $(BUILD_DIR)/main.o: main.c
 $(BUILD_DIR)/main.elf: $(BUILD_DIR)/main.o 
 							
 	
-	gcc  -o $@ $^ -lglfw -lvulkan -lm
+	$(CC)  -o $@ $^ -lglfw3 -lvulkan-1 -lm
 # 	ld -o $@ $^ 
 
 
