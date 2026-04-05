@@ -1,0 +1,15 @@
+cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc  
+cmake --build build
+
+
+git clone https://github.com/glfw/glfw.git
+cd glfw
+
+which gcc
+Get-Command gcc
+
+
+cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=gcc   -DCMAKE_BUILD_TYPE=Release   -DGLFW_BUILD_EXAMPLES=OFF   -DGLFW_BUILD_TESTS=OFF   -DGLFW_BUILD_DOCS=OFF   -DCMAKE_INSTALL_PREFIX=c:/libs/glfw-ucrt
+
+cmake --build build
+cmake --install build

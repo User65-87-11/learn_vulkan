@@ -442,13 +442,14 @@ void createImage(
 	VkDeviceMemory * imageMemory
 );
 
-void beginSingleTimeCommands(VkCommandBuffer *commandBuffer);
+void beginSingleTimeCommands(VkCommandBuffer commandBuffer);
 
-void endSingleTimeCommands(VkCommandBuffer *commandBuffer);
+void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 // void transitionImageLayout(VkImage *image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlagBits aspectFlags);
 
 void transitionImageLayout(
+	VkCommandBuffer cmdBuffer,
 	VkImage *image, 
 
 	VkImageLayout oldLayout, 
@@ -547,7 +548,7 @@ void procMouseInput(GLFWwindow* window){
 
 void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
 
-	printf("%f %f\n",xposIn,yposIn);
+	// printf("%f %f\n",xposIn,yposIn);
 
 
 	float xpos =  xposIn;
@@ -566,7 +567,7 @@ void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
     lastY = ypos;
 
 
-	if(leftPressed == false) return;
+	// if(leftPressed == false) return;
 
     float sensitivity = 0.1f; // change this value to your liking
     xoffset *= sensitivity;
@@ -1036,7 +1037,12 @@ void createDepthResources() {
 	
 	createImageView(&depthImageView,&depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,1);
 
+
+	beginSingleTimeCommands(transferCommandBuffers);
+
+
 	transitionImageLayout(
+		transferCommandBuffers,
         &depthImage,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -1048,6 +1054,7 @@ void createDepthResources() {
 		1
     );
 
+	endSingleTimeCommands(transferCommandBuffers);
 	
 
 }
@@ -1130,7 +1137,7 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 	*/
 
 
-	beginSingleTimeCommands(&transferCommandBuffers);
+	beginSingleTimeCommands(transferCommandBuffers);
 
 
 	
@@ -1152,12 +1159,13 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 	
 
 	
-    endSingleTimeCommands(&transferCommandBuffers);
+    endSingleTimeCommands(transferCommandBuffers);
 	
 	
 
 }
 void transitionImageLayout(
+	VkCommandBuffer cmdBuffer,
 	VkImage *image, 
 	
 	VkImageLayout oldLayout, 
@@ -1175,7 +1183,7 @@ void transitionImageLayout(
 
 	// PRINT_FNAME;
     // VkCommandBuffer commandBuffer;
-	beginSingleTimeCommands(&transferCommandBuffers);
+	
 	
 
 	// TODO
@@ -1204,7 +1212,7 @@ void transitionImageLayout(
 
 
 	vkCmdPipelineBarrier(
-		transferCommandBuffers, 
+		cmdBuffer, 
 		srcStageMask, 
 		dstStageMask, 
 		0, 
@@ -1214,10 +1222,10 @@ void transitionImageLayout(
 		&imageMemoryBarriers
 	);
 
-    endSingleTimeCommands(&transferCommandBuffers);
+ 
 }
 
-void  beginSingleTimeCommands(VkCommandBuffer *commandBuffer){
+void  beginSingleTimeCommands(VkCommandBuffer commandBuffer){
 
 	/*
 		 allocInfo = (VkCommandBufferAllocateInfo){ 
@@ -1228,7 +1236,7 @@ void  beginSingleTimeCommands(VkCommandBuffer *commandBuffer){
 		
 	};
 	*/
-	vkResetCommandBuffer(*commandBuffer, 0);
+	vkResetCommandBuffer(commandBuffer, 0);
 
 	// VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
 	// 	.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -1244,11 +1252,11 @@ void  beginSingleTimeCommands(VkCommandBuffer *commandBuffer){
 		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 	};
 
-	vkBeginCommandBuffer(*commandBuffer, &beginInfo);
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
 }
-void endSingleTimeCommands(VkCommandBuffer *commandBuffer){
+void endSingleTimeCommands(VkCommandBuffer commandBuffer){
 
-	vkEndCommandBuffer(*commandBuffer);
+	vkEndCommandBuffer(commandBuffer);
 
 	VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 
@@ -1257,7 +1265,7 @@ void endSingleTimeCommands(VkCommandBuffer *commandBuffer){
 		.commandBufferInfoCount = 1,
 		.pCommandBufferInfos = &(VkCommandBufferSubmitInfo){
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-			.commandBuffer = transferCommandBuffers,
+			.commandBuffer = commandBuffer,//fix transferCommandBuffers
 		},
 
 	};
@@ -1411,7 +1419,10 @@ void createTextureImage(char * path){
 			
 	*/
 
+	beginSingleTimeCommands(transferCommandBuffers);
+
 	transitionImageLayout(
+		transferCommandBuffers,
 		&textureImage, 
 		VK_IMAGE_LAYOUT_UNDEFINED,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -1423,6 +1434,7 @@ void createTextureImage(char * path){
 		mipLevels
 	);
 
+	endSingleTimeCommands(transferCommandBuffers);
 	copyBufferToImage(
 		&stagingBuffer, 
 		&textureImage, 
@@ -1465,7 +1477,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
 
     PRINT_FNAME;
     // VkCommandBuffer commandBuffer;
-    beginSingleTimeCommands(&transferCommandBuffers);
+    beginSingleTimeCommands(transferCommandBuffers);
 
     // Check linear blitting support
     VkFormatProperties2 formatProperties = {
@@ -1593,7 +1605,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
 
     vkCmdPipelineBarrier2(transferCommandBuffers, &dependencyInfo);
 
-    endSingleTimeCommands(&transferCommandBuffers);
+    endSingleTimeCommands(transferCommandBuffers);
 }
 
 void createDescriptorSets(){
@@ -1602,8 +1614,12 @@ void createDescriptorSets(){
 
 	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT]={
 		//C99 designated initializer
-		 [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
+		//  [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
 	};
+
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+   		layouts[i] = descriptorSetLayout;
+}
 
 	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -1864,7 +1880,7 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 	// VkCommandBuffer commandCopyBuffer ;
 
 
-	beginSingleTimeCommands(&transferCommandBuffers);
+	beginSingleTimeCommands(transferCommandBuffers);
 
 	VkBufferCopy bufferCopy = {
 		
@@ -1885,7 +1901,7 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 	vkCmdCopyBuffer2(transferCommandBuffers, &copyBufferInfo2);
 	// vkCmdCopyBuffer(transferCommandBuffers,  srcBuffer, dstBuffer, 1, &bufferCopy);
 
-	endSingleTimeCommands(&transferCommandBuffers);
+	endSingleTimeCommands(transferCommandBuffers);
 
 }
 void createIndexBuffer(){
@@ -2137,8 +2153,124 @@ void createCommandPool(){
 	
 
 }
+void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
+	    VkCommandBufferBeginInfo beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = 0, 
+        .pInheritanceInfo = NULL,
+    };
+    vkBeginCommandBuffer(graphicsCommandBuffers[frameIndex], &beginInfo);
 
-void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
+    // ✅ REMOVED: transitionImageLayout calls here.
+    // Dynamic rendering automatically handles UNDEFINED -> ATTACHMENT_OPTIMAL transitions.
+
+
+	  // ✅ ADD THIS: Transition swapchain image BEFORE rendering
+    VkImageMemoryBarrier2 beginBarrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+        .srcAccessMask = 0,
+        .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  // Safe: we clear anyway
+        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = swapchainImages[imageIndex],
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    };
+    VkDependencyInfo beginDepInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &beginBarrier,
+    };
+    vkCmdPipelineBarrier2(graphicsCommandBuffers[frameIndex], &beginDepInfo);
+	
+
+    VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+    VkClearValue clearDepth = {1.0f, 0};
+    
+    VkRenderingAttachmentInfo colorAttachmentInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = swapchainImageViews[imageIndex],
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = clearColor
+    };
+    VkRenderingAttachmentInfo depthAttachmentInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = depthImageView,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .clearValue = clearDepth
+    };
+
+    VkRenderingInfo renderingInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = { .offset = {0, 0}, .extent = swapChainExtent },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachmentInfo,
+        .pDepthAttachment = &depthAttachmentInfo,
+    };
+
+    vkCmdBeginRendering(graphicsCommandBuffers[frameIndex], &renderingInfo);
+
+    vkCmdBindPipeline(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+    
+    VkViewport viewPort = {
+        .x = 0, .y = 0, .width = swapChainExtent.width, .height = swapChainExtent.height, 
+        .minDepth = 0.0f, .maxDepth = 1.0f
+    };
+    vkCmdSetViewport(graphicsCommandBuffers[frameIndex], 0, 1, &viewPort);
+    
+    VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
+    vkCmdSetScissor(graphicsCommandBuffers[frameIndex], 0, 1, &scissor);
+
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &vertextBuffer, &offset);
+    vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindDescriptorSets(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, 
+                            pipelineLayout, 0, 1, &descriptorSets[frameIndex], 0, NULL);
+
+    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, 1, 0, 0, 0);
+    vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
+
+    // ✅ Explicit transition to PRESENT_SRC_KHR for vkQueuePresentKHR
+    VkImageMemoryBarrier2 endBarrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+        .dstAccessMask = 0,
+        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = swapchainImages[imageIndex],
+        .subresourceRange = { 
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, 
+            .baseArrayLayer = 0, .layerCount = 1 
+        },
+    };
+    VkDependencyInfo depInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &endBarrier
+    };
+    vkCmdPipelineBarrier2(graphicsCommandBuffers[frameIndex], &depInfo);
+
+    vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
+}
+void recordCommandBuffer2(uint32_t imageIndex,uint32_t frameIndex) {
 
 	
 	
@@ -2150,32 +2282,31 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 	vkBeginCommandBuffer(graphicsCommandBuffers[frameIndex], &beginInfo );
 
 	
-	transitionImageLayout(
-		&swapchainImages[imageIndex], 
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		// currentSwapchainLayouts[imageIndex], 
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
-		0, 
-		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 
-		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
-		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		1
-	);
+	// transitionImageLayout(
+	// 	graphicsCommandBuffers[frameIndex],
+	// 	&swapchainImages[imageIndex], 
+	// 	VK_IMAGE_LAYOUT_UNDEFINED,
+	// 	VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
+	// 	0, 
+	// 	VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 
+	// 	VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
+	// 	VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
+	// 	VK_IMAGE_ASPECT_COLOR_BIT,
+	// 	1
+	// );
 
-	//  currentSwapchainLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	transitionImageLayout(
-		&depthImage, 
-		VK_IMAGE_LAYOUT_UNDEFINED, 
-		VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
-		VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
-		VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
-		VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
-		VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
-		VK_IMAGE_ASPECT_DEPTH_BIT,
-		1
-	);
+	// transitionImageLayout(
+	// 	graphicsCommandBuffers[frameIndex],
+	// 	&depthImage, 
+	// 	VK_IMAGE_LAYOUT_UNDEFINED, 
+	// 	VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
+	// 	VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
+	// 	VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
+	// 	VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
+	// 	VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
+	// 	VK_IMAGE_ASPECT_DEPTH_BIT,
+	// 	1
+	// );
 
 	VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
 
@@ -2272,6 +2403,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
  
 	
 	transitionImageLayout(
+		graphicsCommandBuffers[frameIndex],
 		&swapchainImages[imageIndex], 
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
 		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 
@@ -2283,7 +2415,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex) {
 		1
 	);
 
-	// currentSwapchainLayouts[imageIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+ 
 
 	vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
 
@@ -2405,7 +2537,7 @@ void drawFrame() {
 			.semaphore = presentCompleteSemaphore[frameIndex],
 			.stageMask = stageMask,
 			.value = 0,
-			.deviceIndex = 0,
+			.deviceIndex = 0,// FIX 1
 		},
 
 		.commandBufferInfoCount = 1,

@@ -8,7 +8,7 @@ CFLAGS = -std=c23 -g
 LD_FLAGS = ""
 
 
-OBJECTS_TO_BUILD = $(BUILD_DIR)/main.elf 
+OBJECTS_TO_BUILD = $(BUILD_DIR)/main.exe 
  
 ALL: CLEAN INIT  ${OBJECTS_TO_BUILD} 
 
@@ -20,16 +20,12 @@ CLEAN:
 
 
 $(BUILD_DIR)/main.o: main.c
-	$(CC)  $(CFLAGS) -c  $^ -o $@		
+	$(CC) -I"C:/LIBS/glfw-ucrt/include"  $(CFLAGS) -c  $^ -o $@		
 
 
 
+$(BUILD_DIR)/main.exe: $(BUILD_DIR)/main.o 
+	$(CC)  -o $@ $^ -L"C:/LIBS/glfw-ucrt/lib"  -lglfw3 -lvulkan-1 -lm -luser32 -lgdi32 -lshell32 -lwinmm
 
-$(BUILD_DIR)/main.elf: $(BUILD_DIR)/main.o 
-							
 	
-	$(CC)  -o $@ $^ -lglfw3 -lvulkan-1 -lm
-# 	ld -o $@ $^ 
-
-
 	
