@@ -1,0 +1,14 @@
+CompileFlags:
+  Add: 
+  - -Wall
+  - -Wextra
+  - -std=c23
+  - -g
+  - "-IC:/VulkanSDK/1.4.341.1/Include"
+  - "-IC:/glfw-3.4.bin.WIN64/include"
+  - -Wno-format
+  - -Wno-unused-parameter
+  - -Wno-unused-variable
+  - -Wno-sign-compare
+  - -Wno-misleading-indentation
+

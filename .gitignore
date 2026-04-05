@@ -8,7 +8,9 @@ shaders/*.spv
 shaders3
 out
 bootstrap_gen.text
-.clangd
 build
 assets
 .vscode
+zig-out
+out
+.zig-cache

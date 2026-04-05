@@ -1998,9 +1998,7 @@ void createVertexBuffer() {
 	vkFreeMemory(device, bufferMemory, NULL);
 }
 
-static void keyCallback(GLFWwindow * win, int, int, int, int){
-
-}
+ 
 static void framebufferResizeCallback(GLFWwindow *win,int w,int h)
 {
 	framebufferResized = true;
@@ -2161,11 +2159,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
     };
     vkBeginCommandBuffer(graphicsCommandBuffers[frameIndex], &beginInfo);
 
-    // ✅ REMOVED: transitionImageLayout calls here.
-    // Dynamic rendering automatically handles UNDEFINED -> ATTACHMENT_OPTIMAL transitions.
 
-
-	  // ✅ ADD THIS: Transition swapchain image BEFORE rendering
     VkImageMemoryBarrier2 beginBarrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
@@ -2191,7 +2185,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
         .pImageMemoryBarriers = &beginBarrier,
     };
     vkCmdPipelineBarrier2(graphicsCommandBuffers[frameIndex], &beginDepInfo);
-	
+
 
     VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
     VkClearValue clearDepth = {1.0f, 0};
@@ -3370,22 +3364,24 @@ void createInstance(){
 			return  ;
 		}
 
-		printf("Print layers:\n");
+		printf("Print layers: %d\n",layerCount);
 		bool validationLayerSupported = false;
 		for (uint32_t i = 0; i < layerCount; i++) {
 			
 			printf("layer: %s\n",layers[i].layerName);
 
 			uint32_t cnt = 0;
-
 			vkEnumerateInstanceExtensionProperties(layers[i].layerName, &cnt, NULL);
 
-			VkExtensionProperties expr[cnt];
-			vkEnumerateInstanceExtensionProperties(layers[i].layerName, &cnt, expr);
+			if(cnt > 0)
+			{
+				VkExtensionProperties expr[cnt];
+				vkEnumerateInstanceExtensionProperties(layers[i].layerName, &cnt, expr);
 
-			for(int i=0;i<cnt;i++){
+				for(int i=0;i<cnt;i++){
 
-				printf("\tlayer extensions: %s\n",expr[i].extensionName);
+					printf("\tlayer extensions: %s\n",expr[i].extensionName);
+				}
 			}
 
 			if(strcmp(layers[i].layerName, validationLayers[0]) ==0){
