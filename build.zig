@@ -40,9 +40,11 @@ pub fn build(b: *std.Build) void {
 
     exe.linkLibC();
 
-    const install = b.addInstallArtifact(exe, .{
-        .dest_dir = .{ .override = .{ .custom = "out" } },
-    });
+    // const install = b.addInstallArtifact(exe, .{
+    //     .dest_dir = .{ .override = .{ .custom = "out" } },
+    // });
 
-    b.getInstallStep().dependOn(&install.step);
+    // b.getInstallStep().dependOn(&install.step);
+
+    b.installArtifact(exe);
 }

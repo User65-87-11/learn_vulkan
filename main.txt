@@ -781,19 +781,6 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 	// 	printf(" .data:%p\n",data->buffer_views[i].data);
 	// }
 	
-	printf("Scene count: %d\n",data->scenes_count);
-	for(int i=0;i<data->scenes_count;i++)
-	{
-
-		printf("Node count: %d\n",data->scenes[i].nodes_count);
-		for(int j=0;j<data->scenes[i].nodes_count;j++)
-		{
-			printf("Node name: %s\n",data->scenes[i].nodes[j]->name);
-		}
-	}
-
-
-
 	for(int i=0;i<data->meshes_count;i++){
 	
 		printf("Meshes :");
@@ -1575,7 +1562,6 @@ void createTextureImage(char * path){
 	);
 
 	endSingleTimeCommands(transferCommandBuffers);
-
 	copyBufferToImage(
 		&stagingBuffer, 
 		&textureImage, 
@@ -1873,8 +1859,8 @@ void clearUniformBuffers(){
 
 		if(buffersMVPMapped[i] != NULL)
 		{
-			 
-			vkUnmapMemory(device,buffersMVPMemory[i]);
+			printf("there2?\n");
+			vkUnmapMemory(device,buffersMVPMapped[i]);
 			buffersMVPMapped[i] = NULL;
 		}
 		if(buffersMVP[i] != NULL){
@@ -1892,8 +1878,8 @@ void clearUniformBuffers(){
 		
 		if(buffersDirectionalLightMapped[i] != NULL)
 		{
-			 
-			vkUnmapMemory(device,buffersDirectionalLightMemory[i]);
+			printf("there?\n");
+			vkUnmapMemory(device,buffersDirectionalLightMapped[i]);
 			buffersDirectionalLightMapped[i] = NULL;
 		}
 		if(buffersDirectionalLight[i] != NULL){

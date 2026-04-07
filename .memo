@@ -17,3 +17,7 @@ cmake --install build
 
 
 zig cc main.c -o app.exe   -I C:\VulkanSDK\1.4.341.1\Include   -L C:\VulkanSDK\1.4.341.1\Lib   -I c:\libs\glfw-ucrt\include   -L c:\libs\glfw-ucrt\lib   -lglfw3 -lvulkan-1   
+
+
+
+zig build --prefix ./out
