@@ -6,6 +6,7 @@
 
 #include "cglm/vec3.h"
 #include <vulkan/vulkan_core.h>
+#include <time.h>
 
 
 
@@ -218,6 +219,11 @@ VkBuffer indexBuffer = NULL;
 VkDeviceMemory indexBufferMemory = NULL;
 
 
+
+
+
+
+
 #define UNIFORM_BUFFER_MATRIX_IDX 0
 #define UNIFORM_BUFFER_LIGHTS_IDX 1
 
@@ -233,11 +239,18 @@ VkDeviceMemory indexBufferMemory = NULL;
 // void * uniformBuffersMapped[MAX_FRAMES_IN_FLIGHT]={};
 
 
-VkBuffer buffersMVP[MAX_FRAMES_IN_FLIGHT] ={};
+VkBuffer bufferModel[MAX_FRAMES_IN_FLIGHT] = {};
 
-VkDeviceMemory buffersMVPMemory[MAX_FRAMES_IN_FLIGHT]={};
+VkDeviceMemory bufferModelMemory[MAX_FRAMES_IN_FLIGHT]={};
 
-void * buffersMVPMapped[MAX_FRAMES_IN_FLIGHT]={};
+void * bufferModelMapped[MAX_FRAMES_IN_FLIGHT]={};
+
+
+VkBuffer buffersViewProjection[MAX_FRAMES_IN_FLIGHT] ={};
+
+VkDeviceMemory buffersViewProjectionMemory[MAX_FRAMES_IN_FLIGHT]={};
+
+void * buffersViewProjectionMapped[MAX_FRAMES_IN_FLIGHT]={};
 
 
 VkBuffer buffersDirectionalLight[MAX_FRAMES_IN_FLIGHT] ={};
@@ -376,6 +389,10 @@ uint32_t verticesNum = 0;
 struct Vertex* vertices = NULL;
 
 
+#define INSTANCE_NUM 5
+
+uint32_t instanceNum = INSTANCE_NUM;
+
 
 
 
@@ -399,8 +416,15 @@ A float4x4 matrix must have the same alignment as a float4.
 
 size_t uboMVPcnt = 1;
 
-struct UBOMVP {
+struct UBOModel {
+
     mat4 model;
+    
+};
+struct UBOModel uboModels [INSTANCE_NUM]; 
+
+struct UBOViewProjection {
+
     mat4 view;
     mat4 proj;
 };
@@ -582,6 +606,11 @@ void processInput(GLFWwindow *window);
 
 */
 
+
+float rand_float()
+{
+    return ((float)rand() / (float)RAND_MAX) * 20.0f - 10.0f;
+}
 
 void procMouseInput(GLFWwindow* window){
 
@@ -1094,6 +1123,17 @@ typedef enum cgltf_type
 	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+
+	// srand((unsigned int)time(NULL));
+
+	for(int i=0;i < INSTANCE_NUM;i++){
+
+		glm_mat4_identity(uboModels[i].model) ;
+		vec3 pos = {rand_float(),0.0,rand_float()};
+		glm_translate(uboModels[i].model, pos);
+
+	}
+
 }
 
 
@@ -1776,10 +1816,17 @@ void createDescriptorSets(){
 	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
 		VkDescriptorBufferInfo bufferInfo = { 
-			.buffer = buffersMVP[i], 
+			.buffer = buffersViewProjection[i], 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOMVP) 
+			.range = sizeof(struct UBOViewProjection) 
+		};
+
+		VkDescriptorBufferInfo bufferInfoModel = { 
+			.buffer = bufferModel[i], 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOModel) * INSTANCE_NUM
 		};
 
 		VkDescriptorBufferInfo bufferInfoLight = { 
@@ -1808,10 +1855,22 @@ void createDescriptorSets(){
 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
 				.pBufferInfo = &bufferInfo
 			},
+			
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = descriptorSets[i], 
 				.dstBinding = 1, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+				.pBufferInfo = &bufferInfoModel
+			},
+			
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptorSets[i], 
+				.dstBinding = 2, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -1821,7 +1880,7 @@ void createDescriptorSets(){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = descriptorSets[i], 
-				.dstBinding = 2, 
+				.dstBinding = 3, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -1871,23 +1930,41 @@ void clearUniformBuffers(){
 		// 	}
 		// }
 
-		if(buffersMVPMapped[i] != NULL)
+		if(buffersViewProjectionMapped[i] != NULL)
 		{
 			 
-			vkUnmapMemory(device,buffersMVPMemory[i]);
-			buffersMVPMapped[i] = NULL;
+			vkUnmapMemory(device,buffersViewProjectionMemory[i]);
+			buffersViewProjectionMapped[i] = NULL;
 		}
-		if(buffersMVP[i] != NULL){
+		if(buffersViewProjection[i] != NULL){
 
-			vkDestroyBuffer(device, buffersMVP[i], NULL);
-			buffersMVP[i] = NULL;
+			vkDestroyBuffer(device, buffersViewProjection[i], NULL);
+			buffersViewProjection[i] = NULL;
 		}
-		if(buffersMVPMemory[i] != NULL){
+		if(buffersViewProjectionMemory[i] != NULL){
 
-			vkFreeMemory(device, buffersMVPMemory[i], NULL);
-			buffersMVPMemory[i]= NULL;
+			vkFreeMemory(device, buffersViewProjectionMemory[i], NULL);
+			buffersViewProjectionMemory[i]= NULL;
 		}
 		
+
+
+		if(bufferModelMapped[i] != NULL)
+		{
+			 
+			vkUnmapMemory(device,bufferModelMemory[i]);
+			bufferModelMapped[i] = NULL;
+		}
+		if(bufferModel[i] != NULL){
+
+			vkDestroyBuffer(device, bufferModel[i], NULL);
+			bufferModel[i] = NULL;
+		}
+		if(bufferModelMemory[i] != NULL){
+
+			vkFreeMemory(device, bufferModelMemory[i], NULL);
+			bufferModelMemory[i]= NULL;
+		}
 
 		
 		if(buffersDirectionalLightMapped[i] != NULL)
@@ -1927,7 +2004,7 @@ void createUniformBuffers(){
 		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
 		{
 			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOMVP);
+			VkDeviceSize bufferSize = sizeof(struct UBOViewProjection);
 			VkBuffer buffer;
 			VkDeviceMemory bufferMemory;
 
@@ -1938,15 +2015,41 @@ void createUniformBuffers(){
 				&buffer, 
 				&bufferMemory
 			);
-			buffersMVP[i] = buffer;
-			buffersMVPMemory[i] = bufferMemory;
+			buffersViewProjection[i] = buffer;
+			buffersViewProjectionMemory[i] = bufferMemory;
 
 			void * memptr = NULL;
 			
 
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			buffersMVPMapped[i] = memptr;
+			buffersViewProjectionMapped[i] = memptr;
+			
+			//----------------
+		}
+
+		{
+			// MVP uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBOModel) * INSTANCE_NUM;
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			bufferModel[i] = buffer;
+			bufferModelMemory[i] = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			bufferModelMapped[i] = memptr;
 			
 			//----------------
 		}
@@ -1986,6 +2089,10 @@ void createDescriptorPool() {
 	VkDescriptorPoolSize poolSize[]={
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+		},
+		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
 		},
 		(VkDescriptorPoolSize){
@@ -2029,12 +2136,19 @@ void createDescriptorSetLayout(){
 		(VkDescriptorSetLayoutBinding) {
 			.binding = 1,
 			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 2,
+			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.pImmutableSamplers = NULL,
 		},
 		(VkDescriptorSetLayoutBinding) {
-			.binding = 2,
+			.binding = 3,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -2497,7 +2611,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
     vkCmdBindDescriptorSets(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, 
                             pipelineLayout, 0, 1, &descriptorSets[frameIndex], 0, NULL);
 
-    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, 1, 0, 0, 0);
+    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, instanceNum, 0, 0, 0);
     vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
 
    
@@ -2686,18 +2800,28 @@ void updateUniformBuffer(uint32_t currentImage){
 
 	// printf("time %f\n",time);
 
-	struct UBOMVP ubo = {};
+	
 	// mat4 model;
 	// vec3 rotation = {0.f,0.f,1.f};
 
-	glm_mat4_identity(ubo.model);
+	// glm_mat4_identity(ubo.model);
 	
-
 
 	// glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
 
 
 	// glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+
+
+
+	memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
+
+
+
+	
+	struct UBOViewProjection ubo = {};
 
 	vec3 cameraCenter;
 	
@@ -2709,11 +2833,11 @@ void updateUniformBuffer(uint32_t currentImage){
 	
 
 	
-	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 10.0f , ubo.proj);
+	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo.proj);
 
 	ubo.proj[1][1] *= -1;
 
-	memcpy(buffersMVPMapped[currentImage], &ubo, sizeof(struct UBOMVP));
+	memcpy(buffersViewProjectionMapped[currentImage], &ubo, sizeof(struct UBOViewProjection));
 
 
 	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
@@ -3010,6 +3134,7 @@ void physicalDeviceFeatureCheck(){
 
 	VkPhysicalDeviceFeatures2 physicalDeviceFeatures2={
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+	
 		// .features = {.samplerAnisotropy = true},
 	};
 
@@ -3048,6 +3173,10 @@ void physicalDeviceFeatureCheck(){
 						if(next->features.samplerAnisotropy ){
 							all_ok ++;
 						}
+						if(next->features.vertexPipelineStoresAndAtomics)
+						{
+							all_ok ++;
+						}
 					}
 					
 				break;
@@ -3079,7 +3208,7 @@ void physicalDeviceFeatureCheck(){
 		}		
 		next = next->pNext;
 	}
-	if(all_ok != 4){
+	if(all_ok != 5){
 
 		printf("supported :%d \n",all_ok);
 
@@ -3967,6 +4096,7 @@ void createGraphicsPipeline() {
 		.basePipelineIndex = - 1,
 		.pDepthStencilState = &depthStencil,
 		
+		
 	};
 
 	vkCreateGraphicsPipelines(
@@ -4089,6 +4219,8 @@ void mainLoop(){
 
 	startTime = glfwGetTime();
 
+
+
 	while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -4175,7 +4307,7 @@ void cleanup(){
 
 	vkDestroyBuffer(device,vertextBuffer,NULL);
 
-	
+ 
 
 	vkFreeMemory(device, vertexBufferMemory, NULL);
 

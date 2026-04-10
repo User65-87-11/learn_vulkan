@@ -10,7 +10,7 @@ layout(location = 2) in vec3 fragPos;
 layout(location = 0) out vec4 outColor;
 
 
-layout(binding = 1) uniform Light
+layout(binding = 2) uniform Light
 {
   vec4 lightPos; 
   vec4 viewPos; 
@@ -18,7 +18,7 @@ layout(binding = 1) uniform Light
 
 };
 
-layout(binding = 2) uniform sampler2D  tex;
+layout(binding = 3) uniform sampler2D  tex;
 
 
 
