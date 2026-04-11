@@ -335,6 +335,11 @@ camera pos 1.464953,0.533709,-1.610037
 camera front -0.684573,-0.085417,0.723923
 */
 
+struct PushConst{
+	int texIdx;
+	int hasColor;
+};
+
 struct Vertex{
 
 	vec3 pos;
@@ -2675,27 +2680,35 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 		&descriptorSets[frameIndex], 0, NULL
 	);
 
-	int textureIndex = 0; // choose texture
+	struct PushConst constants0 = {
+		.hasColor = false,
+		.texIdx = 0,
+	};
+	// int textureIndex = 0; // choose texture
 	vkCmdPushConstants(
 		graphicsCommandBuffers[frameIndex],
 		pipelineLayout,
 		VK_SHADER_STAGE_FRAGMENT_BIT,
 		0,
-		sizeof(int),
-		&textureIndex
+		sizeof(struct PushConst),
+		&constants0
 	);
 
     vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, INSTANCE_NUM , 0, 0, 0);
 	
 
-	textureIndex = 1;
+	struct PushConst constants1 = {
+		.hasColor = true,
+		.texIdx = 1,
+	};
+	// textureIndex = 1;
 	vkCmdPushConstants(
 		graphicsCommandBuffers[frameIndex],
 		pipelineLayout,
 		VK_SHADER_STAGE_FRAGMENT_BIT,
 		0,
-		sizeof(int),
-		&textureIndex
+		sizeof(struct PushConst),
+		&constants1
 	);
 	 
     vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, INSTANCE_NUM , 0, 0, INSTANCE_NUM);
@@ -3979,7 +3992,7 @@ void createGraphicsPipeline() {
 	VkPushConstantRange pushRange = {};
 	pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	pushRange.offset = 0;
-	pushRange.size = sizeof(int);
+	pushRange.size = sizeof(struct PushConst);
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,

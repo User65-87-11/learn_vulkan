@@ -22,13 +22,20 @@ layout(binding = 3) uniform sampler2D  tex[];
 
 layout(push_constant) uniform Push {
     int textureIndex;
+	int hasColor;
+
 } pc;
 
 
 void main() {
 	// // vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
 
-	 vec4 texColor = texture(tex[pc.textureIndex], texCoord);
+	vec4 texColor = texture(tex[pc.textureIndex], texCoord);
+
+	if(pc.hasColor != 0)
+	{
+		texColor = lightColor;
+	}
 
     // outColor = texColor;
 
