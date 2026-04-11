@@ -267,15 +267,37 @@ VkDescriptorPool descriptorPool = NULL;
 
 VkDescriptorSet descriptorSets [MAX_FRAMES_IN_FLIGHT];
 
+VkDescriptorSet descriptorSets2 [MAX_FRAMES_IN_FLIGHT];
 
 
-VkImage textureImage = NULL;
 
-VkDeviceMemory textureImageMemory = NULL;
+struct TextureRes{
 
-VkImageView textureImageView = NULL;
+	char * path;
 
-VkSampler textureSampler = NULL;
+	VkImage textureImage ;
+
+	VkDeviceMemory textureImageMemory ;
+
+	VkImageView textureImageView ;
+
+	VkSampler textureSampler;
+
+	uint32_t mipLevels;
+};
+
+#define TEXTURE_COUNT  2
+struct TextureRes textures[TEXTURE_COUNT]= {
+	{
+		.path = "models_gltf/viking_room.png"
+	},
+	{
+		.path = "models_gltf/viking_room2.png"
+	},
+};
+
+
+
 
 VkImage depthImage = NULL;
 
@@ -283,7 +305,7 @@ VkDeviceMemory depthImageMemory = NULL;
 
 VkImageView depthImageView = NULL;
 
-uint32_t mipLevels;
+
 
 
 // VkImageLayout currentSwapchainLayouts[MAX_IMAGE_VIEWS];
@@ -389,7 +411,7 @@ uint32_t verticesNum = 0;
 struct Vertex* vertices = NULL;
 
 
-#define INSTANCE_NUM 5
+#define INSTANCE_NUM 6
 
 uint32_t instanceNum = INSTANCE_NUM;
 
@@ -421,9 +443,13 @@ struct UBOModel {
     mat4 model;
     
 };
-struct UBOModel uboModels [INSTANCE_NUM]; 
+struct UBOModel uboModels [INSTANCE_NUM * 2] ; 
 
-struct UBOViewProjection {
+
+
+
+
+struct UBOCommon {
 
     mat4 view;
     mat4 proj;
@@ -522,9 +548,14 @@ void clearUniformBuffers();
 
 void createDescriptorSetLayout();
 
-void createDescriptorSets();
+void createDescriptorSets(struct TextureRes * textures,size_t count);
 
-void createTextureImage(char * path);
+void createTextureImage(
+	char * path, 
+	VkImage *textureImage,
+	VkDeviceMemory *textureImageMemory,
+	uint32_t *mipmap
+);
 
 void createTextureImageView();
 
@@ -577,7 +608,7 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 
 void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, VkImageAspectFlagBits aspectFlags,uint32_t mipLevels);
 
-void createTextureSampler();
+void createTextureSampler(VkSampler * sampler);
 
 void createDepthResources();
 
@@ -1126,11 +1157,13 @@ typedef enum cgltf_type
 
 	// srand((unsigned int)time(NULL));
 
-	for(int i=0;i < INSTANCE_NUM;i++){
+	for(int i=0;i < INSTANCE_NUM * 2;i++){
 
 		glm_mat4_identity(uboModels[i].model) ;
 		vec3 pos = {rand_float(),0.0,rand_float()};
 		glm_translate(uboModels[i].model, pos);
+
+
 
 	}
 
@@ -1239,7 +1272,7 @@ void createDepthResources() {
 
 }
 
-void createTextureSampler(){
+void createTextureSampler(VkSampler * sampler){
 
 
 	// vk::SamplerCreateInfo samplerInfo{.magFilter = vk::Filter::eLinear, .minFilter = vk::Filter::eLinear};
@@ -1270,7 +1303,7 @@ void createTextureSampler(){
 		.unnormalizedCoordinates = VK_FALSE,
 	};
 
-	vkCreateSampler(device, &samplerInfo, NULL, &textureSampler);
+	vkCreateSampler(device, &samplerInfo, NULL, sampler);
 
 }
 
@@ -1302,8 +1335,17 @@ void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, Vk
 
 void createTextureImageView(){
 
-	createImageView(&textureImageView,&textureImage,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,mipLevels);
+	for(int i=0;i<TEXTURE_COUNT;i++)
+	{
+		// createImageView(&textureImageView,&textureImage,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,mipLevels);
 
+		 createImageView(
+			&textures[i].textureImageView,
+			&textures[i].textureImage,
+			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+			textures[i].mipLevels
+		);
+	}
 }
 
 void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_t height) {
@@ -1530,10 +1572,19 @@ uint32_t getMipmapLevels(uint32_t w,uint32_t h){
 	return  d;
 
 }
-void createTextureImage(char * path){
+void createTextureImage(
+	char * path, 
+	VkImage *textureImage,
+	VkDeviceMemory *textureImageMemory,
+	uint32_t *mipmap
+){
 	/**
 	Staging is the process of getting image data into the GPU’s memory.
-	
+		VkImage textureImage ;
+
+	VkDeviceMemory textureImageMemory ;
+
+	VkImageView textureImageView ;
 	*/
 	PRINT_FNAME;
 
@@ -1542,7 +1593,7 @@ void createTextureImage(char * path){
 	// stbi_set_flip_vertically_on_load(true);
 	stbi_uc* pixels  = stbi_load(path,  &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
-	mipLevels  = getMipmapLevels(texWidth,texHeight);
+	*mipmap  = getMipmapLevels(texWidth,texHeight);
 
 	
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
@@ -1583,13 +1634,13 @@ void createTextureImage(char * path){
 	createImage(
 		texWidth, 
 		texHeight, 
-		mipLevels,
+		*mipmap,
 		VK_FORMAT_R8G8B8A8_SRGB, 
 		VK_IMAGE_TILING_OPTIMAL, 
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-		&textureImage, 
-		&textureImageMemory
+		textureImage, 
+		textureImageMemory
 	);
 
 	/*
@@ -1603,7 +1654,7 @@ void createTextureImage(char * path){
 
 	transitionImageLayout(
 		transferCommandBuffers,
-		&textureImage, 
+		textureImage, 
 		VK_IMAGE_LAYOUT_UNDEFINED,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		0,  // srcAccessMask: no prior access
@@ -1611,14 +1662,14 @@ void createTextureImage(char * path){
 		VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_2_TRANSFER_BIT,  // dst stage: transfer op
 		VK_IMAGE_ASPECT_COLOR_BIT,
-		mipLevels
+		*mipmap
 	);
 
 	endSingleTimeCommands(transferCommandBuffers);
 
 	copyBufferToImage(
 		&stagingBuffer, 
-		&textureImage, 
+		textureImage, 
 		texWidth, 
 		texHeight
 	);
@@ -1646,11 +1697,11 @@ void createTextureImage(char * path){
 	// generateMipmaps(*textureImage, vk::Format::eR8G8B8A8Srgb, texWidth, texHeight, mipLevels);
 
 	generateMipmaps(
-		&textureImage, 
+		textureImage, 
 		VK_FORMAT_R8G8B8A8_SRGB, 
 		texWidth, 
 		texHeight, 
-		mipLevels
+		*mipmap
 	);
 }
 
@@ -1789,7 +1840,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     endSingleTimeCommands(transferCommandBuffers);
 }
 
-void createDescriptorSets(){
+void createDescriptorSets(struct TextureRes * textures, size_t count){
 	PRINT_FNAME;
 
 
@@ -1819,14 +1870,14 @@ void createDescriptorSets(){
 			.buffer = buffersViewProjection[i], 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOViewProjection) 
+			.range = sizeof(struct UBOCommon) 
 		};
 
 		VkDescriptorBufferInfo bufferInfoModel = { 
 			.buffer = bufferModel[i], 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOModel) * INSTANCE_NUM
+			.range = sizeof(struct UBOModel) * INSTANCE_NUM * 2
 		};
 
 		VkDescriptorBufferInfo bufferInfoLight = { 
@@ -1837,11 +1888,21 @@ void createDescriptorSets(){
 		};
 
 
-		VkDescriptorImageInfo imageInfo = {
-			.sampler = textureSampler,
-			.imageView = textureImageView,
-			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		};
+		VkDescriptorImageInfo imageInfos[count];
+		for(int i=0;i<count;i++){
+			imageInfos[i] = (VkDescriptorImageInfo ){
+				.sampler = textures[i].textureSampler,
+				.imageView = textures[i].textureImageView,
+				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			};
+			// VkDescriptorImageInfo imageInfo = {
+			// 	.sampler = textures[i].textureSampler,
+			// 	.imageView = textures[i].textureImageView,
+			// 	.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			// };
+
+			// imageInfos[i] = imageInfo;
+		}
 
  
 		VkWriteDescriptorSet   descriptorWrite[] = {
@@ -1881,14 +1942,13 @@ void createDescriptorSets(){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = descriptorSets[i], 
 				.dstBinding = 3, 
-				.dstArrayElement = 0, 
-				.descriptorCount = 1, 
+				.descriptorCount = count, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
 				// .pBufferInfo = &bufferInfo
-				.pImageInfo = &imageInfo,
+				.pImageInfo = imageInfos,
 			},
-
+			
 		};
 
 
@@ -1903,8 +1963,6 @@ void createDescriptorSets(){
 	}
 
 }
-
-
 
 
 void clearUniformBuffers(){
@@ -2004,7 +2062,7 @@ void createUniformBuffers(){
 		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
 		{
 			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOViewProjection);
+			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
 			VkBuffer buffer;
 			VkDeviceMemory bufferMemory;
 
@@ -2030,7 +2088,7 @@ void createUniformBuffers(){
 
 		{
 			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOModel) * INSTANCE_NUM;
+			VkDeviceSize bufferSize = sizeof(struct UBOModel) * INSTANCE_NUM * 2;
 			VkBuffer buffer;
 			VkDeviceMemory bufferMemory;
 
@@ -2101,7 +2159,8 @@ void createDescriptorPool() {
 		},
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT * TEXTURE_COUNT,
+			
 		},
 	};
 
@@ -2149,7 +2208,7 @@ void createDescriptorSetLayout(){
 		},
 		(VkDescriptorSetLayoutBinding) {
 			.binding = 3,
-			.descriptorCount = 1,
+			.descriptorCount = TEXTURE_COUNT,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.pImmutableSamplers = NULL,
@@ -2608,10 +2667,40 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &vertextBuffer, &offset);
     vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdBindDescriptorSets(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, 
-                            pipelineLayout, 0, 1, &descriptorSets[frameIndex], 0, NULL);
 
-    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, instanceNum, 0, 0, 0);
+	vkCmdBindDescriptorSets(
+		graphicsCommandBuffers[frameIndex], 
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		pipelineLayout, 0, 1, 
+		&descriptorSets[frameIndex], 0, NULL
+	);
+
+	int textureIndex = 0; // choose texture
+	vkCmdPushConstants(
+		graphicsCommandBuffers[frameIndex],
+		pipelineLayout,
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+		0,
+		sizeof(int),
+		&textureIndex
+	);
+	memcpy(bufferModelMapped[frameIndex], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM * 2);
+	
+    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, INSTANCE_NUM , 0, 0, 0);
+	
+
+	textureIndex = 1;
+	vkCmdPushConstants(
+		graphicsCommandBuffers[frameIndex],
+		pipelineLayout,
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+		0,
+		sizeof(int),
+		&textureIndex
+	);
+	 
+    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, INSTANCE_NUM , 0, 0, INSTANCE_NUM);
+
     vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
 
    
@@ -2644,156 +2733,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 
     vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
 }
-void recordCommandBuffer2(uint32_t imageIndex,uint32_t frameIndex) {
 
-	
-	
-	VkCommandBufferBeginInfo beginInfo = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.pInheritanceInfo = NULL,	
-	};
-
-	vkBeginCommandBuffer(graphicsCommandBuffers[frameIndex], &beginInfo );
-
-	
-	// transitionImageLayout(
-	// 	graphicsCommandBuffers[frameIndex],
-	// 	&swapchainImages[imageIndex], 
-	// 	VK_IMAGE_LAYOUT_UNDEFINED,
-	// 	VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
-	// 	0, 
-	// 	VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 
-	// 	VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
-	// 	VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
-	// 	VK_IMAGE_ASPECT_COLOR_BIT,
-	// 	1
-	// );
-
-	// transitionImageLayout(
-	// 	graphicsCommandBuffers[frameIndex],
-	// 	&depthImage, 
-	// 	VK_IMAGE_LAYOUT_UNDEFINED, 
-	// 	VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
-	// 	VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
-	// 	VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, 
-	// 	VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
-	// 	VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, 
-	// 	VK_IMAGE_ASPECT_DEPTH_BIT,
-	// 	1
-	// );
-
-	VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-
-	VkClearValue clearDepth = {1.0f, 0};
-
-
-
-
-    VkRenderingAttachmentInfo colorAttachmentInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = swapchainImageViews[imageIndex],
-        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .loadOp =VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue = clearColor
-    };
-
-	VkRenderingAttachmentInfo deapthAttachmentInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = depthImageView,
-        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        .loadOp =VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .clearValue = clearDepth
-    };
-
-    // Set up the rendering info
-	
-    VkRenderingInfo renderingInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-        .renderArea = { 
-			.offset = { 0, 0 }, 
-			//.extent = surfaceCapabilities.currentExtent,
-			.extent = swapChainExtent,
-		},
-        .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentInfo,
-		.pDepthAttachment = &deapthAttachmentInfo,
-		
-    };
-
-	vkCmdBeginRendering(graphicsCommandBuffers[frameIndex], &renderingInfo);
-    // Begin rendering
-    
-
-	vkCmdBindPipeline(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-
-	VkViewport viewPort = {
-		.x = 0,
-		.y = 0,
-		.width = swapChainExtent.width,
-		.height = swapChainExtent.height,
-		.minDepth = 0.0f,  // Explicitly set
-    	.maxDepth = 1.0f   // Explicitly set
-		
-	};
-	vkCmdSetViewport(graphicsCommandBuffers[frameIndex], 0, 1, &viewPort);
-
-	VkRect2D scissor = {
-		.extent = swapChainExtent,
-		.offset = {},
-	};
-
-	vkCmdSetScissor(graphicsCommandBuffers[frameIndex], 0, 1, &scissor);
-
-
-	// vkCmdBindPipeline(graphicsCommandBuffers[frameIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-	VkDeviceSize offset = 0;
-
-	vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &vertextBuffer, &offset);
-
-	vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-	 
-	vkCmdBindDescriptorSets(
-		graphicsCommandBuffers[frameIndex],
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipelineLayout, 
-		0,
-		1, 
-		&descriptorSets[frameIndex], 
-		0, 
-		NULL);
-
-	// uint32_t indicesCount = sizeof(indices) / sizeof(uint32_t);
-
-	vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, 1, 0, 0, 0);
-
-	vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
-
- 
-	
-	transitionImageLayout(
-		graphicsCommandBuffers[frameIndex],
-		&swapchainImages[imageIndex], 
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 
-		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, 
-		0, 
-		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, 
-		VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, 
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		1
-	);
-
- 
-
-	vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
-
-}
 
 void updateUniformBuffer(uint32_t currentImage){
 
@@ -2816,12 +2756,12 @@ void updateUniformBuffer(uint32_t currentImage){
 
 
 
-	memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
+	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
 
 
 
 	
-	struct UBOViewProjection ubo = {};
+	struct UBOCommon ubo = {};
 
 	vec3 cameraCenter;
 	
@@ -2837,7 +2777,7 @@ void updateUniformBuffer(uint32_t currentImage){
 
 	ubo.proj[1][1] *= -1;
 
-	memcpy(buffersViewProjectionMapped[currentImage], &ubo, sizeof(struct UBOViewProjection));
+	memcpy(buffersViewProjectionMapped[currentImage], &ubo, sizeof(struct UBOCommon));
 
 
 	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
@@ -4035,11 +3975,17 @@ void createGraphicsPipeline() {
 	};
 
 
+	VkPushConstantRange pushRange = {};
+	pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	pushRange.offset = 0;
+	pushRange.size = sizeof(int);
+
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = 1,
 		.pSetLayouts = &descriptorSetLayout,
-		.pushConstantRangeCount  = 0,
+		.pushConstantRangeCount  = 1,
+		.pPushConstantRanges = &pushRange
 	};
 
 	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipelineLayout );
@@ -4191,12 +4137,23 @@ void initVulkan(){
 
 	createDepthResources();
 
-	createTextureImage(model_path_text);
-
+	for( int i=0;i<TEXTURE_COUNT ;i++)
+	{
+		struct TextureRes * t = &textures[i];
+		createTextureImage(
+			t->path,
+			&t->textureImage,
+			&t->textureImageMemory,
+			&t->mipLevels
+		);
+	}
 	createTextureImageView();
 
-	createTextureSampler();
-
+	for( int i=0;i<TEXTURE_COUNT ;i++)
+	{
+		struct TextureRes * t = &textures[i];
+		createTextureSampler(&t->textureSampler);
+	}
 	loadModel(model_path_gltf);
 
 	
@@ -4209,8 +4166,11 @@ void initVulkan(){
 
 	createDescriptorPool();
 
-	createDescriptorSets();
-
+	// for( int i=0;i<TEXTURE_COUNT ;i++)
+	{
+		// struct TextureRes * t = &textures[i];
+		createDescriptorSets(textures,TEXTURE_COUNT);
+	}
 	
 
 }
@@ -4272,16 +4232,22 @@ void cleanup(){
 	
 	vkDestroyFence(device, transferFence, NULL);
 
-	vkDestroyImageView(device, textureImageView,  NULL);
-	
+	for( int i=0;i<TEXTURE_COUNT ;i++)
+	{
+		struct TextureRes * t = &textures[i];
+		vkDestroyImageView(device, t->textureImageView,  NULL);
+	}
 	vkDestroyImage(device, depthImage, NULL);
 
 	vkDestroyImageView(device,depthImageView, NULL);
 
 	vkFreeMemory(device, depthImageMemory, NULL);
 
-	vkDestroySampler(device, textureSampler, NULL);
-
+	for( int i=0;i<TEXTURE_COUNT ;i++)
+	{
+		struct TextureRes * t = &textures[i];
+		vkDestroySampler(device, t->textureSampler, NULL);
+	}
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
 
 	vkDestroyDescriptorPool(device, descriptorPool, NULL);
@@ -4315,10 +4281,14 @@ void cleanup(){
 
 	vkFreeMemory(device, indexBufferMemory, NULL);
 
-	vkDestroyImage(device, textureImage, NULL);
+	for( int i=0;i<TEXTURE_COUNT ;i++)
+	{
+		struct TextureRes * t = &textures[i];
 
-	vkFreeMemory(device, textureImageMemory, NULL);
+		vkDestroyImage(device, t->textureImage, NULL);
 
+		vkFreeMemory(device, t->textureImageMemory, NULL);
+	}
 	clearUniformBuffers();
 
 	vkDestroyDevice(device, NULL);

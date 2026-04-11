@@ -1,5 +1,5 @@
 #version 450
- 
+#extension GL_EXT_nonuniform_qualifier : require
 
 layout(location = 0) in vec2 texCoord;
 
@@ -18,15 +18,17 @@ layout(binding = 2) uniform Light
 
 };
 
-layout(binding = 3) uniform sampler2D  tex;
+layout(binding = 3) uniform sampler2D  tex[];
 
-
+layout(push_constant) uniform Push {
+    int textureIndex;
+} pc;
 
 
 void main() {
 	// // vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
 
-	 vec4 texColor = texture(tex, texCoord);
+	 vec4 texColor = texture(tex[pc.textureIndex], texCoord);
 
     // outColor = texColor;
 
