@@ -210,22 +210,34 @@ VkFence inFlightFences [MAX_FRAMES_IN_FLIGHT];
 
 VkFence transferFence;
 
-VkBuffer vertextBuffer = NULL;
 
-VkDeviceMemory vertexBufferMemory = NULL;
+struct ObjectVertexData
+{
+	char * gltfPath;
 
-VkBuffer indexBuffer = NULL;
+	VkBuffer vertextBuffer ;
 
-VkDeviceMemory indexBufferMemory = NULL;
+	VkDeviceMemory vertexBufferMemory;
+
+	VkBuffer indexBuffer;
+
+	VkDeviceMemory indexBufferMemory;
+
+	uint32_t indices_num;
+
+};
+
+#define OBJECT_NUM 2
+size_t objectNum = OBJECT_NUM;
+struct ObjectVertexData objectVertexData[OBJECT_NUM]={
+	{.gltfPath = "models_gltf/viking_room.gltf"},
+	{.gltfPath =  NULL},
+};
 
 
 
 
 
-
-
-#define UNIFORM_BUFFER_MATRIX_IDX 0
-#define UNIFORM_BUFFER_LIGHTS_IDX 1
 
 
 
@@ -409,11 +421,11 @@ char * model_path_bin	= 	"models_gltf/viking_room.bin";
 char * model_path_text	= 	"models_gltf/viking_room.png";
 
 
-uint32_t indicesNum = 0;
-uint32_t* indices = NULL;
+// uint32_t indicesNum = 0;
+// uint32_t* indices = NULL;
 
-uint32_t verticesNum = 0;
-struct Vertex* vertices = NULL;
+// uint32_t verticesNum = 0;
+// struct Vertex* vertices = NULL;
 
 
 #define INSTANCE_NUM 6
@@ -524,7 +536,14 @@ void mouseCallback(GLFWwindow* window, double xposIn, double yposIn);
 
 uint32_t createShaderFromFile(const char * path, uint8_t** buffer);
 
-void loadModel(char *fname) ;
+void loadModel(
+	
+	char *fname,
+	size_t *indicesNum,
+	uint32_t ** indices,
+	size_t *verticesNum,
+	struct Vertex ** vertices
+) ;
 
 void createUniformBuffers();
 
@@ -545,9 +564,21 @@ void recreateSwapChain();
 
 void cleanup();
 
-void createVertexBuffer();
+void createVertexBuffer(
+	size_t verticesNum,
+	struct Vertex * vertices,
+	VkBuffer *vertexBuffer, 
+	VkDeviceMemory *vertexBufferMemory
 
-void createIndexBuffer();
+);
+
+void createIndexBuffer(
+	size_t indicesNum,
+	uint32_t * indices,
+	VkBuffer *indexBuffer, 
+	VkDeviceMemory *indexBufferMemory
+
+);
 
 void clearUniformBuffers();
 
@@ -785,7 +816,13 @@ void processInput(GLFWwindow *window){
 	// printf("camera front %f,%f,%f\n",cameraFront[0],cameraFront[1],cameraFront[2]);
 	// printf("camera pos %f,%f,%f\n",cameraPos[0],cameraPos[1],cameraPos[2]);
 }
-void loadModel(char *fname){
+void loadModel(
+	char *fname,
+	size_t *indicesNum,
+	uint32_t ** indices,
+	size_t *verticesNum,
+	struct Vertex ** vertices
+){
 	PRINT_FNAME;
 
 	printf("load model: %s\n",fname);
@@ -1011,19 +1048,20 @@ typedef enum cgltf_type
 			uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
 			size_t stride = accessor->stride ? accessor->stride : sizeof(float) * 3;
 
-			verticesNum = accessor->count;
-			vertices = malloc(sizeof(struct Vertex) * verticesNum);
+			*verticesNum = accessor->count;
+			*vertices = malloc(sizeof(struct Vertex) * (*verticesNum));
 
-			printf("verticesNum: %d\n",verticesNum);
+			printf("verticesNum: %d\n",*verticesNum);
 			printf("stride: %ld\n",stride);
 		 
-			for (size_t d = 0; d < verticesNum; d++) {
+			for (size_t d = 0; d < *verticesNum; d++) {
 				float* data = (float*)(base + d * stride);
 
+				struct Vertex * v = *vertices;
 			
-				vertices[d].pos[0] = data[0];
-				vertices[d].pos[1] = data[1];
-				vertices[d].pos[2] = data[2];
+				v[d].pos[0] = data[0];
+				v[d].pos[1] = data[1];
+				v[d].pos[2] = data[2];
 
 				
 			 
@@ -1038,7 +1076,6 @@ typedef enum cgltf_type
 
 		
 	}
-
 
 	for(int i=0;i<primitive->attributes_count;i++){
 
@@ -1057,12 +1094,16 @@ typedef enum cgltf_type
 
 			// verticesNum = accessor->count;
 
-			for (size_t d = 0; d < verticesNum; d++) {
+			for (size_t d = 0; d < *verticesNum; d++) {
 				float* data = (float*)(base + d * stride);
 
-				vertices[d].norm[0] = data[0];
-				vertices[d].norm[1] = data[1];
-				vertices[d].norm[2] = data[2];
+				struct Vertex * v = *vertices;
+			
+				v[d].norm[0] = data[0];
+				v[d].norm[1] = data[1];
+				v[d].norm[2] = data[2];
+
+ 
 			}
 			break;
 		}
@@ -1087,11 +1128,16 @@ typedef enum cgltf_type
 
 			// verticesNum = accessor->count;
 
-			for (size_t d = 0; d < verticesNum; d++) {
+			for (size_t d = 0; d < *verticesNum; d++) {
 				float* data = (float*)(base + d * stride);
 
-				vertices[d].texCoords[0] = data[0];
-				vertices[d].texCoords[1] = data[1];
+
+				struct Vertex * v = *vertices;
+			
+				v[d].texCoords[0] = data[0];
+				v[d].texCoords[1] = data[1];
+		 
+ 
 			}
 			break;
 		}
@@ -1116,23 +1162,27 @@ typedef enum cgltf_type
 			stride = cgltf_component_size(accessor->component_type);
 		}
 
-		indicesNum = primitive->indices->count;
+		*indicesNum = primitive->indices->count;
 
-		indices = malloc(sizeof(uint32_t)* indicesNum);
+		
+		printf("indices num: %d\n",*indicesNum);
+		*indices = malloc(sizeof(uint32_t) * (*indicesNum));
 
-		for(int d=0;d<indicesNum;d++){
+		for(int d=0;d < *indicesNum;d++){
 
 			uint8_t* ptr = base + d * stride;
 
+			uint32_t * ind = *indices;
+
 			 switch (accessor->component_type) {
 				case cgltf_component_type_r_16u:
-					indices[d] = *(uint16_t*)ptr;
+					ind[d] = *(uint16_t*)ptr;
 					break;
 				case cgltf_component_type_r_32u:
-					indices[d] = *(uint32_t*)ptr;
+					ind[d] = *(uint32_t*)ptr;
 					break;
 				case cgltf_component_type_r_8u:
-					indices[d] = *(uint8_t*)ptr;
+					ind[d] = *(uint8_t*)ptr;
 					break;
 				default:{
 						printf("datatype: %d\n",accessor->component_type);
@@ -1150,27 +1200,6 @@ typedef enum cgltf_type
 	cgltf_free(data);
 
 
-
-	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
-	pitch = glm_deg(asin(cameraFront[1]));
-
-	
-	vec4 v = {1.0,1.0,1.0,1.0};
-	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
-
-	// srand((unsigned int)time(NULL));
-
-	for(int i=0;i < INSTANCE_NUM * 2;i++){
-
-		glm_mat4_identity(uboModels[i].model) ;
-		vec3 pos = {rand_float(),0.0,rand_float()};
-		glm_translate(uboModels[i].model, pos);
-
-
-
-	}
 
 }
 
@@ -2338,7 +2367,12 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 	endSingleTimeCommands(transferCommandBuffers);
 
 }
-void createIndexBuffer(){
+void createIndexBuffer(
+	size_t indicesNum,
+	uint32_t * indices,
+	VkBuffer *indexBuffer, 
+	VkDeviceMemory *indexBufferMemory
+	){
 
 	VkDeviceSize bufferSize = sizeof(uint32_t) * indicesNum;
 
@@ -2368,18 +2402,25 @@ void createIndexBuffer(){
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		&indexBuffer,
-		&indexBufferMemory
+		indexBuffer,
+		indexBufferMemory
 	);
 
-    copyBuffer(stagingBuffer, indexBuffer,  bufferSize);
+    copyBuffer(stagingBuffer, *indexBuffer,  bufferSize);
 
 	vkDestroyBuffer(device, stagingBuffer, NULL);
 
 	vkFreeMemory(device, bufferMemory, NULL);
 
 }
-void createVertexBuffer() {
+void createVertexBuffer(
+
+	size_t verticesNum,
+	struct Vertex * vertices,
+	VkBuffer *vertexBuffer, 
+	VkDeviceMemory *vertexBufferMemory
+
+) {
 
     VkDeviceSize bufferSize = sizeof(struct Vertex) * verticesNum;
 
@@ -2421,11 +2462,11 @@ void createVertexBuffer() {
 		bufferSize,
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT|VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		&vertextBuffer,
-		&vertexBufferMemory
+		vertexBuffer,
+		vertexBufferMemory
 	);
 
-    copyBuffer(stagingBuffer, vertextBuffer,  bufferSize);
+    copyBuffer(stagingBuffer, *vertexBuffer,  bufferSize);
 
 	vkDestroyBuffer(device, stagingBuffer, NULL);
 
@@ -2670,8 +2711,10 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
     vkCmdSetScissor(graphicsCommandBuffers[frameIndex], 0, 1, &scissor);
 
     VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &vertextBuffer, &offset);
-    vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	
+	
+    vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &objectVertexData[0].vertextBuffer, &offset);
+    vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], objectVertexData[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 	vkCmdBindDescriptorSets(
 		graphicsCommandBuffers[frameIndex], 
@@ -2694,7 +2737,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 		&constants0
 	);
 
-    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, INSTANCE_NUM , 0, 0, 0);
+    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], objectVertexData[0].indices_num, INSTANCE_NUM , 0, 0, 0);
 	
 
 	struct PushConst constants1 = {
@@ -2711,7 +2754,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 		&constants1
 	);
 	 
-    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, INSTANCE_NUM , 0, 0, INSTANCE_NUM);
+    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], objectVertexData[0].indices_num, INSTANCE_NUM , 0, 0, INSTANCE_NUM);
 
     vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
 
@@ -3212,6 +3255,7 @@ void  createLogicalDevice(){
 
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 		.features.samplerAnisotropy = VK_TRUE,
+	 
 		
 	};
 
@@ -3219,13 +3263,17 @@ void  createLogicalDevice(){
 
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
 		.dynamicRendering = VK_TRUE,
-		.synchronization2 = VK_TRUE
+		.synchronization2 = VK_TRUE,
+		
+		
 	};
 
 	VkPhysicalDeviceExtendedDynamicStateFeaturesEXT physicalDeviceExtendedDynamicStateFeaturesEXT = {
 
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
 		.extendedDynamicState = VK_TRUE,
+		
+		
 	};
 
 	physicalDeviceFeatures13.pNext = &physicalDeviceExtendedDynamicStateFeaturesEXT;
@@ -3810,6 +3858,7 @@ void createGraphicsPipeline() {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 		.pCode = (uint32_t*)data,
 		.codeSize = dataSize,
+	 
 		
 	};
  
@@ -4168,13 +4217,79 @@ void initVulkan(){
 		struct TextureRes * t = &textures[i];
 		createTextureSampler(&t->textureSampler);
 	}
-	loadModel(model_path_gltf);
+	for(int i=0;i<OBJECT_NUM;i++)
+	{
+
+		struct ObjectVertexData * ref = &objectVertexData[i];
+
+		if(ref->gltfPath == NULL) continue;
+
+		size_t verticesCnt;
+		struct Vertex * vertices;
+		
+
+		size_t indicesCnt;
+		uint32_t * indices;
+	
+		
+		loadModel(
+			ref->gltfPath,
+			&indicesCnt,
+			&indices,
+			&verticesCnt,
+			&vertices
+		);
+
+		ref->indices_num = indicesCnt;
+
+		createVertexBuffer(
+			verticesCnt,
+			vertices,
+			&ref->vertextBuffer,
+			&ref->vertexBufferMemory
+		);
+
+		createIndexBuffer(
+			indicesCnt,
+			indices,
+			&ref->indexBuffer,
+			&ref->indexBufferMemory
+		);
+
+		free(vertices);
+		free(indices);
+	}
+
+	// init MODELS
+
+	{
+		
+
+		yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+		pitch = glm_deg(asin(cameraFront[1]));
+
+		
+		vec4 v = {1.0,1.0,1.0,1.0};
+		GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
+		GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+		GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+
+		// srand((unsigned int)time(NULL));
+
+		for(int i=0;i < INSTANCE_NUM * 2;i++){
+
+			glm_mat4_identity(uboModels[i].model) ;
+			vec3 pos = {rand_float(),0.0,rand_float()};
+			glm_translate(uboModels[i].model, pos);
+
+
+
+		}
+	}
 
 	
 
-	createVertexBuffer();
-
-	createIndexBuffer();
+	
 
 	createUniformBuffers();
 
@@ -4285,15 +4400,36 @@ void cleanup(){
 	
 	vkDestroyShaderModule(device,shaderModuleVert,NULL);
 
-	vkDestroyBuffer(device,vertextBuffer,NULL);
+	for(int i=0;i<OBJECT_NUM ;i++)
+	{
+		struct ObjectVertexData * ref = &objectVertexData[i];
 
+		if(ref->vertextBuffer != NULL){
+
+			vkDestroyBuffer(device,ref->vertextBuffer,NULL);
+			ref->vertextBuffer = NULL;
+		}
  
+		if(ref->vertexBufferMemory != NULL){
 
-	vkFreeMemory(device, vertexBufferMemory, NULL);
+			vkFreeMemory(device, ref->vertexBufferMemory, NULL);
+			ref->vertexBufferMemory = NULL;
+		}
 
-	vkDestroyBuffer(device,indexBuffer,NULL);
+		if(ref->indexBuffer != NULL){
 
-	vkFreeMemory(device, indexBufferMemory, NULL);
+			vkDestroyBuffer(device,ref->indexBuffer,NULL);
+			ref->indexBuffer = NULL;
+		}
+
+		if(ref->indexBufferMemory != NULL){
+			
+			vkFreeMemory(device, ref->indexBufferMemory, NULL);
+			ref->indexBufferMemory = NULL;
+		}
+	}
+
+
 
 	for( int i=0;i<TEXTURE_COUNT ;i++)
 	{
@@ -4319,8 +4455,8 @@ void cleanup(){
     glfwTerminate();
 
 
-	free(vertices);
-	free(indices);
+	// free(vertices);
+	// free(indices);
 
 }
 void initWindow(){
