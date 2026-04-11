@@ -2684,8 +2684,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 		sizeof(int),
 		&textureIndex
 	);
-	memcpy(bufferModelMapped[frameIndex], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM * 2);
-	
+
     vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], indicesNum, INSTANCE_NUM , 0, 0, 0);
 	
 
@@ -2759,6 +2758,8 @@ void updateUniformBuffer(uint32_t currentImage){
 	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
 
 
+	memcpy(bufferModelMapped[frameIndex], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM * 2);
+	
 
 	
 	struct UBOCommon ubo = {};
