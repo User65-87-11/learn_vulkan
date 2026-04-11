@@ -228,7 +228,7 @@ struct ObjectVertexData
 };
 
 #define OBJECT_NUM 2
-size_t objectNum = OBJECT_NUM;
+uint32_t objectNum = OBJECT_NUM;
 struct ObjectVertexData objectVertexData[OBJECT_NUM]={
 	{.gltfPath = "models_gltf/viking_room.gltf"},
 	{.gltfPath =  NULL},
@@ -450,10 +450,10 @@ A float4x4 matrix must have the same alignment as a float4.
 
 // #define UNIFORM_BUFFER_COUNT 2
 
-// size_t uniformBufferSizes [UNIFORM_BUFFER_COUNT];
+// uint32_t uniformBufferSizes [UNIFORM_BUFFER_COUNT];
 
 
-size_t uboMVPcnt = 1;
+uint32_t uboMVPcnt = 1;
 
 struct UBOModel {
 
@@ -472,7 +472,7 @@ struct UBOCommon {
     mat4 proj;
 };
 
-size_t uboDirectionalLightCnt = 1;
+uint32_t uboDirectionalLightCnt = 1;
 
 struct UBODirectionalLight {
   vec4 lightPos; 
@@ -485,7 +485,7 @@ float deltaTime = 0.0f;
 float lastTime = 0.0f;
 
 
-size_t uboPointLightCnt =0 ;
+uint32_t uboPointLightCnt =0 ;
 
 struct UBOPointLight {    
     vec3 position;
@@ -539,9 +539,9 @@ uint32_t createShaderFromFile(const char * path, uint8_t** buffer);
 void loadModel(
 	
 	char *fname,
-	size_t *indicesNum,
+	uint32_t *indicesNum,
 	uint32_t ** indices,
-	size_t *verticesNum,
+	uint32_t *verticesNum,
 	struct Vertex ** vertices
 ) ;
 
@@ -565,7 +565,7 @@ void recreateSwapChain();
 void cleanup();
 
 void createVertexBuffer(
-	size_t verticesNum,
+	uint32_t verticesNum,
 	struct Vertex * vertices,
 	VkBuffer *vertexBuffer, 
 	VkDeviceMemory *vertexBufferMemory
@@ -573,7 +573,7 @@ void createVertexBuffer(
 );
 
 void createIndexBuffer(
-	size_t indicesNum,
+	uint32_t indicesNum,
 	uint32_t * indices,
 	VkBuffer *indexBuffer, 
 	VkDeviceMemory *indexBufferMemory
@@ -584,7 +584,7 @@ void clearUniformBuffers();
 
 void createDescriptorSetLayout();
 
-void createDescriptorSets(struct TextureRes * textures,size_t count);
+void createDescriptorSets(struct TextureRes * textures,uint32_t count);
 
 void createTextureImage(
 	char * path, 
@@ -818,9 +818,9 @@ void processInput(GLFWwindow *window){
 }
 void loadModel(
 	char *fname,
-	size_t *indicesNum,
+	uint32_t *indicesNum,
 	uint32_t ** indices,
-	size_t *verticesNum,
+	uint32_t *verticesNum,
 	struct Vertex ** vertices
 ){
 	PRINT_FNAME;
@@ -1046,7 +1046,7 @@ typedef enum cgltf_type
 			cgltf_buffer_view* view = accessor->buffer_view;
 
 			uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
-			size_t stride = accessor->stride ? accessor->stride : sizeof(float) * 3;
+			uint32_t stride = accessor->stride ? accessor->stride : sizeof(float) * 3;
 
 			*verticesNum = accessor->count;
 			*vertices = malloc(sizeof(struct Vertex) * (*verticesNum));
@@ -1054,7 +1054,7 @@ typedef enum cgltf_type
 			printf("verticesNum: %d\n",*verticesNum);
 			printf("stride: %ld\n",stride);
 		 
-			for (size_t d = 0; d < *verticesNum; d++) {
+			for (uint32_t d = 0; d < *verticesNum; d++) {
 				float* data = (float*)(base + d * stride);
 
 				struct Vertex * v = *vertices;
@@ -1090,11 +1090,11 @@ typedef enum cgltf_type
 			cgltf_buffer_view* view = accessor->buffer_view;
 
 			uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
-			size_t stride = accessor->stride ? accessor->stride : sizeof(float) * 2;
+			uint32_t stride = accessor->stride ? accessor->stride : sizeof(float) * 2;
 
 			// verticesNum = accessor->count;
 
-			for (size_t d = 0; d < *verticesNum; d++) {
+			for (uint32_t d = 0; d < *verticesNum; d++) {
 				float* data = (float*)(base + d * stride);
 
 				struct Vertex * v = *vertices;
@@ -1124,11 +1124,11 @@ typedef enum cgltf_type
 			cgltf_buffer_view* view = accessor->buffer_view;
 
 			uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
-			size_t stride = accessor->stride ? accessor->stride : sizeof(float) * 2;
+			uint32_t stride = accessor->stride ? accessor->stride : sizeof(float) * 2;
 
 			// verticesNum = accessor->count;
 
-			for (size_t d = 0; d < *verticesNum; d++) {
+			for (uint32_t d = 0; d < *verticesNum; d++) {
 				float* data = (float*)(base + d * stride);
 
 
@@ -1156,7 +1156,7 @@ typedef enum cgltf_type
 
 		uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
 
-		size_t stride = accessor->stride;
+		uint32_t stride = accessor->stride;
 
 		if (stride == 0) {
 			stride = cgltf_component_size(accessor->component_type);
@@ -1874,7 +1874,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     endSingleTimeCommands(transferCommandBuffers);
 }
 
-void createDescriptorSets(struct TextureRes * textures, size_t count){
+void createDescriptorSets(struct TextureRes * textures, uint32_t count){
 	PRINT_FNAME;
 
 
@@ -1898,7 +1898,7 @@ void createDescriptorSets(struct TextureRes * textures, size_t count){
 
 	// assert(UNIFORM_BUFFER_COUNT == 2);
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
 		VkDescriptorBufferInfo bufferInfo = { 
 			.buffer = buffersViewProjection[i], 
@@ -2368,7 +2368,7 @@ void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 
 }
 void createIndexBuffer(
-	size_t indicesNum,
+	uint32_t indicesNum,
 	uint32_t * indices,
 	VkBuffer *indexBuffer, 
 	VkDeviceMemory *indexBufferMemory
@@ -2415,7 +2415,7 @@ void createIndexBuffer(
 }
 void createVertexBuffer(
 
-	size_t verticesNum,
+	uint32_t verticesNum,
 	struct Vertex * vertices,
 	VkBuffer *vertexBuffer, 
 	VkDeviceMemory *vertexBufferMemory
@@ -2512,7 +2512,7 @@ uint32_t createShaderFromFile(const char * path, uint8_t** buffer){
 
 
 	fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
+    uint32_t size = ftell(file);
     rewind(file);
 
     *buffer = malloc(size);
@@ -2987,7 +2987,7 @@ void createSyncObjects(){
 	PRINT_FNAME;
 
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
 
 	
@@ -3136,6 +3136,10 @@ void physicalDeviceFeatureCheck(){
 	};
 
 
+	VkPhysicalDeviceVulkan12Features features12 = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+	};
+
 
 	VkPhysicalDeviceVulkan13Features features13 = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -3150,7 +3154,8 @@ void physicalDeviceFeatureCheck(){
 	};
 
 	features13.pNext = &physicalDeviceExtendedDynamicStateFeaturesEXT;
-	physicalDeviceFeatures2.pNext = &features13;
+	features12.pNext = &features13;
+	physicalDeviceFeatures2.pNext = &features12;
 
 
 	vkGetPhysicalDeviceFeatures2(physicalDevice, &physicalDeviceFeatures2 );
@@ -3199,13 +3204,23 @@ void physicalDeviceFeatureCheck(){
 						}
 					}
 				break;
+			case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES:
+					printf("supported: VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES\n");
+
+					{
+						VkPhysicalDeviceVulkan12Features * temp = (VkPhysicalDeviceVulkan12Features*)next;
+						if(temp->runtimeDescriptorArray ){
+							all_ok +=1;
+						}
+					}
+				break;
 			default:
 					printf("next %d\n",next->sType);
 				break;
 		}		
 		next = next->pNext;
 	}
-	if(all_ok != 5){
+	if(all_ok != 6){
 
 		printf("supported :%d \n",all_ok);
 
@@ -3259,6 +3274,12 @@ void  createLogicalDevice(){
 		
 	};
 
+	VkPhysicalDeviceVulkan12Features physicalDeviceFeatures12 = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+		.runtimeDescriptorArray = VK_TRUE,
+	};
+
+
 	VkPhysicalDeviceVulkan13Features physicalDeviceFeatures13={
 
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -3276,9 +3297,10 @@ void  createLogicalDevice(){
 		
 	};
 
+	physicalDeviceExtendedDynamicStateFeaturesEXT.pNext = NULL;
 	physicalDeviceFeatures13.pNext = &physicalDeviceExtendedDynamicStateFeaturesEXT;
-
-	physicalDeviceFeatures2.pNext = &physicalDeviceFeatures13;
+	physicalDeviceFeatures12.pNext = &physicalDeviceFeatures13;
+	physicalDeviceFeatures2.pNext = &physicalDeviceFeatures12;
 
 	VkDeviceCreateInfo deviceCreateInfo = {
 
@@ -3840,7 +3862,7 @@ void createGraphicsPipeline() {
 
 	char * path ="shaders/frag.spv";
 	uint8_t* data = NULL;
-	size_t dataSize = createShaderFromFile(path, &data);
+	uint32_t dataSize = createShaderFromFile(path, &data);
 	
 	//--- FRAGMENT
 
@@ -3911,7 +3933,7 @@ void createGraphicsPipeline() {
 
 	};
 
-	size_t dynamicStateCount = 2;
+	uint32_t dynamicStateCount = 2;
 
 	/*
 	INFO
@@ -3933,7 +3955,7 @@ void createGraphicsPipeline() {
 		shaderStageCreateInfoFrag
 	};
 
-	size_t shaderStageCreateInfCnt = sizeof(shaderStageCreateInf) /  sizeof(VkPipelineShaderStageCreateInfo);
+	uint32_t shaderStageCreateInfCnt = sizeof(shaderStageCreateInf) /  sizeof(VkPipelineShaderStageCreateInfo);
 
 
 	VkVertexInputBindingDescription vertexInputBindingDescription={
@@ -4224,11 +4246,11 @@ void initVulkan(){
 
 		if(ref->gltfPath == NULL) continue;
 
-		size_t verticesCnt;
+		uint32_t verticesCnt;
 		struct Vertex * vertices;
 		
 
-		size_t indicesCnt;
+		uint32_t indicesCnt;
 		uint32_t * indices;
 	
 		
