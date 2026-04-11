@@ -231,7 +231,7 @@ struct ObjectVertexData
 uint32_t objectNum = OBJECT_NUM;
 struct ObjectVertexData objectVertexData[OBJECT_NUM]={
 	{.gltfPath = "models_gltf/viking_room.gltf"},
-	{.gltfPath =  NULL},
+	{.gltfPath =  "models_gltf/box.gltf"},
 };
 
 
@@ -279,7 +279,7 @@ VkDescriptorPool descriptorPool = NULL;
 
 VkDescriptorSet descriptorSets [MAX_FRAMES_IN_FLIGHT];
 
-VkDescriptorSet descriptorSets2 [MAX_FRAMES_IN_FLIGHT];
+// VkDescriptorSet descriptorSets2 [MAX_FRAMES_IN_FLIGHT];
 
 
 
@@ -298,13 +298,16 @@ struct TextureRes{
 	uint32_t mipLevels;
 };
 
-#define TEXTURE_COUNT  2
+#define TEXTURE_COUNT  3
 struct TextureRes textures[TEXTURE_COUNT]= {
 	{
 		.path = "models_gltf/viking_room.png"
 	},
 	{
 		.path = "models_gltf/viking_room2.png"
+	},
+	{
+		.path = "models_gltf/wooden_small.jpg"
 	},
 };
 
