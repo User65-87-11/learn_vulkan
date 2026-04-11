@@ -29,11 +29,15 @@ layout(location = 2) out vec3 out_fragPos;
 
 void main() {
 	
-	gl_Position = projection * view * model[gl_InstanceIndex] * vec4(in_position, 1.0);
+	vec4 tpos = model[gl_InstanceIndex] * vec4(in_position, 1.0);
+
+	gl_Position = projection * view * tpos;
 	
 	out_texCoord = in_texCoord;
 	
 	out_norm = in_norm;
+	
+	out_fragPos = tpos.xyz;
 
-	out_fragPos = in_position;
+	// out_fragPos = in_position;
 }
