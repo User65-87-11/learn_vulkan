@@ -1910,6 +1910,9 @@ void createDescriptorSets(struct TextureRes * textures, uint32_t count){
 			.range = sizeof(struct UBOCommon) 
 		};
 
+
+		
+
 		VkDescriptorBufferInfo bufferInfoModel = { 
 			.buffer = bufferModel[i], 
 			.offset = 0, 
@@ -1926,10 +1929,10 @@ void createDescriptorSets(struct TextureRes * textures, uint32_t count){
 
 
 		VkDescriptorImageInfo imageInfos[count];
-		for(int i=0;i<count;i++){
-			imageInfos[i] = (VkDescriptorImageInfo ){
-				.sampler = textures[i].textureSampler,
-				.imageView = textures[i].textureImageView,
+		for(int j=0;j<count;j++){
+			imageInfos[j] = (VkDescriptorImageInfo ){
+				.sampler = textures[j].textureSampler,
+				.imageView = textures[j].textureImageView,
 				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			};
 			// VkDescriptorImageInfo imageInfo = {
@@ -4386,11 +4389,11 @@ void cleanup(){
 	
 	vkDestroyFence(device, transferFence, NULL);
 
-	for( int i=0;i<TEXTURE_COUNT ;i++)
-	{
-		struct TextureRes * t = &textures[i];
-		vkDestroyImageView(device, t->textureImageView,  NULL);
-	}
+	// for( int i=0;i<TEXTURE_COUNT ;i++)
+	// {
+	// 	struct TextureRes * t = &textures[i];
+	// 	vkDestroyImageView(device, t->textureImageView,  NULL);
+	// }
 	vkDestroyImage(device, depthImage, NULL);
 
 	vkDestroyImageView(device,depthImageView, NULL);
@@ -4400,7 +4403,10 @@ void cleanup(){
 	for( int i=0;i<TEXTURE_COUNT ;i++)
 	{
 		struct TextureRes * t = &textures[i];
+		vkDestroyImageView(device, t->textureImageView,  NULL);
 		vkDestroySampler(device, t->textureSampler, NULL);
+		vkDestroyImage(device, t->textureImage, NULL);
+		vkFreeMemory(device, t->textureImageMemory, NULL);
 	}
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
 
@@ -4413,19 +4419,19 @@ void cleanup(){
 
 
 
-	vkDestroyCommandPool(device, graphicsCommnadPool,NULL);
+	vkDestroyCommandPool(device, graphicsCommnadPool, NULL);
 
-	vkDestroyCommandPool(device, transferCommnadPool,NULL);
+	vkDestroyCommandPool(device, transferCommnadPool, NULL);
 	
-	vkDestroyPipeline(device, graphicsPipeline,NULL);
+	vkDestroyPipeline(device, graphicsPipeline, NULL);
 
 	vkDestroyPipelineLayout(device,pipelineLayout, NULL);
 
-	vkDestroyShaderModule(device,shaderModuleFrag,NULL);
+	vkDestroyShaderModule(device, shaderModuleFrag, NULL);
 	
-	vkDestroyShaderModule(device,shaderModuleVert,NULL);
+	vkDestroyShaderModule(device, shaderModuleVert, NULL);
 
-	for(int i=0;i<OBJECT_NUM ;i++)
+	for(int i=0; i < OBJECT_NUM; i++)
 	{
 		struct ObjectVertexData * ref = &objectVertexData[i];
 
@@ -4456,14 +4462,14 @@ void cleanup(){
 
 
 
-	for( int i=0;i<TEXTURE_COUNT ;i++)
-	{
-		struct TextureRes * t = &textures[i];
+	// for( int i=0;i<TEXTURE_COUNT ;i++)
+	// {
+	// 	struct TextureRes * t = &textures[i];
 
-		vkDestroyImage(device, t->textureImage, NULL);
+	// 	vkDestroyImage(device, t->textureImage, NULL);
 
-		vkFreeMemory(device, t->textureImageMemory, NULL);
-	}
+	// 	vkFreeMemory(device, t->textureImageMemory, NULL);
+	// }
 	clearUniformBuffers();
 
 	vkDestroyDevice(device, NULL);
