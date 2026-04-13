@@ -5,6 +5,7 @@
 // 
 
 #include "cglm/vec3.h"
+#include "gm_array2.h"
 #include <vulkan/vulkan_core.h>
 #include <time.h>
 
@@ -103,6 +104,14 @@ const uint32_t HEIGHT = 600;
 		dst[2]=c;\
 		dst[3]=d;\
 	}while(0)\
+
+#define GLM_VEC3_SET(dst,a,b,c)\
+	do{\
+		dst[0]=a;\
+		dst[1]=b;\
+		dst[2]=c;\
+	}while(0)\
+
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -211,7 +220,7 @@ VkFence inFlightFences [MAX_FRAMES_IN_FLIGHT];
 VkFence transferFence;
 
 
-struct ObjectVertexData
+struct ModelVertexData
 {
 	char * gltfPath;
 
@@ -227,9 +236,9 @@ struct ObjectVertexData
 
 };
 
-#define OBJECT_NUM 2
-uint32_t objectNum = OBJECT_NUM;
-struct ObjectVertexData objectVertexData[OBJECT_NUM]={
+#define MODEL_NUM 2
+uint32_t modelNum = MODEL_NUM;
+struct ModelVertexData modelVertexData[MODEL_NUM]={
 	{.gltfPath = "models_gltf/viking_room.gltf"},
 	{.gltfPath =  "models_gltf/box.gltf"},
 };
@@ -296,6 +305,8 @@ struct TextureRes{
 	VkSampler textureSampler;
 
 	uint32_t mipLevels;
+
+	uint32_t textureIdx;
 };
 
 #define TEXTURE_COUNT  3
@@ -465,6 +476,7 @@ struct UBOModel {
 };
 struct UBOModel uboModels [INSTANCE_NUM * 2] ; 
 
+ 
 
 
 
@@ -503,6 +515,58 @@ struct UBOPointLight {
 }; 
 
 
+struct GameObjectInstance{
+	vec3 position;
+	vec3 scale;
+	vec3 rotation;
+	uint32_t uboModelInd;
+};
+
+struct GameObject {
+
+	// vec3 position;
+	// vec3 scale;
+	// vec3 rotation;
+
+	struct ModelVertexData * mesh;
+	struct TextureRes * tex;
+	
+	// uint32_t uboIndex;
+
+	struct GmArrayView uboModelView;
+	// struct UBOModel * uboModel;
+
+	struct UBOPointLight * uboLight;
+
+	// struct GameObjectInstance  * instances;
+	struct GmArrayView instancesView;
+
+
+};
+
+
+struct GmArray gameObejctInstances;
+
+struct GameObject    gameObjectsCubes ;
+
+ 
+struct GameObject   gameObjectsRooms0 ;
+
+ 
+struct GameObject   gameObjectsRooms1 ;
+
+// #define GAME_OBJECT_TYPES 3
+
+// uint32_t gameObjectsTotal = 0 ;
+
+// struct GameObject  * gameObjectsTypes[GAME_OBJECT_TYPES] ={
+// 	&gameObjectsCubes,
+// 	&gameObjectsRooms0,
+// 	&gameObjectsRooms1,
+// };
+
+struct GmArray uboModels3;
+// struct UBOModel * uboModels2 [GAME_OBJECT_TYPES]; 
 
 /**
 
@@ -587,7 +651,7 @@ void clearUniformBuffers();
 
 void createDescriptorSetLayout();
 
-void createDescriptorSets(struct TextureRes * textures,uint32_t count);
+void createDescriptorSets();
 
 void createTextureImage(
 	char * path, 
@@ -1877,7 +1941,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     endSingleTimeCommands(transferCommandBuffers);
 }
 
-void createDescriptorSets(struct TextureRes * textures, uint32_t count){
+void createDescriptorSets(){
 	PRINT_FNAME;
 
 
@@ -1928,8 +1992,8 @@ void createDescriptorSets(struct TextureRes * textures, uint32_t count){
 		};
 
 
-		VkDescriptorImageInfo imageInfos[count];
-		for(int j=0;j<count;j++){
+		VkDescriptorImageInfo imageInfos[TEXTURE_COUNT];
+		for(int j=0;j<TEXTURE_COUNT;j++){
 			imageInfos[j] = (VkDescriptorImageInfo ){
 				.sampler = textures[j].textureSampler,
 				.imageView = textures[j].textureImageView,
@@ -1982,7 +2046,7 @@ void createDescriptorSets(struct TextureRes * textures, uint32_t count){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = descriptorSets[i], 
 				.dstBinding = 3, 
-				.descriptorCount = count, 
+				.descriptorCount = TEXTURE_COUNT, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
 				// .pBufferInfo = &bufferInfo
@@ -2004,6 +2068,132 @@ void createDescriptorSets(struct TextureRes * textures, uint32_t count){
 
 }
 
+void createDescriptorSets2(){
+	PRINT_FNAME;
+
+
+	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT]={
+		//C99 designated initializer
+		//  [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
+	};
+
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+   		layouts[i] = descriptorSetLayout;
+	}
+
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+		.pSetLayouts = layouts,
+		
+	};
+	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets);
+
+	// assert(UNIFORM_BUFFER_COUNT == 2);
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+		VkDescriptorBufferInfo bufferInfo = { 
+			.buffer = buffersViewProjection[i], 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOCommon) 
+		};
+
+
+		
+
+		VkDescriptorBufferInfo bufferInfoModel = { 
+			.buffer = bufferModel[i], 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOModel) * uboModels3.len
+		};
+
+		VkDescriptorBufferInfo bufferInfoLight = { 
+			.buffer = buffersDirectionalLight[i], 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBODirectionalLight) 
+		};
+
+
+		VkDescriptorImageInfo imageInfos[TEXTURE_COUNT];
+		for(int j=0;j<TEXTURE_COUNT;j++){
+			imageInfos[j] = (VkDescriptorImageInfo ){
+				.sampler = textures[j].textureSampler,
+				.imageView = textures[j].textureImageView,
+				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			};
+			// VkDescriptorImageInfo imageInfo = {
+			// 	.sampler = textures[i].textureSampler,
+			// 	.imageView = textures[i].textureImageView,
+			// 	.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			// };
+
+			// imageInfos[i] = imageInfo;
+		}
+
+ 
+		VkWriteDescriptorSet   descriptorWrite[] = {
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptorSets[i], 
+				.dstBinding = 0, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+				.pBufferInfo = &bufferInfo
+			},
+			
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptorSets[i], 
+				.dstBinding = 1, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+				.pBufferInfo = &bufferInfoModel
+			},
+			
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptorSets[i], 
+				.dstBinding = 2, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+				.pBufferInfo = &bufferInfoLight
+			},
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptorSets[i], 
+				.dstBinding = 3, 
+				.descriptorCount = TEXTURE_COUNT, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+				// .pBufferInfo = &bufferInfo
+				.pImageInfo = imageInfos,
+			},
+			
+		};
+
+
+		vkUpdateDescriptorSets(
+			device,
+			sizeof(descriptorWrite ) / sizeof(VkWriteDescriptorSet), 
+			descriptorWrite, 
+			0, 
+			NULL
+		);
+		
+	}
+
+}
 
 void clearUniformBuffers(){
 	
@@ -2083,7 +2273,318 @@ void clearUniformBuffers(){
 		}
 	}
 }
+void initGameObjects2(){
+	
+	// assert(GAME_OBJECT_TYPES == 3);
 
+	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+	pitch = glm_deg(asin(cameraFront[1]));
+
+	
+	vec4 v = {1.0,1.0,1.0,1.0};
+	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
+	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+
+	// srand((unsigned int)time(NULL));
+
+
+	uint32_t num = 30;
+	
+	// gmArrayCreate((void **)&gameObjectsCubes , sizeof(struct GameObject), 1);
+	// gameObjectsTotal+=num;
+	
+	// gmArrayCreate((void **)&gameObjectsRooms0 , sizeof(struct GameObject), 1);
+	// gameObjectsTotal+=num;
+
+	// gmArrayCreate((void **)&gGameObjectsRooms1 , sizeof(struct GameObject), 1);
+	// gameObjectsTotal+=num;
+
+	// gameObjectsTypes[0] = gameObjectsCubes;
+	// gameObjectsTypes[1] = gameObjectsRooms0;
+	// gameObjectsTypes[2] = gGameObjectsRooms1;
+
+	
+	
+	
+	gmArrayInit(&uboModels3, sizeof(struct UBOModel), num);
+	gmArrayInit(&gameObejctInstances, sizeof(struct GameObjectInstance), num);
+	
+
+
+	
+	for(int i=0;i<num;i++)
+	{
+		//push
+		// struct UBOModel *m = (struct UBOModel *) gmArrayGet(&uboModels3, i);
+
+		// struct GameObjectInstance *g = (struct GameObjectInstance *) gmArrayGet(&gameObejctInstances, i);
+
+		struct UBOModel m;
+		struct GameObjectInstance g ;
+
+
+
+		glm_mat4_identity(m.model) ;
+		
+		GLM_VEC3_SET(g.position, rand_float(),0.0,rand_float());
+		
+		glm_translate(m.model, g.position);
+
+		gmArrayPush(&uboModels3,&m);
+		gmArrayPush(&gameObejctInstances,&g);
+	}
+	
+
+
+	uint32_t texture_index = 2;
+	uint32_t vertexData_index = 1;
+
+	//for(int i=0;i<gmArrayLength(gameObjectsCubes);i++)
+	{
+	
+		gmArrayViewCreateSlice(&uboModels3, &gameObjectsCubes.uboModelView ,0, 10);	
+		gmArrayViewCreateSlice(&gameObejctInstances, &gameObjectsCubes.instancesView ,0, 10);	
+
+		// gmArrayInit(&gameObjectsCubes.instances, sizeof(struct GameObjectInstance), 10);
+
+		gameObjectsCubes.tex = &textures[texture_index];
+		gameObjectsCubes.mesh = &modelVertexData[vertexData_index];
+		gameObjectsCubes.uboLight = NULL;
+
+	}
+
+	texture_index = 1;
+	vertexData_index = 0;
+	{
+	
+		gmArrayViewCreateSlice(&uboModels3, &gameObjectsRooms0.uboModelView ,10, 10);	
+		gmArrayViewCreateSlice(&gameObejctInstances, &gameObjectsRooms0.instancesView ,10, 10);	
+		
+		gameObjectsRooms0.tex = &textures[texture_index];
+		gameObjectsRooms0.mesh = &modelVertexData[vertexData_index];
+		gameObjectsRooms0.uboLight = NULL;
+
+		
+	}
+	assert(gameObjectsRooms0.mesh->vertextBuffer != NULL);
+
+
+	texture_index = 0;
+	vertexData_index = 0;
+	{
+	
+		gmArrayViewCreateSlice(&uboModels3, &gameObjectsRooms1.uboModelView ,20, 10);	
+		gmArrayViewCreateSlice(&gameObejctInstances, &gameObjectsRooms1.instancesView ,20, 10);	
+	
+		gameObjectsRooms1.tex = &textures[texture_index];
+		gameObjectsRooms1.mesh = &modelVertexData[vertexData_index];
+		gameObjectsRooms1.uboLight = NULL;
+	
+
+	}
+
+	 
+
+	// for(int i=0;i < gameObjectsTotal ;i++){
+
+	// 	glm_mat4_identity(uboModels[i].model) ;
+	// 	vec3 pos = {rand_float(),0.0,rand_float()};
+	// 	glm_translate(uboModels[i].model, pos);
+
+
+
+	// }
+
+
+
+	// for(int i=0;i < INSTANCE_NUM * 2;i++){
+
+	// 	glm_mat4_identity(uboModels[i].model) ;
+	// 	vec3 pos = {rand_float(),0.0,rand_float()};
+	// 	glm_translate(uboModels[i].model, pos);
+
+
+
+	// }
+
+}
+void initGameObjects(){
+	
+		
+
+	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+	pitch = glm_deg(asin(cameraFront[1]));
+
+	
+	vec4 v = {1.0,1.0,1.0,1.0};
+	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
+	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+
+	// srand((unsigned int)time(NULL));
+
+
+	// uint32_t num = 10;
+	
+	// gmArrayCreate((void **)&gameObjectsCubes , sizeof(struct GameObject), num);
+
+	// gameObjectsTotal+=num;
+
+	// gmArrayCreate((void **)&gameObjectsRooms0 , sizeof(struct GameObject), num);
+	// gameObjectsTotal+=num;
+
+	// gmArrayCreate((void **)&gGameObjectsRooms1 , sizeof(struct GameObject), num);
+	// gameObjectsTotal+=num;
+
+	// gameObjectsTypes[0] = gameObjectsCubes;
+	// gameObjectsTypes[1] = gameObjectsRooms0;
+	// gameObjectsTypes[2] = gGameObjectsRooms1;
+
+
+	
+
+
+	for(int i=0;i < INSTANCE_NUM * 2;i++){
+
+		glm_mat4_identity(uboModels[i].model) ;
+		vec3 pos = {rand_float(),0.0,rand_float()};
+		glm_translate(uboModels[i].model, pos);
+
+
+
+	}
+
+
+
+	// for(int i=0;i < INSTANCE_NUM * 2;i++){
+
+	// 	glm_mat4_identity(uboModels[i].model) ;
+	// 	vec3 pos = {rand_float(),0.0,rand_float()};
+	// 	glm_translate(uboModels[i].model, pos);
+
+
+
+	// }
+
+}
+void freeGameObjects(){
+
+	// if(gameObjectsCubes != NULL)
+	// {
+	// 	gmArrayFree((void**)&gameObjectsCubes);
+	// }
+
+	// if(gameObjectsRooms0 != NULL)
+	// {
+	// 	gmArrayFree((void**)&gameObjectsRooms0);
+	// }
+
+	// if(gGameObjectsRooms1 != NULL)
+	// {
+	// 	gmArrayFree((void**)&gGameObjectsRooms1);
+	// }
+
+	gmArrayFree(&uboModels3);
+	gmArrayFree(&gameObejctInstances);
+
+	
+};
+void createUniformBuffers2(){
+
+	// assert(UNIFORM_BUFFER_COUNT == 2);
+	// uniformBufferSizes[0]  = sizeof(struct UBOMVP);
+	// uniformBufferSizes[1]  = sizeof(struct UBODirectionalLight);
+
+
+	
+
+	clearUniformBuffers();
+
+	
+
+	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
+
+		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
+		{
+			// MVP uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			buffersViewProjection[i] = buffer;
+			buffersViewProjectionMemory[i] = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			buffersViewProjectionMapped[i] = memptr;
+			
+			//----------------
+		}
+
+		{
+			// MVP uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBOModel) * uboModels3.len;
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			bufferModel[i] = buffer;
+			bufferModelMemory[i] = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			bufferModelMapped[i] = memptr;
+			
+			//----------------
+		}
+
+		{
+			// directional light uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBODirectionalLight);
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			buffersDirectionalLight[i] = buffer;
+			buffersDirectionalLightMemory[i] = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			buffersDirectionalLightMapped[i] = memptr;
+			
+			//----------------
+		}
+	}
+}
 void createUniformBuffers(){
 
 	// assert(UNIFORM_BUFFER_COUNT == 2);
@@ -2179,6 +2680,7 @@ void createUniformBuffers(){
 		}
 	}
 }
+
 
 void createDescriptorPool() {
 
@@ -2718,49 +3220,159 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 
     VkDeviceSize offset = 0;
 	
+	//draw Room0
+	{
+		vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &gameObjectsRooms0.mesh->vertextBuffer, &offset);
+		vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], gameObjectsRooms0.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindDescriptorSets(
+			graphicsCommandBuffers[frameIndex], 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipelineLayout, 0, 1, 
+			&descriptorSets[frameIndex], 0, NULL
+		);
+
+		struct PushConst constants0 = {
+			.hasColor = false,
+			.texIdx = gameObjectsRooms0.tex->textureIdx,
+		};
+		// int textureIndex = 0; // choose texture
+		vkCmdPushConstants(
+			graphicsCommandBuffers[frameIndex],
+			pipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(struct PushConst),
+			&constants0
+		);
+
+		 vkCmdDrawIndexed(
+			graphicsCommandBuffers[frameIndex], 
+			gameObjectsRooms0.mesh->indices_num, 
+			gameObjectsRooms0.uboModelView.len , 
+			0, 
+			0,
+			gameObjectsRooms0.uboModelView.offset
+		);
+	}
+
+	//draw Room1
+	{
+		vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &gameObjectsRooms1.mesh->vertextBuffer, &offset);
+		vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], gameObjectsRooms1.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindDescriptorSets(
+			graphicsCommandBuffers[frameIndex], 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipelineLayout, 0, 1, 
+			&descriptorSets[frameIndex], 0, NULL
+		);
+
+		struct PushConst constants0 = {
+			.hasColor = true,
+			.texIdx = gameObjectsRooms1.tex->textureIdx,
+		};
+		// int textureIndex = 0; // choose texture
+		vkCmdPushConstants(
+			graphicsCommandBuffers[frameIndex],
+			pipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(struct PushConst),
+			&constants0
+		);
+
+		 vkCmdDrawIndexed(
+			graphicsCommandBuffers[frameIndex], 
+			gameObjectsRooms1.mesh->indices_num, 
+			gameObjectsRooms1.uboModelView.len , 
+			0, 
+			0,
+			gameObjectsRooms1.uboModelView.offset
+		);
+	}
+	//draw Cube
+	{
+		vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &gameObjectsCubes.mesh->vertextBuffer, &offset);
+		vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], gameObjectsCubes.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindDescriptorSets(
+			graphicsCommandBuffers[frameIndex], 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipelineLayout, 0, 1, 
+			&descriptorSets[frameIndex], 0, NULL
+		);
+
+		struct PushConst constants0 = {
+			.hasColor = false,
+			.texIdx = gameObjectsCubes.tex->textureIdx,
+		};
+		// int textureIndex = 0; // choose texture
+		vkCmdPushConstants(
+			graphicsCommandBuffers[frameIndex],
+			pipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(struct PushConst),
+			&constants0
+		);
+
+		 vkCmdDrawIndexed(
+			graphicsCommandBuffers[frameIndex], 
+			gameObjectsCubes.mesh->indices_num, 
+			gameObjectsCubes.uboModelView.len , 
+			0, 
+			0,
+			gameObjectsCubes.uboModelView.offset
+		);
+	}
+
+    // vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &modelVertexData[0].vertextBuffer, &offset);
+    // vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], modelVertexData[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+	// vkCmdBindDescriptorSets(
+	// 	graphicsCommandBuffers[frameIndex], 
+	// 	VK_PIPELINE_BIND_POINT_GRAPHICS, 
+	// 	pipelineLayout, 0, 1, 
+	// 	&descriptorSets[frameIndex], 0, NULL
+	// );
+
+	// struct PushConst constants0 = {
+	// 	.hasColor = false,
+	// 	.texIdx = 0,
+	// };
+	// // int textureIndex = 0; // choose texture
+	// vkCmdPushConstants(
+	// 	graphicsCommandBuffers[frameIndex],
+	// 	pipelineLayout,
+	// 	VK_SHADER_STAGE_FRAGMENT_BIT,
+	// 	0,
+	// 	sizeof(struct PushConst),
+	// 	&constants0
+	// );
+
+    // vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], modelVertexData[0].indices_num, INSTANCE_NUM , 0, 0, 0);
 	
-    vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &objectVertexData[0].vertextBuffer, &offset);
-    vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], objectVertexData[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-	vkCmdBindDescriptorSets(
-		graphicsCommandBuffers[frameIndex], 
-		VK_PIPELINE_BIND_POINT_GRAPHICS, 
-		pipelineLayout, 0, 1, 
-		&descriptorSets[frameIndex], 0, NULL
-	);
-
-	struct PushConst constants0 = {
-		.hasColor = false,
-		.texIdx = 0,
-	};
-	// int textureIndex = 0; // choose texture
-	vkCmdPushConstants(
-		graphicsCommandBuffers[frameIndex],
-		pipelineLayout,
-		VK_SHADER_STAGE_FRAGMENT_BIT,
-		0,
-		sizeof(struct PushConst),
-		&constants0
-	);
-
-    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], objectVertexData[0].indices_num, INSTANCE_NUM , 0, 0, 0);
-	
-
-	struct PushConst constants1 = {
-		.hasColor = true,
-		.texIdx = 1,
-	};
-	// textureIndex = 1;
-	vkCmdPushConstants(
-		graphicsCommandBuffers[frameIndex],
-		pipelineLayout,
-		VK_SHADER_STAGE_FRAGMENT_BIT,
-		0,
-		sizeof(struct PushConst),
-		&constants1
-	);
+	// struct PushConst constants1 = {
+	// 	.hasColor = true,
+	// 	.texIdx = 1,
+	// };
+	// // textureIndex = 1;
+	// vkCmdPushConstants(
+	// 	graphicsCommandBuffers[frameIndex],
+	// 	pipelineLayout,
+	// 	VK_SHADER_STAGE_FRAGMENT_BIT,
+	// 	0,
+	// 	sizeof(struct PushConst),
+	// 	&constants1
+	// );
 	 
-    vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], objectVertexData[0].indices_num, INSTANCE_NUM , 0, 0, INSTANCE_NUM);
+    // vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], modelVertexData[0].indices_num, INSTANCE_NUM , 0, 0, INSTANCE_NUM);
+
+
+
+
 
     vkCmdEndRendering(graphicsCommandBuffers[frameIndex]);
 
@@ -2855,7 +3467,65 @@ void updateUniformBuffer(uint32_t currentImage){
 
 
 };
+void updateUniformBuffer2(uint32_t currentImage){
 
+
+	// printf("time %f\n",time);
+
+	
+	// mat4 model;
+	// vec3 rotation = {0.f,0.f,1.f};
+
+	// glm_mat4_identity(ubo.model);
+	
+
+	// glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
+
+
+	// glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+
+
+
+	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
+
+
+	memcpy(bufferModelMapped[frameIndex], uboModels3.data, sizeof(struct UBOModel)* uboModels3.len);
+	
+
+	
+	struct UBOCommon ubo = {};
+
+	vec3 cameraCenter;
+	
+	glm_vec3_add(cameraPos, cameraFront, cameraCenter);
+
+	glm_lookat(cameraPos, cameraCenter, cameraUp, ubo.view);
+
+
+	
+
+	
+	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo.proj);
+
+	ubo.proj[1][1] *= -1;
+
+	memcpy(buffersViewProjectionMapped[currentImage], &ubo, sizeof(struct UBOCommon));
+
+
+	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
+
+
+	// vec4 lightPos ;
+	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
+	
+
+	memcpy(buffersDirectionalLightMapped[currentImage], &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
+
+
+};
 void drawFrame() {
 
  
@@ -2896,7 +3566,7 @@ void drawFrame() {
 	}
 	
 	
-	updateUniformBuffer(frameIndex);
+	updateUniformBuffer2(frameIndex);
 	
 	vkResetFences(device, 1, &inFlightFences[frameIndex]);
 
@@ -4237,6 +4907,7 @@ void initVulkan(){
 			&t->textureImageMemory,
 			&t->mipLevels
 		);
+		t->textureIdx = i;
 	}
 	createTextureImageView();
 
@@ -4245,10 +4916,10 @@ void initVulkan(){
 		struct TextureRes * t = &textures[i];
 		createTextureSampler(&t->textureSampler);
 	}
-	for(int i=0;i<OBJECT_NUM;i++)
+	for(int i=0;i<MODEL_NUM;i++)
 	{
 
-		struct ObjectVertexData * ref = &objectVertexData[i];
+		struct ModelVertexData * ref = &modelVertexData[i];
 
 		if(ref->gltfPath == NULL) continue;
 
@@ -4290,43 +4961,19 @@ void initVulkan(){
 
 	// init MODELS
 
-	{
-		
-
-		yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
-		pitch = glm_deg(asin(cameraFront[1]));
-
-		
-		vec4 v = {1.0,1.0,1.0,1.0};
-		GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
-		GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
-		GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
-
-		// srand((unsigned int)time(NULL));
-
-		for(int i=0;i < INSTANCE_NUM * 2;i++){
-
-			glm_mat4_identity(uboModels[i].model) ;
-			vec3 pos = {rand_float(),0.0,rand_float()};
-			glm_translate(uboModels[i].model, pos);
-
-
-
-		}
-	}
-
+	initGameObjects2();
 	
 
 	
 
-	createUniformBuffers();
+	createUniformBuffers2();
 
 	createDescriptorPool();
 
 	// for( int i=0;i<TEXTURE_COUNT ;i++)
 	{
 		// struct TextureRes * t = &textures[i];
-		createDescriptorSets(textures,TEXTURE_COUNT);
+		createDescriptorSets2();
 	}
 	
 
@@ -4431,9 +5078,9 @@ void cleanup(){
 	
 	vkDestroyShaderModule(device, shaderModuleVert, NULL);
 
-	for(int i=0; i < OBJECT_NUM; i++)
+	for(int i=0; i < MODEL_NUM; i++)
 	{
-		struct ObjectVertexData * ref = &objectVertexData[i];
+		struct ModelVertexData * ref = &modelVertexData[i];
 
 		if(ref->vertextBuffer != NULL){
 
@@ -4471,6 +5118,9 @@ void cleanup(){
 	// 	vkFreeMemory(device, t->textureImageMemory, NULL);
 	// }
 	clearUniformBuffers();
+
+
+	freeGameObjects();
 
 	vkDestroyDevice(device, NULL);
 

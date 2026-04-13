@@ -6,14 +6,29 @@
  
 #include "gm_array.h"
 
+
+/**
+
+incremental / amortized sorting
+
+few elements per frame is fine.= one pass
+
+*/
+
 static inline struct GmArray *gmArrayHeader(void *arr) {
     return ((struct GmArray *)arr) - 1;
 }
 
+void gmArrayViewCreate(void ** dst,void * src, uint32_t size){
+	assert(src != NULL);
+
+	*dst
+	
+}
 
 void gmArrayCreate(void ** dst, uint32_t width, uint32_t size){
 	assert(*dst == NULL);
-	assert(width !=0);
+	assert(width !=0 && size !=0);
 
 
 	
@@ -34,8 +49,49 @@ void gmArrayCreate(void ** dst, uint32_t width, uint32_t size){
 	// }
 	// a->capacity = size;
 	 
-
 }
+
+void gmArraySwap(void *dst, uint32_t pos1, uint32_t pos2)
+{
+    struct GmArray *h = gmArrayHeader(dst);
+
+    assert(pos1 < h->len);
+    assert(pos2 < h->len);
+
+    if (pos1 == pos2)
+        return;
+
+    void *base = dst;
+
+    void *a = (char *)base + pos1 * h->width;
+    void *b = (char *)base + pos2 * h->width;
+
+    char tmp[h->width];  // VLA temporary buffer
+    memcpy(tmp, a, h->width);
+    memcpy(a, b, h->width);
+    memcpy(b, tmp, h->width);
+}
+
+void gmArrayRemove(void *dst, uint32_t position)
+{
+    struct GmArray *h = gmArrayHeader(dst);
+
+    void *base = dst;
+
+    void *target = (char *)base + position * h->width;
+    void *last   = (char *)base + (h->len - 1) * h->width;
+
+	
+    memcpy(target, last, h->width);
+    h->len--;
+
+	// if(*element!= NULL)
+	// {
+	// 	*element = last;
+	// }
+}
+
+
 void gmArrayAdd(void **dst, void *element) {
    assert(dst && *dst && element);
 
