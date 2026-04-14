@@ -2303,10 +2303,12 @@ void createDescriptorSets3(){
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
-		frames[i].descriptorSets = &descriptorSets[i];
+		struct Frame * frame = &frames[i];
+
+		frame->descriptorSets = &descriptorSets[i];
 
 		VkDescriptorBufferInfo bufferInfo = { 
-			.buffer = frames[i].buffersViewProjection, 
+			.buffer = frame->buffersViewProjection, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
 			.range = sizeof(struct UBOCommon) 
@@ -2316,14 +2318,14 @@ void createDescriptorSets3(){
 		
 
 		VkDescriptorBufferInfo bufferInfoModel = { 
-			.buffer = frames[i].bufferModel, 
+			.buffer = frame->bufferModel, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
 			.range = sizeof(struct UBOModel) * uboModels3.len
 		};
 
 		VkDescriptorBufferInfo bufferInfoLight = { 
-			.buffer = frames[i].buffersDirectionalLight, 
+			.buffer = frame->buffersDirectionalLight, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
 			.range = sizeof(struct UBODirectionalLight) 
@@ -2350,7 +2352,7 @@ void createDescriptorSets3(){
 		VkWriteDescriptorSet   descriptorWrite[] = {
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frames[i].descriptorSets, 
+				.dstSet = *frame->descriptorSets, 
 				.dstBinding = 0, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
@@ -2361,7 +2363,7 @@ void createDescriptorSets3(){
 			
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frames[i].descriptorSets, 
+				.dstSet = *frame->descriptorSets, 
 				.dstBinding = 1, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
@@ -2372,7 +2374,7 @@ void createDescriptorSets3(){
 			
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frames[i].descriptorSets, 
+				.dstSet = *frame->descriptorSets, 
 				.dstBinding = 2, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
@@ -2382,7 +2384,7 @@ void createDescriptorSets3(){
 			},
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frames[i].descriptorSets, 
+				.dstSet = *frame->descriptorSets, 
 				.dstBinding = 3, 
 				.descriptorCount = TEXTURE_COUNT, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -2489,6 +2491,7 @@ void clearUniformBuffers3(){
 
 	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
 
+		struct Frame * frame = &frames[i];
 		// for(int k=0; k < UNIFORM_BUFFER_COUNT; k++)
 		// {
 		// 	if(uniformBuffersMapped[i][k] != NULL)
@@ -2506,58 +2509,58 @@ void clearUniformBuffers3(){
 		// 	}
 		// }
 
-		if(frames[i].buffersViewProjectionMapped != NULL)
+		if(frame->buffersViewProjectionMapped != NULL)
 		{
 			 
-			vkUnmapMemory(device,frames[i].buffersViewProjectionMemory);
-			frames[i].buffersViewProjectionMapped = NULL;
+			vkUnmapMemory(device,frame->buffersViewProjectionMemory);
+			frame->buffersViewProjectionMapped = NULL;
 		}
-		if(frames[i].buffersViewProjection != NULL){
+		if(frame->buffersViewProjection != NULL){
 
-			vkDestroyBuffer(device, frames[i].buffersViewProjection, NULL);
-			frames[i].buffersViewProjection = NULL;
+			vkDestroyBuffer(device, frame->buffersViewProjection, NULL);
+			frame->buffersViewProjection = NULL;
 		}
-		if(frames[i].buffersViewProjectionMemory != NULL){
+		if(frame->buffersViewProjectionMemory != NULL){
 
-			vkFreeMemory(device, frames[i].buffersViewProjectionMemory, NULL);
-			frames[i].buffersViewProjectionMemory= NULL;
+			vkFreeMemory(device, frame->buffersViewProjectionMemory, NULL);
+			frame->buffersViewProjectionMemory= NULL;
 		}
 		
 
 
-		if(frames[i].bufferModelMapped != NULL)
+		if(frame->bufferModelMapped != NULL)
 		{
 			 
-			vkUnmapMemory(device,frames[i].bufferModelMemory);
-			frames[i].bufferModelMapped = NULL;
+			vkUnmapMemory(device,frame->bufferModelMemory);
+			frame->bufferModelMapped = NULL;
 		}
-		if(frames[i].bufferModel != NULL){
+		if(frame->bufferModel != NULL){
 
-			vkDestroyBuffer(device, frames[i].bufferModel, NULL);
-			frames[i].bufferModel = NULL;
+			vkDestroyBuffer(device, frame->bufferModel, NULL);
+			frame->bufferModel = NULL;
 		}
-		if(frames[i].bufferModelMemory != NULL){
+		if(frame->bufferModelMemory != NULL){
 
-			vkFreeMemory(device, frames[i].bufferModelMemory, NULL);
-			frames[i].bufferModelMemory= NULL;
+			vkFreeMemory(device, frame->bufferModelMemory, NULL);
+			frame->bufferModelMemory= NULL;
 		}
 
 		
-		if(frames[i].buffersDirectionalLightMapped != NULL)
+		if(frame->buffersDirectionalLightMapped != NULL)
 		{
 			 
-			vkUnmapMemory(device,frames[i].buffersDirectionalLightMemory);
-			frames[i].buffersDirectionalLightMapped = NULL;
+			vkUnmapMemory(device,frame->buffersDirectionalLightMemory);
+			frame->buffersDirectionalLightMapped = NULL;
 		}
-		if(frames[i].buffersDirectionalLight != NULL){
+		if(frame->buffersDirectionalLight != NULL){
 
-			vkDestroyBuffer(device, frames[i].buffersDirectionalLight, NULL);
-			frames[i].buffersDirectionalLight = NULL;
+			vkDestroyBuffer(device, frame->buffersDirectionalLight, NULL);
+			frame->buffersDirectionalLight = NULL;
 		}
-		if(frames[i].buffersDirectionalLightMemory != NULL){
+		if(frame->buffersDirectionalLightMemory != NULL){
 
-			vkFreeMemory(device, frames[i].buffersDirectionalLightMemory, NULL);
-			frames[i].buffersDirectionalLightMemory= NULL;
+			vkFreeMemory(device, frame->buffersDirectionalLightMemory, NULL);
+			frame->buffersDirectionalLightMemory= NULL;
 		}
 	}
 }
@@ -2799,6 +2802,8 @@ void createUniformBuffers3(){
 
 	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
 
+		struct Frame * frame = &frames[i];
+
 		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
 		{
 			// MVP uniform buffers
@@ -2813,15 +2818,15 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frames[i].buffersViewProjection= buffer;
-			frames[i].buffersViewProjectionMemory = bufferMemory;
+			frame->buffersViewProjection= buffer;
+			frame->buffersViewProjectionMemory = bufferMemory;
 
 			void * memptr = NULL;
 			
 
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frames[i].buffersViewProjectionMapped = memptr;
+			frame->buffersViewProjectionMapped = memptr;
 			
 			//----------------
 		}
@@ -2839,15 +2844,15 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frames[i].bufferModel = buffer;
-			frames[i].bufferModelMemory = bufferMemory;
+			frame->bufferModel = buffer;
+			frame->bufferModelMemory = bufferMemory;
 
 			void * memptr = NULL;
 			
 
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frames[i].bufferModelMapped= memptr;
+			frame->bufferModelMapped= memptr;
 			
 			//----------------
 		}
@@ -2865,15 +2870,15 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frames[i].buffersDirectionalLight = buffer;
-			frames[i].buffersDirectionalLightMemory = bufferMemory;
+			frame->buffersDirectionalLight = buffer;
+			frame->buffersDirectionalLightMemory = bufferMemory;
 
 			void * memptr = NULL;
 			
 
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frames[i].buffersDirectionalLightMapped = memptr;
+			frame->buffersDirectionalLightMapped = memptr;
 			
 			//----------------
 		}
@@ -4524,14 +4529,14 @@ void createSyncObjects3(){
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
-
+		struct Frame * frame = &frames[i];
 	
 		VkSemaphoreCreateInfo semaphoreCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 		};
-		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &frames[i].presentCompleteSemaphore);
+		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &frame->presentCompleteSemaphore);
 
-		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &frames[i].renderFinishedSemaphore);
+		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &frame->renderFinishedSemaphore);
 
 		
 	
@@ -4541,7 +4546,7 @@ void createSyncObjects3(){
 			.flags = VK_FENCE_CREATE_SIGNALED_BIT,
 		};
 
-		vkCreateFence(device, &createInfo, NULL,  &frames[i].inFlightFence);
+		vkCreateFence(device, &createInfo, NULL,  &frame->inFlightFence);
 	}
 
 	VkFenceCreateInfo fenceInfo = {
@@ -5939,21 +5944,22 @@ void cleanup(){
 	
 	for(int i=0;i < MAX_FRAMES_IN_FLIGHT;i++)
 	{
+		struct Frame * frame = &frames[i];
 
-		vkDestroySemaphore(device,frames[i].presentCompleteSemaphore,NULL);
+		vkDestroySemaphore(device,frame->presentCompleteSemaphore,NULL);
 	
-		vkDestroySemaphore(device,frames[i].renderFinishedSemaphore,NULL);
+		vkDestroySemaphore(device,frame->renderFinishedSemaphore,NULL);
 
-		vkDestroyFence(device,frames[i].inFlightFence,NULL);
+		vkDestroyFence(device,frame->inFlightFence,NULL);
 
 
 		
 
-		vkDestroySemaphore(device,presentCompleteSemaphore[i],NULL);
+		// vkDestroySemaphore(device,presentCompleteSemaphore[i],NULL);
 	
-		vkDestroySemaphore(device,renderFinishedSemaphore[i],NULL);
+		// vkDestroySemaphore(device,renderFinishedSemaphore[i],NULL);
 
-		vkDestroyFence(device,inFlightFences[i],NULL);
+		// vkDestroyFence(device,inFlightFences[i],NULL);
 	}
 
 		
