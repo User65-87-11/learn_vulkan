@@ -155,6 +155,8 @@ VkQueue graphicsQueue = NULL;
 
 VkQueue transferQueue = NULL;
 
+
+
 uint32_t queueFamilyIndexCount = 2;
 
 uint32_t graphicsQueueFamilyArrayIndex = 0;
@@ -164,6 +166,9 @@ uint32_t transferQueueFamilyArrayIndex = 1;
 uint32_t queueFamilyIndeces[2] = {
 	-1,-1,
 };
+
+
+
 
 uint32_t presentationSupportQueueFamilyIndex = - 1;
 
@@ -223,6 +228,60 @@ VkFence inFlightFences [MAX_FRAMES_IN_FLIGHT];
 
 VkFence transferFence;
 
+
+struct Frame{
+
+ 
+
+	VkCommandBuffer * graphicsCommandBuffers;
+
+	VkSemaphore presentCompleteSemaphore;
+
+	VkSemaphore renderFinishedSemaphore;
+
+	VkFence inFlightFence ;
+
+
+
+	VkBuffer bufferModel ;
+
+	VkDeviceMemory bufferModelMemory ;
+
+	void * bufferModelMapped ;
+
+
+	VkBuffer buffersViewProjection ;
+
+	VkDeviceMemory buffersViewProjectionMemory ;
+
+	void * buffersViewProjectionMapped ;
+
+
+	VkBuffer buffersDirectionalLight ;
+
+	VkDeviceMemory buffersDirectionalLightMemory ;
+
+	void * buffersDirectionalLightMapped ;
+
+
+
+	VkDescriptorSet* descriptorSets;
+
+	//--
+
+	VkImage pickImage;
+    VkImageView pickView;
+    VkDeviceMemory pickMemory;
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingMemory;
+
+    uint32_t pickedID;
+
+	//---
+};
+
+struct Frame frames[MAX_FRAMES_IN_FLIGHT] ={};
 
 struct ModelVertexData
 {
@@ -2216,6 +2275,136 @@ void createDescriptorSets2(){
 
 }
 
+void createDescriptorSets3(){
+	PRINT_FNAME;
+
+
+	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT]={
+		//C99 designated initializer
+		//  [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
+	};
+
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+   		layouts[i] = descriptorSetLayout;
+	}
+
+
+
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+		.pSetLayouts = layouts,
+		
+	};
+	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets);
+
+	// assert(UNIFORM_BUFFER_COUNT == 2);
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+		frames[i].descriptorSets = &descriptorSets[i];
+
+		VkDescriptorBufferInfo bufferInfo = { 
+			.buffer = frames[i].buffersViewProjection, 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOCommon) 
+		};
+
+
+		
+
+		VkDescriptorBufferInfo bufferInfoModel = { 
+			.buffer = frames[i].bufferModel, 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOModel) * uboModels3.len
+		};
+
+		VkDescriptorBufferInfo bufferInfoLight = { 
+			.buffer = frames[i].buffersDirectionalLight, 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBODirectionalLight) 
+		};
+
+
+		VkDescriptorImageInfo imageInfos[TEXTURE_COUNT];
+		for(int j=0;j<TEXTURE_COUNT;j++){
+			imageInfos[j] = (VkDescriptorImageInfo ){
+				.sampler = textures[j].textureSampler,
+				.imageView = textures[j].textureImageView,
+				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			};
+			// VkDescriptorImageInfo imageInfo = {
+			// 	.sampler = textures[i].textureSampler,
+			// 	.imageView = textures[i].textureImageView,
+			// 	.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			// };
+
+			// imageInfos[i] = imageInfo;
+		}
+
+ 
+		VkWriteDescriptorSet   descriptorWrite[] = {
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frames[i].descriptorSets, 
+				.dstBinding = 0, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+				.pBufferInfo = &bufferInfo
+			},
+			
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frames[i].descriptorSets, 
+				.dstBinding = 1, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+				.pBufferInfo = &bufferInfoModel
+			},
+			
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frames[i].descriptorSets, 
+				.dstBinding = 2, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+				.pBufferInfo = &bufferInfoLight
+			},
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frames[i].descriptorSets, 
+				.dstBinding = 3, 
+				.descriptorCount = TEXTURE_COUNT, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+				// .pBufferInfo = &bufferInfo
+				.pImageInfo = imageInfos,
+			},
+			
+		};
+
+
+		vkUpdateDescriptorSets(
+			device,
+			sizeof(descriptorWrite ) / sizeof(VkWriteDescriptorSet), 
+			descriptorWrite, 
+			0, 
+			NULL
+		);
+		
+	}
+
+}
 void clearUniformBuffers(){
 	
 	PRINT_FNAME;
@@ -2291,6 +2480,84 @@ void clearUniformBuffers(){
 
 			vkFreeMemory(device, buffersDirectionalLightMemory[i], NULL);
 			buffersDirectionalLightMemory[i]= NULL;
+		}
+	}
+}
+void clearUniformBuffers3(){
+	
+	PRINT_FNAME;
+
+	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
+
+		// for(int k=0; k < UNIFORM_BUFFER_COUNT; k++)
+		// {
+		// 	if(uniformBuffersMapped[i][k] != NULL)
+		// 	{
+		// 		vkUnmapMemory(device,uniformBuffersMemory[i][k]);
+		// 		uniformBuffersMapped[i][k] = NULL;
+		// 	}
+		// 	if(uniformBuffers[i] != NULL){
+		// 		vkDestroyBuffer(device, uniformBuffers[i][k], NULL);
+		// 		uniformBuffers[i][k] = NULL;
+		// 	}
+		// 	if(uniformBuffersMemory[i][k] != NULL){
+		// 		vkFreeMemory(device, uniformBuffersMemory[i][k], NULL);
+		// 		uniformBuffersMemory[i][k] = NULL;
+		// 	}
+		// }
+
+		if(frames[i].buffersViewProjectionMapped != NULL)
+		{
+			 
+			vkUnmapMemory(device,frames[i].buffersViewProjectionMemory);
+			frames[i].buffersViewProjectionMapped = NULL;
+		}
+		if(frames[i].buffersViewProjection != NULL){
+
+			vkDestroyBuffer(device, frames[i].buffersViewProjection, NULL);
+			frames[i].buffersViewProjection = NULL;
+		}
+		if(frames[i].buffersViewProjectionMemory != NULL){
+
+			vkFreeMemory(device, frames[i].buffersViewProjectionMemory, NULL);
+			frames[i].buffersViewProjectionMemory= NULL;
+		}
+		
+
+
+		if(frames[i].bufferModelMapped != NULL)
+		{
+			 
+			vkUnmapMemory(device,frames[i].bufferModelMemory);
+			frames[i].bufferModelMapped = NULL;
+		}
+		if(frames[i].bufferModel != NULL){
+
+			vkDestroyBuffer(device, frames[i].bufferModel, NULL);
+			frames[i].bufferModel = NULL;
+		}
+		if(frames[i].bufferModelMemory != NULL){
+
+			vkFreeMemory(device, frames[i].bufferModelMemory, NULL);
+			frames[i].bufferModelMemory= NULL;
+		}
+
+		
+		if(frames[i].buffersDirectionalLightMapped != NULL)
+		{
+			 
+			vkUnmapMemory(device,frames[i].buffersDirectionalLightMemory);
+			frames[i].buffersDirectionalLightMapped = NULL;
+		}
+		if(frames[i].buffersDirectionalLight != NULL){
+
+			vkDestroyBuffer(device, frames[i].buffersDirectionalLight, NULL);
+			frames[i].buffersDirectionalLight = NULL;
+		}
+		if(frames[i].buffersDirectionalLightMemory != NULL){
+
+			vkFreeMemory(device, frames[i].buffersDirectionalLightMemory, NULL);
+			frames[i].buffersDirectionalLightMemory= NULL;
 		}
 	}
 }
@@ -2517,6 +2784,101 @@ void freeGameObjects(){
 
 	
 };
+void createUniformBuffers3(){
+
+	// assert(UNIFORM_BUFFER_COUNT == 2);
+	// uniformBufferSizes[0]  = sizeof(struct UBOMVP);
+	// uniformBufferSizes[1]  = sizeof(struct UBODirectionalLight);
+
+
+	
+
+	clearUniformBuffers3();
+
+	
+
+	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
+
+		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
+		{
+			// MVP uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			frames[i].buffersViewProjection= buffer;
+			frames[i].buffersViewProjectionMemory = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			frames[i].buffersViewProjectionMapped = memptr;
+			
+			//----------------
+		}
+
+		{
+			// MVP uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBOModel) * uboModels3.len;
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			frames[i].bufferModel = buffer;
+			frames[i].bufferModelMemory = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			frames[i].bufferModelMapped= memptr;
+			
+			//----------------
+		}
+
+		{
+			// directional light uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBODirectionalLight);
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			frames[i].buffersDirectionalLight = buffer;
+			frames[i].buffersDirectionalLightMemory = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			frames[i].buffersDirectionalLightMapped = memptr;
+			
+			//----------------
+		}
+	}
+}
 void createUniformBuffers2(){
 
 	// assert(UNIFORM_BUFFER_COUNT == 2);
@@ -2793,7 +3155,7 @@ void createDescriptorSetLayout(){
 		.pBindings = descriptorSetLayoutBindings,
 	};
 
-	VkResult res= vkCreateDescriptorSetLayout(device,&descriptorSetLayoutCreateInfo,NULL,&descriptorSetLayout);
+	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
 
 	if(res != VK_SUCCESS){
 		EXIT_CLEAN("vkCreateDescriptorSetLayout failed");
@@ -2867,7 +3229,7 @@ void createBuffer(
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice,&physicalDeviceMemoryProperties);
 
 	vkAllocateMemory(device, &memoryAllocateInfo, NULL, bufferMemory);
-
+	
 	vkBindBufferMemory(device, *buffer, *bufferMemory, 0);
 }
 void copyBuffer(VkBuffer  srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
@@ -3137,7 +3499,10 @@ void createCommandPool(){
 	};
 
 	vkAllocateCommandBuffers(device, &allocInfo, graphicsCommandBuffers);
- 
+
+	for(int i=0;i< MAX_FRAMES_IN_FLIGHT;i++){
+		frames[i].graphicsCommandBuffers = &graphicsCommandBuffers[i];
+	}
 
 	// --
 	commandPoolCreateInfo = (VkCommandPoolCreateInfo){
@@ -3434,6 +3799,282 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
     vkEndCommandBuffer(graphicsCommandBuffers[frameIndex]);
 }
 
+void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
+
+	VkCommandBuffer commandBuffer = *(frames[frameIndex].graphicsCommandBuffers);
+	VkDescriptorSet * descriptorSet = frames[frameIndex].descriptorSets;
+
+
+	VkCommandBufferBeginInfo beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = 0, 
+        .pInheritanceInfo = NULL,
+    };
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+
+    VkImageMemoryBarrier2 beginBarrier = {
+
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+        .srcAccessMask = 0,
+        .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
+        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = swapchainImages[imageIndex],
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    };
+
+    VkDependencyInfo beginDepInfo = {
+
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &beginBarrier,
+    };
+
+    vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
+
+
+    VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
+    VkClearValue clearDepth = {1.0f, 0};
+    
+    VkRenderingAttachmentInfo colorAttachmentInfo = {
+
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = swapchainImageViews[imageIndex],
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = clearColor
+    };
+    VkRenderingAttachmentInfo depthAttachmentInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = depthImageView,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .clearValue = clearDepth
+    };
+
+    VkRenderingInfo renderingInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = { .offset = {0, 0}, .extent = swapChainExtent },
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachmentInfo,
+        .pDepthAttachment = &depthAttachmentInfo,
+    };
+
+    vkCmdBeginRendering(commandBuffer, &renderingInfo);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+    
+    VkViewport viewPort = {
+        .x = 0, .y = 0, .width = swapChainExtent.width, .height = swapChainExtent.height, 
+        .minDepth = 0.0f, .maxDepth = 1.0f
+    };
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
+    
+    VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    VkDeviceSize offset = 0;
+	
+	//draw Room0
+	{
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsRooms0.mesh->vertextBuffer, &offset);
+		vkCmdBindIndexBuffer(commandBuffer, gameObjectsRooms0.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindDescriptorSets(
+			commandBuffer, 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipelineLayout, 0, 1, 
+			descriptorSet, 0, NULL
+		);
+
+		struct PushConst constants0 = {
+			.hasColor = false,
+			.texIdx = gameObjectsRooms0.tex->textureIdx,
+		};
+		// int textureIndex = 0; // choose texture
+		vkCmdPushConstants(
+			commandBuffer,
+			pipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(struct PushConst),
+			&constants0
+		);
+
+		 vkCmdDrawIndexed(
+			commandBuffer, 
+			gameObjectsRooms0.mesh->indices_num, 
+			gameObjectsRooms0.uboModelView.len , 
+			0, 
+			0,
+			gameObjectsRooms0.uboModelView.offset
+		);
+	}
+
+	//draw Room1
+	{
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsRooms1.mesh->vertextBuffer, &offset);
+		vkCmdBindIndexBuffer(commandBuffer, gameObjectsRooms1.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindDescriptorSets(
+			commandBuffer, 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipelineLayout, 0, 1, 
+			descriptorSet, 0, NULL
+		);
+
+		struct PushConst constants0 = {
+			.hasColor = true,
+			.texIdx = gameObjectsRooms1.tex->textureIdx,
+		};
+		// int textureIndex = 0; // choose texture
+		vkCmdPushConstants(
+			commandBuffer,
+			pipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(struct PushConst),
+			&constants0
+		);
+
+		 vkCmdDrawIndexed(
+			commandBuffer, 
+			gameObjectsRooms1.mesh->indices_num, 
+			gameObjectsRooms1.uboModelView.len , 
+			0, 
+			0,
+			gameObjectsRooms1.uboModelView.offset
+		);
+	}
+	//draw Cube
+	{
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsCubes.mesh->vertextBuffer, &offset);
+		vkCmdBindIndexBuffer(commandBuffer, gameObjectsCubes.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindDescriptorSets(
+			commandBuffer, 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipelineLayout, 0, 1, 
+			descriptorSet, 0, NULL
+		);
+
+		struct PushConst constants0 = {
+			.hasColor = false,
+			.texIdx = gameObjectsCubes.tex->textureIdx,
+		};
+		// int textureIndex = 0; // choose texture
+		vkCmdPushConstants(
+			commandBuffer,
+			pipelineLayout,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			0,
+			sizeof(struct PushConst),
+			&constants0
+		);
+
+		 vkCmdDrawIndexed(
+			commandBuffer, 
+			gameObjectsCubes.mesh->indices_num, 
+			gameObjectsCubes.uboModelView.len , 
+			0, 
+			0,
+			gameObjectsCubes.uboModelView.offset
+		);
+	}
+
+    // vkCmdBindVertexBuffers(graphicsCommandBuffers[frameIndex], 0, 1, &modelVertexData[0].vertextBuffer, &offset);
+    // vkCmdBindIndexBuffer(graphicsCommandBuffers[frameIndex], modelVertexData[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+	// vkCmdBindDescriptorSets(
+	// 	graphicsCommandBuffers[frameIndex], 
+	// 	VK_PIPELINE_BIND_POINT_GRAPHICS, 
+	// 	pipelineLayout, 0, 1, 
+	// 	&descriptorSets[frameIndex], 0, NULL
+	// );
+
+	// struct PushConst constants0 = {
+	// 	.hasColor = false,
+	// 	.texIdx = 0,
+	// };
+	// // int textureIndex = 0; // choose texture
+	// vkCmdPushConstants(
+	// 	graphicsCommandBuffers[frameIndex],
+	// 	pipelineLayout,
+	// 	VK_SHADER_STAGE_FRAGMENT_BIT,
+	// 	0,
+	// 	sizeof(struct PushConst),
+	// 	&constants0
+	// );
+
+    // vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], modelVertexData[0].indices_num, INSTANCE_NUM , 0, 0, 0);
+	
+
+	// struct PushConst constants1 = {
+	// 	.hasColor = true,
+	// 	.texIdx = 1,
+	// };
+	// // textureIndex = 1;
+	// vkCmdPushConstants(
+	// 	graphicsCommandBuffers[frameIndex],
+	// 	pipelineLayout,
+	// 	VK_SHADER_STAGE_FRAGMENT_BIT,
+	// 	0,
+	// 	sizeof(struct PushConst),
+	// 	&constants1
+	// );
+	 
+    // vkCmdDrawIndexed(graphicsCommandBuffers[frameIndex], modelVertexData[0].indices_num, INSTANCE_NUM , 0, 0, INSTANCE_NUM);
+
+
+
+
+
+    vkCmdEndRendering(commandBuffer);
+
+   
+    VkImageMemoryBarrier2 endBarrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+        .dstAccessMask = 0,
+        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = swapchainImages[imageIndex],
+        .subresourceRange = { 
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
+			.baseMipLevel = 0, 
+			.levelCount = 1, 
+            .baseArrayLayer = 0, 
+			.layerCount = 1 
+        },
+    };
+
+    VkDependencyInfo depInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &endBarrier
+    };
+    vkCmdPipelineBarrier2(commandBuffer, &depInfo);
+
+    vkEndCommandBuffer(commandBuffer);
+}
 
 // void updateUniformBuffer(uint32_t currentImage){
 
@@ -3494,7 +4135,7 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 
 
 // };
-void updateUniformBuffer2(uint32_t currentImage){
+void updateUniformBuffer2(uint32_t currentFrame){
 
 
 	// printf("time %f\n",time);
@@ -3518,7 +4159,7 @@ void updateUniformBuffer2(uint32_t currentImage){
 	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
 
 
-	memcpy(bufferModelMapped[frameIndex], uboModels3.data, sizeof(struct UBOModel)* uboModels3.len);
+	memcpy(bufferModelMapped[currentFrame], uboModels3.data, sizeof(struct UBOModel)* uboModels3.len);
 	
 
 	
@@ -3538,7 +4179,7 @@ void updateUniformBuffer2(uint32_t currentImage){
 
 	ubo.proj[1][1] *= -1;
 
-	memcpy(buffersViewProjectionMapped[currentImage], &ubo, sizeof(struct UBOCommon));
+	memcpy(buffersViewProjectionMapped[currentFrame], &ubo, sizeof(struct UBOCommon));
 
 
 	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
@@ -3548,7 +4189,66 @@ void updateUniformBuffer2(uint32_t currentImage){
 	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
 	
 
-	memcpy(buffersDirectionalLightMapped[currentImage], &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+	memcpy(buffersDirectionalLightMapped[currentFrame], &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
+
+
+};
+void updateUniformBuffer3(uint32_t currentFrame){
+
+
+	// printf("time %f\n",time);
+
+	
+	// mat4 model;
+	// vec3 rotation = {0.f,0.f,1.f};
+
+	// glm_mat4_identity(ubo.model);
+	
+
+	// glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
+
+
+	// glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+
+
+
+	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
+
+
+	memcpy(frames[currentFrame].bufferModelMapped, uboModels3.data, sizeof(struct UBOModel)* uboModels3.len);
+	
+
+	
+	struct UBOCommon ubo = {};
+
+	vec3 cameraCenter;
+	
+	glm_vec3_add(cameraPos, cameraFront, cameraCenter);
+
+	glm_lookat(cameraPos, cameraCenter, cameraUp, ubo.view);
+
+
+	
+
+	
+	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo.proj);
+
+	ubo.proj[1][1] *= -1;
+
+	memcpy(frames[currentFrame].buffersViewProjectionMapped, &ubo, sizeof(struct UBOCommon));
+
+
+	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
+
+
+	// vec4 lightPos ;
+	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
+	
+
+	memcpy(frames[currentFrame].buffersDirectionalLightMapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
 	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
 
 
@@ -3600,7 +4300,7 @@ void drawFrame() {
 	// vkResetCommandBuffer(graphicsCommandBuffers[frameIndex],VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
 	
-	recordCommandBuffer(imageIndex,frameIndex);
+	recordCommandBuffer3(imageIndex,frameIndex);
 
 	// VkPipelineStageFlags waitDestinationStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ;
 
@@ -3685,6 +4385,173 @@ void drawFrame() {
 	frameIndex = (frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 	
 }
+void drawFrame3() {
+
+ 
+	VkResult result = vkWaitForFences(
+		device, 
+		1, 
+		&frames[frameIndex].inFlightFence,
+		VK_TRUE, UINT64_MAX
+	);
+	
+	if(result != VK_SUCCESS)
+	{
+		EXIT_CLEAN("failed to wait for fence!");
+	}
+
+	uint32_t imageIndex =  -1;
+
+	 
+	result = vkAcquireNextImageKHR(
+		device, 
+		swapchain, 
+		UINT64_MAX, 
+		frames[frameIndex].presentCompleteSemaphore, 
+		NULL, 
+		&imageIndex
+	);
+ 	
+	if(result == VK_ERROR_OUT_OF_DATE_KHR){
+
+		recreateSwapChain();
+
+		return;
+
+	}else if(result != VK_SUCCESS && result!= VK_SUBOPTIMAL_KHR)
+	{
+		assert(result == VK_TIMEOUT || result == VK_NOT_READY);
+		EXIT_CLEAN("failed to acquire swapchain image!");
+	}
+	
+	
+	updateUniformBuffer3(frameIndex);
+	
+	vkResetFences(device, 1, &frames[frameIndex].inFlightFence);
+
+	// vkResetCommandBuffer(graphicsCommandBuffers[frameIndex],VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+
+	
+	recordCommandBuffer3(imageIndex,frameIndex);
+
+	// VkPipelineStageFlags waitDestinationStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT ;
+
+		
+	// VkSubmitInfo submitInfo = {
+	// 	.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		
+	// 	.waitSemaphoreCount = 1,
+	// 	.pWaitSemaphores = &presentCompleteSemaphore[frameIndex],
+		
+	// 	.pWaitDstStageMask = &waitDestinationStageMask,
+		
+	// 	.commandBufferCount = 1,
+	// 	.pCommandBuffers = &graphicsCommandBuffers[frameIndex],
+
+	// 	.signalSemaphoreCount = 1,
+	// 	.pSignalSemaphores =  &renderFinishedSemaphore[frameIndex],
+
+	// };
+
+
+
+	VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+	
+	VkSubmitInfo2 submitInfo2 ={
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+
+		.waitSemaphoreInfoCount = 1,
+		.pWaitSemaphoreInfos = &(VkSemaphoreSubmitInfo){
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+			.semaphore = frames[frameIndex].presentCompleteSemaphore,
+			.stageMask = stageMask,
+			.value = 0,
+			.deviceIndex = 0,// FIX 1
+		},
+
+		.commandBufferInfoCount = 1,
+		.pCommandBufferInfos = &(VkCommandBufferSubmitInfo){
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+			.commandBuffer = *frames[frameIndex].graphicsCommandBuffers,
+			
+		},
+		.signalSemaphoreInfoCount = 1,
+		.pSignalSemaphoreInfos = &(VkSemaphoreSubmitInfo) {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+			.semaphore = frames[frameIndex].renderFinishedSemaphore,
+			.stageMask = stageMask,
+			
+		},
+	};
+	
+	 
+	vkQueueSubmit2(graphicsQueue, 1, &submitInfo2, frames[frameIndex].inFlightFence);
+	
+	
+
+	VkPresentInfoKHR presentInfo = {
+
+		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &frames[frameIndex].renderFinishedSemaphore,
+		.swapchainCount = 1,
+		.pSwapchains = &swapchain,
+		.pImageIndices = &imageIndex,
+		
+	};
+
+	
+	result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
+
+	if(
+		(result == VK_SUBOPTIMAL_KHR) || 
+		(result == VK_ERROR_OUT_OF_DATE_KHR) || 
+		framebufferResized
+	){
+		framebufferResized = false;
+		recreateSwapChain();
+	}else
+	{
+		assert(result == VK_SUCCESS);
+	}
+	frameIndex = (frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+	
+}
+void createSyncObjects3(){
+	
+	PRINT_FNAME;
+
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+	{
+
+	
+		VkSemaphoreCreateInfo semaphoreCreateInfo = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+		};
+		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &frames[i].presentCompleteSemaphore);
+
+		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &frames[i].renderFinishedSemaphore);
+
+		
+	
+
+		VkFenceCreateInfo createInfo = {
+			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+			.flags = VK_FENCE_CREATE_SIGNALED_BIT,
+		};
+
+		vkCreateFence(device, &createInfo, NULL,  &frames[i].inFlightFence);
+	}
+
+	VkFenceCreateInfo fenceInfo = {
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
+		// Note: Do NOT use VK_FENCE_CREATE_SIGNALED_BIT here. 
+		// We want it to start unsignaled.
+	};
+	vkCreateFence(device, &fenceInfo, NULL, &transferFence);
+		
+}
 void createSyncObjects(){
 	
 	PRINT_FNAME;
@@ -3700,6 +4567,9 @@ void createSyncObjects(){
 		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &presentCompleteSemaphore[i]);
 
 		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &renderFinishedSemaphore[i]);
+
+
+	
 
 		VkFenceCreateInfo createInfo = {
 			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -4936,7 +5806,7 @@ void initVulkan(){
 
 	createCommandPool();
 
-	createSyncObjects();
+	createSyncObjects3();
 
 	createDepthResources();
 
@@ -5008,14 +5878,14 @@ void initVulkan(){
 
 	
 
-	createUniformBuffers2();
+	createUniformBuffers3();
 
 	createDescriptorPool();
 
 	// for( int i=0;i<TEXTURE_COUNT ;i++)
 	{
 		// struct TextureRes * t = &textures[i];
-		createDescriptorSets2();
+		createDescriptorSets3();
 	}
 	
 
@@ -5039,7 +5909,7 @@ void mainLoop(){
 
 		processInput(window);
 
-		drawFrame();
+		drawFrame3();
     }
 
 	vkDeviceWaitIdle(device);
@@ -5069,13 +5939,24 @@ void cleanup(){
 	
 	for(int i=0;i < MAX_FRAMES_IN_FLIGHT;i++)
 	{
+
+		vkDestroySemaphore(device,frames[i].presentCompleteSemaphore,NULL);
+	
+		vkDestroySemaphore(device,frames[i].renderFinishedSemaphore,NULL);
+
+		vkDestroyFence(device,frames[i].inFlightFence,NULL);
+
+
+		
+
 		vkDestroySemaphore(device,presentCompleteSemaphore[i],NULL);
 	
 		vkDestroySemaphore(device,renderFinishedSemaphore[i],NULL);
 
 		vkDestroyFence(device,inFlightFences[i],NULL);
 	}
-	
+
+		
 	vkDestroyFence(device, transferFence, NULL);
 
 	// for( int i=0;i<TEXTURE_COUNT ;i++)
@@ -5099,6 +5980,9 @@ void cleanup(){
 	}
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
 
+
+	vkFreeDescriptorSets(device,descriptorPool, MAX_FRAMES_IN_FLIGHT,descriptorSets);
+
 	vkDestroyDescriptorPool(device, descriptorPool, NULL);
 
 
@@ -5106,6 +5990,8 @@ void cleanup(){
 	
 	vkFreeCommandBuffers(device, transferCommnadPool, 1, &transferCommandBuffers);
 
+
+	
 
 
 	vkDestroyCommandPool(device, graphicsCommnadPool, NULL);
@@ -5159,7 +6045,7 @@ void cleanup(){
 
 	// 	vkFreeMemory(device, t->textureImageMemory, NULL);
 	// }
-	clearUniformBuffers();
+	clearUniformBuffers3();
 
 
 	freeGameObjects();
