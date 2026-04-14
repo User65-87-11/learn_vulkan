@@ -23,7 +23,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include <time.h>
+// #include <time.h>
 
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -178,7 +178,7 @@ VkSurfaceCapabilitiesKHR surfaceCapabilities ;
 
 VkExtent2D swapChainExtent ;
 
-uint32_t swapchainSurfaceFormat = -1;
+VkFormat swapchainSurfaceFormat = -1;
 
 uint32_t swapchainSurfaceColorSpace = -1;
 
@@ -2606,7 +2606,7 @@ void clearUniformBuffers3(){
 		}
 	}
 }
-void initGameObjects2(){
+void initGameObjects3(){
 	
 	// assert(GAME_OBJECT_TYPES == 3);
 
@@ -2627,7 +2627,7 @@ void initGameObjects2(){
 	// srand((unsigned int)time(NULL));
 
 
-	uint32_t num = 30;
+	uint32_t instancesCount = 30;
 	
 	// gmArrayCreate((void **)&gameObjectsCubes , sizeof(struct GameObject), 1);
 	// gameObjectsTotal+=num;
@@ -2645,21 +2645,19 @@ void initGameObjects2(){
 	
 	
 	
-	gmArrayInit(&uboModels3, sizeof(struct UBOModel), num);
-	gmArrayInit(&gameObejctInstances, sizeof(struct GameObjectInstance), num);
+	gmArrayInit(&uboModels3, sizeof(struct UBOModel), instancesCount);
+	gmArrayInit(&gameObejctInstances, sizeof(struct GameObjectInstance), instancesCount);
 	
 
 
 	
-	for(int i=0;i<num;i++)
+	for(int i=0; i < instancesCount; i++)
 	{
 
 		struct UBOModel m;
 		struct GameObjectInstance g;
 
 
-
-	
 		
 		GLM_VEC3_SET(g.position, rand_float(), 0.0, rand_float());
 		g.uboModelIndex = i;
@@ -3893,8 +3891,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
     vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
 
 
-    VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-    VkClearValue clearDepth = {1.0f, 0};
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    VkClearValue clearDepth = {{{1.0f, 0}}};
     
     VkRenderingAttachmentInfo colorAttachmentInfo = {
 
@@ -4245,6 +4243,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 // };
 void updateUniformBuffer3(uint32_t currentFrame){
 
+	struct Frame * frame = &frames[currentFrame];
 
 	// printf("time %f\n",time);
 
@@ -4267,7 +4266,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
 
 
-	memcpy(frames[currentFrame].bufferModelMapped, uboModels3.data, sizeof(struct UBOModel)* uboModels3.len);
+	memcpy(frame->bufferModelMapped, uboModels3.data, sizeof(struct UBOModel)* uboModels3.len);
 	
 
 	
@@ -4287,7 +4286,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 
 	ubo.proj[1][1] *= -1;
 
-	memcpy(frames[currentFrame].buffersViewProjectionMapped, &ubo, sizeof(struct UBOCommon));
+	memcpy(frame->buffersViewProjectionMapped, &ubo, sizeof(struct UBOCommon));
 
 
 	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
@@ -4297,7 +4296,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
 	
 
-	memcpy(frames[currentFrame].buffersDirectionalLightMapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+	memcpy(frame->buffersDirectionalLightMapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
 	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
 
 
@@ -4583,8 +4582,6 @@ void createSyncObjects3(){
 
 		vkCreateSemaphore(device, &semaphoreCreateInfo, NULL, &frame->renderFinishedSemaphore);
 
-		
-	
 
 		VkFenceCreateInfo createInfo = {
 			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -5860,7 +5857,7 @@ void initVulkan(){
 
 	for(int i=0; i< MAX_FRAMES_IN_FLIGHT; i++)
 	{
-	struct  Frame * frame = &frames[i];
+		struct  Frame * frame = &frames[i];
 
 		createDepthResources3(
 			&(frame->depthImage),
@@ -5869,7 +5866,7 @@ void initVulkan(){
 		);
 	}
 
-	for( int i=0;i<TEXTURE_COUNT ;i++)
+	for( int i=0;i < TEXTURE_COUNT ;i++)
 	{
 		struct TextureRes * t = &textures[i];
 		createTextureImage(
@@ -5932,7 +5929,7 @@ void initVulkan(){
 
 	// init MODELS
 
-	initGameObjects2();
+	initGameObjects3();
 	
 
 	
@@ -5989,7 +5986,7 @@ void cleanup(){
  
 	vkDestroySwapchainKHR(device, swapchain,NULL);
 
-	for(int i=0;i<swapchainImageViewCount;i++){
+	for(int i=0;i < swapchainImageViewCount;i++){
 		
 		vkDestroyImageView(device, swapchainImageViews[i],NULL);
 	}
@@ -6025,9 +6022,10 @@ void cleanup(){
 	// 	vkDestroyImageView(device, t->textureImageView,  NULL);
 	// }
 
-	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++)
+	for(int i=0;i < MAX_FRAMES_IN_FLIGHT;i++)
 	{
 		struct Frame *frame = &frames[i];
+
 		vkDestroyImage(device, frame->depthImage, NULL);
 	
 		vkDestroyImageView(device,frame->depthImageView, NULL);
@@ -6039,6 +6037,7 @@ void cleanup(){
 	for( int i=0;i<TEXTURE_COUNT ;i++)
 	{
 		struct TextureRes * t = &textures[i];
+
 		vkDestroyImageView(device, t->textureImageView,  NULL);
 		vkDestroySampler(device, t->textureSampler, NULL);
 		vkDestroyImage(device, t->textureImage, NULL);
