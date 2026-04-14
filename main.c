@@ -187,6 +187,10 @@ uint32_t swapchainImageViewCount = 0;
 
 VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 
+
+
+
+
 VkShaderModule shaderModuleFrag = NULL;
 
 VkShaderModule shaderModuleVert = NULL;
@@ -467,15 +471,25 @@ A float4x4 matrix must have the same alignment as a float4.
 // uint32_t uniformBufferSizes [UNIFORM_BUFFER_COUNT];
 
 
-uint32_t uboMVPcnt = 1;
+//otherwise struct size changes to 96
+// struct UBOModel {
 
-struct UBOModel {
+	
+// 	float model[4][4];
+// 	float objectId[4];
+	
+// };
 
-    mat4 model;
-    
+//struct __attribute__((packed,aligned(16))) UBOModel
+
+
+struct __attribute__((packed)) UBOModel {
+
+	
+	mat4 model;
+	vec4 objectId;
+	
 };
-struct UBOModel uboModels [INSTANCE_NUM * 2] ; 
-
  
 
 
@@ -519,7 +533,8 @@ struct GameObjectInstance{
 	vec3 position;
 	vec3 scale;
 	vec3 rotation;
-	uint32_t uboModelInd;
+	uint32_t uboModelIndex;
+
 };
 
 struct GameObject {
@@ -880,6 +895,12 @@ void processInput(GLFWwindow *window){
 		
 	}
 
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+    {
+
+		glm_vec3_muladds(cameraUp, cameraSpeed, cameraPos);
+		
+	}
 	// printf("camera front %f,%f,%f\n",cameraFront[0],cameraFront[1],cameraFront[2]);
 	// printf("camera pos %f,%f,%f\n",cameraPos[0],cameraPos[1],cameraPos[2]);
 }
@@ -1941,132 +1962,132 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     endSingleTimeCommands(transferCommandBuffers);
 }
 
-void createDescriptorSets(){
-	PRINT_FNAME;
+// void createDescriptorSets(){
+// 	PRINT_FNAME;
 
 
-	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT]={
-		//C99 designated initializer
-		//  [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
-	};
+// 	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT]={
+// 		//C99 designated initializer
+// 		//  [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
+// 	};
 
-	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-   		layouts[i] = descriptorSetLayout;
-	}
+// 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+//    		layouts[i] = descriptorSetLayout;
+// 	}
 
-	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = descriptorPool,
-		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
-		.pSetLayouts = layouts,
+// 	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+// 		.descriptorPool = descriptorPool,
+// 		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+// 		.pSetLayouts = layouts,
 		
-	};
-	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets);
+// 	};
+// 	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets);
 
-	// assert(UNIFORM_BUFFER_COUNT == 2);
+// 	// assert(UNIFORM_BUFFER_COUNT == 2);
 
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+// 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
-		VkDescriptorBufferInfo bufferInfo = { 
-			.buffer = buffersViewProjection[i], 
-			.offset = 0, 
-			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOCommon) 
-		};
+// 		VkDescriptorBufferInfo bufferInfo = { 
+// 			.buffer = buffersViewProjection[i], 
+// 			.offset = 0, 
+// 			//.range = VK_WHOLE_SIZE 
+// 			.range = sizeof(struct UBOCommon) 
+// 		};
 
 
 		
 
-		VkDescriptorBufferInfo bufferInfoModel = { 
-			.buffer = bufferModel[i], 
-			.offset = 0, 
-			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOModel) * INSTANCE_NUM * 2
-		};
+// 		VkDescriptorBufferInfo bufferInfoModel = { 
+// 			.buffer = bufferModel[i], 
+// 			.offset = 0, 
+// 			//.range = VK_WHOLE_SIZE 
+// 			.range = sizeof(struct UBOModel) * INSTANCE_NUM * 2
+// 		};
 
-		VkDescriptorBufferInfo bufferInfoLight = { 
-			.buffer = buffersDirectionalLight[i], 
-			.offset = 0, 
-			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBODirectionalLight) 
-		};
+// 		VkDescriptorBufferInfo bufferInfoLight = { 
+// 			.buffer = buffersDirectionalLight[i], 
+// 			.offset = 0, 
+// 			//.range = VK_WHOLE_SIZE 
+// 			.range = sizeof(struct UBODirectionalLight) 
+// 		};
 
 
-		VkDescriptorImageInfo imageInfos[TEXTURE_COUNT];
-		for(int j=0;j<TEXTURE_COUNT;j++){
-			imageInfos[j] = (VkDescriptorImageInfo ){
-				.sampler = textures[j].textureSampler,
-				.imageView = textures[j].textureImageView,
-				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			};
-			// VkDescriptorImageInfo imageInfo = {
-			// 	.sampler = textures[i].textureSampler,
-			// 	.imageView = textures[i].textureImageView,
-			// 	.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			// };
+// 		VkDescriptorImageInfo imageInfos[TEXTURE_COUNT];
+// 		for(int j=0;j<TEXTURE_COUNT;j++){
+// 			imageInfos[j] = (VkDescriptorImageInfo ){
+// 				.sampler = textures[j].textureSampler,
+// 				.imageView = textures[j].textureImageView,
+// 				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+// 			};
+// 			// VkDescriptorImageInfo imageInfo = {
+// 			// 	.sampler = textures[i].textureSampler,
+// 			// 	.imageView = textures[i].textureImageView,
+// 			// 	.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+// 			// };
 
-			// imageInfos[i] = imageInfo;
-		}
+// 			// imageInfos[i] = imageInfo;
+// 		}
 
  
-		VkWriteDescriptorSet   descriptorWrite[] = {
-			(VkWriteDescriptorSet){
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = descriptorSets[i], 
-				.dstBinding = 0, 
-				.dstArrayElement = 0, 
-				.descriptorCount = 1, 
-				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-				.pBufferInfo = &bufferInfo
-			},
+// 		VkWriteDescriptorSet   descriptorWrite[] = {
+// 			(VkWriteDescriptorSet){
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = descriptorSets[i], 
+// 				.dstBinding = 0, 
+// 				.dstArrayElement = 0, 
+// 				.descriptorCount = 1, 
+// 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+// 				.pBufferInfo = &bufferInfo
+// 			},
 			
-			(VkWriteDescriptorSet){
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = descriptorSets[i], 
-				.dstBinding = 1, 
-				.dstArrayElement = 0, 
-				.descriptorCount = 1, 
-				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-				.pBufferInfo = &bufferInfoModel
-			},
+// 			(VkWriteDescriptorSet){
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = descriptorSets[i], 
+// 				.dstBinding = 1, 
+// 				.dstArrayElement = 0, 
+// 				.descriptorCount = 1, 
+// 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+// 				.pBufferInfo = &bufferInfoModel
+// 			},
 			
-			(VkWriteDescriptorSet){
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = descriptorSets[i], 
-				.dstBinding = 2, 
-				.dstArrayElement = 0, 
-				.descriptorCount = 1, 
-				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-				.pBufferInfo = &bufferInfoLight
-			},
-			(VkWriteDescriptorSet){
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = descriptorSets[i], 
-				.dstBinding = 3, 
-				.descriptorCount = TEXTURE_COUNT, 
-				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
-				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-				// .pBufferInfo = &bufferInfo
-				.pImageInfo = imageInfos,
-			},
+// 			(VkWriteDescriptorSet){
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = descriptorSets[i], 
+// 				.dstBinding = 2, 
+// 				.dstArrayElement = 0, 
+// 				.descriptorCount = 1, 
+// 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+// 				.pBufferInfo = &bufferInfoLight
+// 			},
+// 			(VkWriteDescriptorSet){
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = descriptorSets[i], 
+// 				.dstBinding = 3, 
+// 				.descriptorCount = TEXTURE_COUNT, 
+// 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+// 				// .pBufferInfo = &bufferInfo
+// 				.pImageInfo = imageInfos,
+// 			},
 			
-		};
+// 		};
 
 
-		vkUpdateDescriptorSets(
-			device,
-			sizeof(descriptorWrite ) / sizeof(VkWriteDescriptorSet), 
-			descriptorWrite, 
-			0, 
-			NULL
-		);
+// 		vkUpdateDescriptorSets(
+// 			device,
+// 			sizeof(descriptorWrite ) / sizeof(VkWriteDescriptorSet), 
+// 			descriptorWrite, 
+// 			0, 
+// 			NULL
+// 		);
 		
-	}
+// 	}
 
-}
+// }
 
 void createDescriptorSets2(){
 	PRINT_FNAME;
@@ -2277,6 +2298,11 @@ void initGameObjects2(){
 	
 	// assert(GAME_OBJECT_TYPES == 3);
 
+	printf("sizeof(struct UBOModel) = %d\n",sizeof(struct UBOModel));
+	assert(sizeof(struct UBOModel) == 80);
+
+ 
+
 	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
 	pitch = glm_deg(asin(cameraFront[1]));
 
@@ -2315,20 +2341,21 @@ void initGameObjects2(){
 	
 	for(int i=0;i<num;i++)
 	{
-		//push
-		// struct UBOModel *m = (struct UBOModel *) gmArrayGet(&uboModels3, i);
-
-		// struct GameObjectInstance *g = (struct GameObjectInstance *) gmArrayGet(&gameObejctInstances, i);
 
 		struct UBOModel m;
-		struct GameObjectInstance g ;
+		struct GameObjectInstance g;
 
 
 
+	
+		
+		GLM_VEC3_SET(g.position, rand_float(), 0.0, rand_float());
+		g.uboModelIndex = i;
+
+		// GLM_VEC4_SET(m.objectId, i, 0.0, 0.0, 1.0);
+		
+		
 		glm_mat4_identity(m.model) ;
-		
-		GLM_VEC3_SET(g.position, rand_float(),0.0,rand_float());
-		
 		glm_translate(m.model, g.position);
 
 		gmArrayPush(&uboModels3,&m);
@@ -2409,65 +2436,65 @@ void initGameObjects2(){
 	// }
 
 }
-void initGameObjects(){
+// void initGameObjects(){
 	
 		
 
-	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
-	pitch = glm_deg(asin(cameraFront[1]));
+// 	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+// 	pitch = glm_deg(asin(cameraFront[1]));
 
 	
-	vec4 v = {1.0,1.0,1.0,1.0};
-	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+// 	vec4 v = {1.0,1.0,1.0,1.0};
+// 	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
+// 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+// 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
 
-	// srand((unsigned int)time(NULL));
+// 	// srand((unsigned int)time(NULL));
 
 
-	// uint32_t num = 10;
+// 	// uint32_t num = 10;
 	
-	// gmArrayCreate((void **)&gameObjectsCubes , sizeof(struct GameObject), num);
+// 	// gmArrayCreate((void **)&gameObjectsCubes , sizeof(struct GameObject), num);
 
-	// gameObjectsTotal+=num;
+// 	// gameObjectsTotal+=num;
 
-	// gmArrayCreate((void **)&gameObjectsRooms0 , sizeof(struct GameObject), num);
-	// gameObjectsTotal+=num;
+// 	// gmArrayCreate((void **)&gameObjectsRooms0 , sizeof(struct GameObject), num);
+// 	// gameObjectsTotal+=num;
 
-	// gmArrayCreate((void **)&gGameObjectsRooms1 , sizeof(struct GameObject), num);
-	// gameObjectsTotal+=num;
+// 	// gmArrayCreate((void **)&gGameObjectsRooms1 , sizeof(struct GameObject), num);
+// 	// gameObjectsTotal+=num;
 
-	// gameObjectsTypes[0] = gameObjectsCubes;
-	// gameObjectsTypes[1] = gameObjectsRooms0;
-	// gameObjectsTypes[2] = gGameObjectsRooms1;
+// 	// gameObjectsTypes[0] = gameObjectsCubes;
+// 	// gameObjectsTypes[1] = gameObjectsRooms0;
+// 	// gameObjectsTypes[2] = gGameObjectsRooms1;
 
 
 	
 
 
-	for(int i=0;i < INSTANCE_NUM * 2;i++){
+// 	for(int i=0;i < INSTANCE_NUM * 2;i++){
 
-		glm_mat4_identity(uboModels[i].model) ;
-		vec3 pos = {rand_float(),0.0,rand_float()};
-		glm_translate(uboModels[i].model, pos);
-
-
-
-	}
+// 		glm_mat4_identity(uboModels[i].model) ;
+// 		vec3 pos = {rand_float(),0.0,rand_float()};
+// 		glm_translate(uboModels[i].model, pos);
 
 
 
-	// for(int i=0;i < INSTANCE_NUM * 2;i++){
-
-	// 	glm_mat4_identity(uboModels[i].model) ;
-	// 	vec3 pos = {rand_float(),0.0,rand_float()};
-	// 	glm_translate(uboModels[i].model, pos);
+// 	}
 
 
 
-	// }
+// 	// for(int i=0;i < INSTANCE_NUM * 2;i++){
 
-}
+// 	// 	glm_mat4_identity(uboModels[i].model) ;
+// 	// 	vec3 pos = {rand_float(),0.0,rand_float()};
+// 	// 	glm_translate(uboModels[i].model, pos);
+
+
+
+// 	// }
+
+// }
 void freeGameObjects(){
 
 	// if(gameObjectsCubes != NULL)
@@ -2585,101 +2612,101 @@ void createUniformBuffers2(){
 		}
 	}
 }
-void createUniformBuffers(){
+// void createUniformBuffers(){
 
-	// assert(UNIFORM_BUFFER_COUNT == 2);
-	// uniformBufferSizes[0]  = sizeof(struct UBOMVP);
-	// uniformBufferSizes[1]  = sizeof(struct UBODirectionalLight);
+// 	// assert(UNIFORM_BUFFER_COUNT == 2);
+// 	// uniformBufferSizes[0]  = sizeof(struct UBOMVP);
+// 	// uniformBufferSizes[1]  = sizeof(struct UBODirectionalLight);
 
-
-	
-
-	clearUniformBuffers();
 
 	
 
-	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
+// 	clearUniformBuffers();
 
-		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
-		{
-			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			buffersViewProjection[i] = buffer;
-			buffersViewProjectionMemory[i] = bufferMemory;
+// 	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
 
-			void * memptr = NULL;
+// 		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
+// 		{
+// 			// MVP uniform buffers
+// 			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
+// 			VkBuffer buffer;
+// 			VkDeviceMemory bufferMemory;
+
+// 			createBuffer(
+// 				bufferSize, 
+// 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+// 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 				&buffer, 
+// 				&bufferMemory
+// 			);
+// 			buffersViewProjection[i] = buffer;
+// 			buffersViewProjectionMemory[i] = bufferMemory;
+
+// 			void * memptr = NULL;
 			
 
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+// 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			buffersViewProjectionMapped[i] = memptr;
+// 			buffersViewProjectionMapped[i] = memptr;
 			
-			//----------------
-		}
+// 			//----------------
+// 		}
 
-		{
-			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOModel) * INSTANCE_NUM * 2;
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+// 		{
+// 			// MVP uniform buffers
+// 			VkDeviceSize bufferSize = sizeof(struct UBOModel) * INSTANCE_NUM * 2;
+// 			VkBuffer buffer;
+// 			VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			bufferModel[i] = buffer;
-			bufferModelMemory[i] = bufferMemory;
+// 			createBuffer(
+// 				bufferSize, 
+// 				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+// 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 				&buffer, 
+// 				&bufferMemory
+// 			);
+// 			bufferModel[i] = buffer;
+// 			bufferModelMemory[i] = bufferMemory;
 
-			void * memptr = NULL;
-			
-
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
-
-			bufferModelMapped[i] = memptr;
-			
-			//----------------
-		}
-
-		{
-			// directional light uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBODirectionalLight);
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
-
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			buffersDirectionalLight[i] = buffer;
-			buffersDirectionalLightMemory[i] = bufferMemory;
-
-			void * memptr = NULL;
+// 			void * memptr = NULL;
 			
 
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+// 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			buffersDirectionalLightMapped[i] = memptr;
+// 			bufferModelMapped[i] = memptr;
 			
-			//----------------
-		}
-	}
-}
+// 			//----------------
+// 		}
+
+// 		{
+// 			// directional light uniform buffers
+// 			VkDeviceSize bufferSize = sizeof(struct UBODirectionalLight);
+// 			VkBuffer buffer;
+// 			VkDeviceMemory bufferMemory;
+
+// 			createBuffer(
+// 				bufferSize, 
+// 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+// 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 				&buffer, 
+// 				&bufferMemory
+// 			);
+// 			buffersDirectionalLight[i] = buffer;
+// 			buffersDirectionalLightMemory[i] = bufferMemory;
+
+// 			void * memptr = NULL;
+			
+
+// 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+// 			buffersDirectionalLightMapped[i] = memptr;
+			
+// 			//----------------
+// 		}
+// 	}
+// }
 
 
 void createDescriptorPool() {
@@ -3408,65 +3435,65 @@ void recordCommandBuffer(uint32_t imageIndex,uint32_t frameIndex){
 }
 
 
-void updateUniformBuffer(uint32_t currentImage){
+// void updateUniformBuffer(uint32_t currentImage){
 
 
-	// printf("time %f\n",time);
-
-	
-	// mat4 model;
-	// vec3 rotation = {0.f,0.f,1.f};
-
-	// glm_mat4_identity(ubo.model);
-	
-
-	// glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
-
-
-	// glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-
-
-
-
-
-	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
-
-
-	memcpy(bufferModelMapped[frameIndex], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM * 2);
-	
+// 	// printf("time %f\n",time);
 
 	
-	struct UBOCommon ubo = {};
+// 	// mat4 model;
+// 	// vec3 rotation = {0.f,0.f,1.f};
 
-	vec3 cameraCenter;
+// 	// glm_mat4_identity(ubo.model);
 	
-	glm_vec3_add(cameraPos, cameraFront, cameraCenter);
 
-	glm_lookat(cameraPos, cameraCenter, cameraUp, ubo.view);
+// 	// glm_rotate_x(ubo.model, lastTime * glm_rad(90.0f), ubo.model);
 
 
+// 	// glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+
+
+
+// 	// memcpy(bufferModelMapped[currentImage], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM);
+
+
+// 	memcpy(bufferModelMapped[frameIndex], uboModels, sizeof(struct UBOModel)* INSTANCE_NUM * 2);
 	
 
 	
-	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo.proj);
+// 	struct UBOCommon ubo = {};
 
-	ubo.proj[1][1] *= -1;
+// 	vec3 cameraCenter;
+	
+// 	glm_vec3_add(cameraPos, cameraFront, cameraCenter);
 
-	memcpy(buffersViewProjectionMapped[currentImage], &ubo, sizeof(struct UBOCommon));
+// 	glm_lookat(cameraPos, cameraCenter, cameraUp, ubo.view);
 
 
-	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
-
-
-	// vec4 lightPos ;
-	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
 	
 
-	memcpy(buffersDirectionalLightMapped[currentImage], &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
-	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
+	
+// 	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo.proj);
+
+// 	ubo.proj[1][1] *= -1;
+
+// 	memcpy(buffersViewProjectionMapped[currentImage], &ubo, sizeof(struct UBOCommon));
 
 
-};
+// 	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
+
+
+// 	// vec4 lightPos ;
+// 	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
+	
+
+// 	memcpy(buffersDirectionalLightMapped[currentImage], &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+// 	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
+
+
+// };
 void updateUniformBuffer2(uint32_t currentImage){
 
 
@@ -4250,10 +4277,25 @@ void createSwapchain(){
 		.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
 		 - one per queue family
 	*/
+
+ 	uint32_t imageCount = 2;
+
+	// clamp to minimum
+	if (imageCount < surfaceCapabilities.minImageCount){
+
+		imageCount = surfaceCapabilities.minImageCount;
+	}
+
+	// clamp to maximum (0 = no limit)
+	if (surfaceCapabilities.maxImageCount > 0 &&
+		imageCount > surfaceCapabilities.maxImageCount){
+
+		imageCount = surfaceCapabilities.maxImageCount;
+	}
 	
 	VkSwapchainCreateInfoKHR createInfo={
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-		.minImageCount = surfaceCapabilities.minImageCount  == 0? 1: surfaceCapabilities.minImageCount,
+		.minImageCount = imageCount,
 		.imageFormat = swapchainSurfaceFormat,
 		.imageColorSpace = swapchainSurfaceColorSpace,
 		.imageExtent = swapChainExtent,
@@ -4295,7 +4337,7 @@ void createImageViews(){
 
 
 
-	// printf("pSwapchainImageCount %d\n",swapchainImageCount);
+	printf("pSwapchainImageCount %d\n",swapchainImageCount);
 	
 	swapchainImageViewCount = swapchainImageCount;
 

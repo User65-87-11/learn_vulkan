@@ -1,5 +1,11 @@
 #version 450
- 
+
+struct ModelData {
+	
+    mat4 model;
+	vec4 objectId;
+};
+
 
 
 layout(location = 0) in vec3 in_position;
@@ -13,10 +19,14 @@ layout(binding = 0) uniform Matrices
   mat4 projection;
 };
 
+
+
 layout(std430, binding = 1) readonly buffer  Models
 {
 
- 	mat4 model[];
+	ModelData modelData[];
+ 	// mat4 model[];
+	// float objectId[];
 };
  
 
@@ -27,9 +37,11 @@ layout(location = 1) out vec3 out_norm;
 
 layout(location = 2) out vec3 out_fragPos;
 
+// layout(location = 3) out vec4 out_objectId;
+
 void main() {
 	
-	vec4 tpos = model[gl_InstanceIndex] * vec4(in_position, 1.0);
+	vec4 tpos = modelData[gl_InstanceIndex].model * vec4(in_position, 1.0);
 
 	gl_Position = projection * view * tpos;
 	
@@ -39,5 +51,8 @@ void main() {
 	
 	out_fragPos = tpos.xyz;
 
+
+	// float colId = modelData[gl_InstanceIndex].objectId;
+	// out_objectId = modelData[gl_InstanceIndex].objectId;
 	// out_fragPos = in_position;
 }
