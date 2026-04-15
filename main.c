@@ -269,6 +269,8 @@ struct Frame{
 
 	void * pickMappedMem;
 
+
+
     uint32_t pickedID;
 
 	//---
@@ -551,13 +553,13 @@ void createTextureImage(
 	uint32_t *mipmap
 );
 
-void createMousePickImage(
-	VkImage *pickImage,
-	VkDeviceMemory *pickImageMemory,
-	VkImageView * pickIamgeView,
-	VkBuffer * stagingBuffer,
-	VkDeviceMemory *stagingBufferMemory,
-	void ** mappedMemory
+void createPickImage(
+	// VkImage *pickImage,
+	// VkDeviceMemory *pickImageMemory,
+	// VkImageView * pickIamgeView,
+	// VkBuffer * stagingBuffer,
+	// VkDeviceMemory *stagingBufferMemory,
+	// void ** mappedMemory
 );
 
 void createTextureImageView();
@@ -1458,54 +1460,55 @@ uint32_t getMipmapLevels(uint32_t w,uint32_t h){
 	return  d;
 
 }
-void createMousePickImage(
-	VkImage *pickImage,
-	VkDeviceMemory *pickImageMemory,
-	VkImageView * pickIamgeView,
-	VkBuffer * stagingBuffer,
-	VkDeviceMemory *stagingBufferMemory,
-	void ** mappedMemory
+void createPickImage(
+	// VkImage *pickImage,
+	// VkDeviceMemory *pickImageMemory,
+	// VkImageView * pickIamgeView,
+	// VkBuffer * stagingBuffer,
+	// VkDeviceMemory *stagingBufferMemory,
+	// void ** mappedMemory
 ){
 	PRINT_FNAME;
 
 	
+	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++)
+	{
+		struct Frame *frame = &frames[i];
+		
 
-	// VkBuffer stagingBuffer;
-
-	// VkDeviceMemory stagingBufferMemory;
-
-	createBuffer(
-		sizeof(uint32_t), 
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory
-	);
+		createBuffer(
+			sizeof(uint32_t), 
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			&frame->pickStagingBuffer,
+			&frame->pickStagingMemory
+		);
 
 
-	
-	vkMapMemory(device, *stagingBufferMemory, 0, VK_WHOLE_SIZE, 0, mappedMemory);
-	
-	createImage(
-		swapChainExtent.width, 
-		swapChainExtent.height, 
-		1,
-		VK_FORMAT_R32_UINT, 
-		VK_IMAGE_TILING_OPTIMAL, 
-		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-		pickImage, 
-		pickImageMemory
-	);
+		
+		vkMapMemory(device, frame->pickStagingMemory, 0, VK_WHOLE_SIZE, 0, &frame->pickMappedMem);
+		
+		createImage(
+			swapChainExtent.width, 
+			swapChainExtent.height, 
+			1,
+			VK_FORMAT_R32_UINT, 
+			VK_IMAGE_TILING_OPTIMAL, 
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+			&frame->pickImage, 
+			&frame->pickMemory
+		);
 
-	createImageView(
-		pickIamgeView, 
-		pickImage,
-		VK_FORMAT_R32_UINT, 
-		VK_IMAGE_ASPECT_COLOR_BIT, 
-		1
-	);
+		createImageView(
+			&frame->pickView, 
+			&frame->pickImage,
+			VK_FORMAT_R32_UINT, 
+			VK_IMAGE_ASPECT_COLOR_BIT, 
+			1
+		);
 
+	}
 }
 
 void createTextureImage(
@@ -3636,8 +3639,27 @@ void createImageViews(){
 		// currentSwapchainLayouts[i] = VK_IMAGE_LAYOUT_UNDEFINED;  
 	}
 
+	
 
  
+}
+void cleanupPickImages(){
+
+	for(int i=0;i< MAX_FRAMES_IN_FLIGHT;i++)
+	{
+		struct Frame * frame = &frames[i];
+
+		vkDestroyImage(device,frame->pickImage, NULL);
+		vkDestroyImageView(device, frame->pickView, NULL);
+		if(frame->pickMappedMem!= NULL){
+
+			vkUnmapMemory(device, frame->pickStagingMemory);
+			frame->pickMappedMem = NULL;
+		}
+		vkFreeMemory(device, frame->pickMemory, NULL);
+		vkDestroyBuffer(device,frame->pickStagingBuffer, NULL);
+		vkFreeMemory(device, frame->pickStagingMemory, NULL);
+	}
 }
 void cleanupSwapChain() {
 
@@ -3651,6 +3673,8 @@ void cleanupSwapChain() {
     vkDestroySwapchainKHR(device, swapchain, NULL);
 
 	swapchain = NULL;
+
+	
 
 }
 
@@ -3667,15 +3691,19 @@ void recreateSwapChain(){
 
 		glfwWaitEvents();
 	}
-
+ 
 
 	vkDeviceWaitIdle(device);
 
 	cleanupSwapChain();
 
+	cleanupPickImages();
+
 	createSwapchain();	
 
 	createImageViews();
+
+	createPickImage();
 	
 }
 
@@ -4169,7 +4197,7 @@ void initVulkan(){
 
 	createImageViews();
 
-
+	createPickImage();
 	
 
 	createQueue();
@@ -4191,16 +4219,8 @@ void initVulkan(){
 			&(frame->depthImageView),
 			&(frame->depthImageMemory)
 		);
-
-		createMousePickImage(
-			&(frame->pickImage), 
-			&(frame->pickMemory), 
-			&(frame->pickView), 
-			&(frame->pickStagingBuffer), 
-			&(frame->pickStagingMemory), 
-			&(frame->pickMappedMem)
-		);
 	}
+	
 
 	for( int i=0;i < TEXTURE_COUNT ;i++)
 	{
@@ -4349,6 +4369,7 @@ void cleanup(){
 		// vkDestroyFence(device,inFlightFences[i],NULL);
 	}
 
+	cleanupPickImages();
 		
 	vkDestroyFence(device, transferFence, NULL);
 
@@ -4367,17 +4388,6 @@ void cleanup(){
 		vkFreeMemory(device, frame->depthImageMemory, NULL);
 
 
-
-		vkDestroyImage(device,frame->pickImage, NULL);
-		vkDestroyImageView(device, frame->pickView, NULL);
-		if(frame->pickMappedMem!= NULL){
-
-			vkUnmapMemory(device, frame->pickStagingMemory);
-			frame->pickMappedMem = NULL;
-		}
-		vkFreeMemory(device, frame->pickMemory, NULL);
-		vkDestroyBuffer(device,frame->pickStagingBuffer, NULL);
-		vkFreeMemory(device, frame->pickStagingMemory, NULL);
 	}
 
 	for( int i=0;i<TEXTURE_COUNT ;i++)
