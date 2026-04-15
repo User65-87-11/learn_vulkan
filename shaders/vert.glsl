@@ -3,7 +3,7 @@
 struct ModelData {
 	
     mat4 model;
-	vec4 objectId;
+	uint objectId;
 };
 
 
@@ -37,7 +37,7 @@ layout(location = 1) out vec3 out_norm;
 
 layout(location = 2) out vec3 out_fragPos;
 
-// layout(location = 3) out vec4 out_objectId;
+layout(location = 3) flat out uint out_objectId;
 
 void main() {
 	
@@ -52,6 +52,7 @@ void main() {
 	out_fragPos = tpos.xyz;
 
 
+	out_objectId = modelData[gl_InstanceIndex].objectId;
 	// float colId = modelData[gl_InstanceIndex].objectId;
 	// out_objectId = modelData[gl_InstanceIndex].objectId;
 	// out_fragPos = in_position;

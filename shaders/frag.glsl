@@ -9,7 +9,11 @@ layout(location = 2) in vec3 fragPos;
 
 // layout(location = 3) in vec4 in_objectId;
 
+layout(location = 3) flat in uint in_objectId;
+
 layout(location = 0) out vec4 outColor;
+
+layout(location = 1) out uint outID;
 
 
 layout(binding = 2) uniform Light
@@ -32,6 +36,7 @@ layout(push_constant) uniform Push {
 void main() {
 	// // vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
 
+	outID = in_objectId;
 	vec4 texColor = texture(tex[pc.textureIndex], texCoord);
 
 	if(pc.hasColor != 0)

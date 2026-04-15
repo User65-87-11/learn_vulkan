@@ -410,7 +410,7 @@ struct __attribute__((packed)) UBOModel {
 
 	
 	mat4 model;
-	vec4 objectId;
+	uint32_t objectId;
 	
 };
  
@@ -2575,8 +2575,16 @@ endBarrier
 vkEndCommandBuffer
 
 
+TODO
+
+
+[validation layer]: 256 2 vkCmdDrawIndexed(): Inside the fragment shader, it writes to output Location 1 but there is no VkRenderingInfo::pColorAttachments[1] and this write is unused.
+
+
+
 
 NO need to provide extra uniforms
+
 
 1. draw normally
 2. draw for picking
