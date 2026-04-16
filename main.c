@@ -155,6 +155,8 @@ uint32_t queueFamilyIndeces[2] = {
 	-1,-1,
 };
 
+#define COLOR_ATTACHMENTS 2
+uint32_t colorAttachmentsInfosCnt = COLOR_ATTACHMENTS;
 
 
 
@@ -378,6 +380,7 @@ vec3 cameraUp    = {0.0f, 1.0f, 0.0f};
 struct PushConst{
 	int texIdx;
 	int hasColor;
+	int objectId;
 };
 
 struct Vertex{
@@ -405,11 +408,12 @@ char * model_path_text	= 	"models_gltf/viking_room.png";
 uint32_t instanceNum = INSTANCE_NUM;
 
 
-
-struct __attribute__((packed)) UBOModel {
+//__attribute__((packed)) 
+//__attribute__((aligned(16)))
+struct __attribute__((aligned(16))) UBOModel  {
 
 	
-	mat4 model;
+	float model[16];
 	uint32_t objectId;
 	
 };
@@ -697,6 +701,7 @@ void mouseCallback(GLFWwindow* window, double xposIn, double yposIn){
     lastX = xpos;
     lastY = ypos;
 
+	// printf("mouse: %f %f\n",lastX,lastY);
 
 	// if(leftPressed == false) return;
 
@@ -1937,7 +1942,7 @@ void initGameObjects3(){
 	// assert(GAME_OBJECT_TYPES == 3);
 
 	printf("sizeof(struct UBOModel) = %d\n",sizeof(struct UBOModel));
-	assert(sizeof(struct UBOModel) == 80);
+	// assert(sizeof(struct UBOModel) ==  96);
 
  
 
@@ -1967,6 +1972,7 @@ void initGameObjects3(){
 		struct UBOModel m;
 		struct GameObjectInstance g;
 
+		m.objectId = i +1;
 
 		
 		GLM_VEC3_SET(g.position, rand_float(), 0.0, rand_float());
@@ -1975,8 +1981,8 @@ void initGameObjects3(){
 		// GLM_VEC4_SET(m.objectId, i, 0.0, 0.0, 1.0);
 		
 		
-		glm_mat4_identity(m.model) ;
-		glm_translate(m.model, g.position);
+		glm_mat4_identity((void*)m.model) ;
+		glm_translate((void*)m.model, g.position);
 
 		gmArrayPush(&uboModels3, &m, NULL);
 		gmArrayPush(&gameObejctInstances, &g, NULL);
@@ -2599,6 +2605,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 	VkCommandBuffer commandBuffer = *frame->graphicsCommandBuffers;
 	VkDescriptorSet * descriptorSet = frame->descriptorSets;
 
+	VkImageView * pickImageView = &frame->pickView;
 
 	VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -2608,32 +2615,57 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
 
-    VkImageMemoryBarrier2 beginBarrier = {
+	VkImageMemoryBarrier2 beginBarrier[]={
 
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-        .srcAccessMask = 0,
-        .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
-        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = swapchainImages[imageIndex],
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-    };
+		 (VkImageMemoryBarrier2){
 
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			.srcAccessMask = 0,
+			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
+			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = swapchainImages[imageIndex],
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+		},
+		(VkImageMemoryBarrier2){
+
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			.srcAccessMask = 0,
+			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
+			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = frame->pickImage,
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+		},
+
+	};
+
+   
     VkDependencyInfo beginDepInfo = {
 
         .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &beginBarrier,
+        .imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
+        .pImageMemoryBarriers = beginBarrier,
     };
 
     vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
@@ -2642,15 +2674,37 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     VkClearValue clearDepth = {{{1.0f, 0}}};
     
-    VkRenderingAttachmentInfo colorAttachmentInfo = {
+	
 
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = swapchainImageViews[imageIndex],
-        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue = clearColor
-    };
+
+	VkRenderingAttachmentInfo colorAttachmentsInfos[COLOR_ATTACHMENTS];
+	{
+
+		colorAttachmentsInfos[0] = (VkRenderingAttachmentInfo){
+			
+			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+			.imageView = swapchainImageViews[imageIndex],
+			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.clearValue = clearColor
+			
+		};
+
+		colorAttachmentsInfos[1] = (VkRenderingAttachmentInfo){
+			
+			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+			.imageView = *pickImageView,
+			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			.clearValue  = { 
+				.color = {{0, 0, 0, 0}} 
+			}
+		};
+
+	}
+
     VkRenderingAttachmentInfo depthAttachmentInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = frame->depthImageView,
@@ -2662,10 +2716,15 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
     VkRenderingInfo renderingInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-        .renderArea = { .offset = {0, 0}, .extent = swapChainExtent },
+        .renderArea = { 
+			.offset = {0, 0}, 
+			.extent = swapChainExtent 
+		},
+		
         .layerCount = 1,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentInfo,
+        .colorAttachmentCount = COLOR_ATTACHMENTS,
+        .pColorAttachments = colorAttachmentsInfos,
+
         .pDepthAttachment = &depthAttachmentInfo,
     };
 
@@ -2704,6 +2763,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		struct PushConst constants0 = {
 			.hasColor = false,
 			.texIdx = gameObjectsRooms0.tex->textureIdx,
+			.objectId = frame->pickedID
 		};
 		// int textureIndex = 0; // choose texture
 		vkCmdPushConstants(
@@ -2738,8 +2798,9 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		);
 
 		struct PushConst constants0 = {
-			.hasColor = true,
+			.hasColor = false,
 			.texIdx = gameObjectsRooms1.tex->textureIdx,
+			.objectId = frame->pickedID
 		};
 		// int textureIndex = 0; // choose texture
 		vkCmdPushConstants(
@@ -2775,6 +2836,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		struct PushConst constants0 = {
 			.hasColor = false,
 			.texIdx = gameObjectsCubes.tex->textureIdx,
+			.objectId = frame->pickedID
 		};
 		// int textureIndex = 0; // choose texture
 		vkCmdPushConstants(
@@ -2801,33 +2863,122 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
     vkCmdEndRendering(commandBuffer);
 
-   
-    VkImageMemoryBarrier2 endBarrier = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-        .dstAccessMask = 0,
-        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = swapchainImages[imageIndex],
-        .subresourceRange = { 
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
-			.baseMipLevel = 0, 
-			.levelCount = 1, 
-            .baseArrayLayer = 0, 
-			.layerCount = 1 
-        },
-    };
 
-    VkDependencyInfo depInfo = {
+	{
+		VkImageMemoryBarrier2 toTransferBarrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+			.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = frame->pickImage,
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0, .levelCount = 1,
+				.baseArrayLayer = 0, .layerCount = 1
+			},
+		};
+
+		VkDependencyInfo toTransferDep = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = 1,
+			.pImageMemoryBarriers = &toTransferBarrier
+		};
+		vkCmdPipelineBarrier2(commandBuffer, &toTransferDep);
+		
+		// 2. Copy pick image to staging buffer
+		VkBufferImageCopy region = {
+			.bufferOffset = 0,
+			.bufferRowLength = 0,
+			.bufferImageHeight = 0,
+			.imageSubresource = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1
+			},
+			.imageOffset = {swapChainExtent.width/2,swapChainExtent.height/2, 0},
+    		.imageExtent = {1, 1, 1}
+		};
+		vkCmdCopyImageToBuffer(
+			commandBuffer,
+			frame->pickImage,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			frame->pickStagingBuffer,
+			1, 
+			&region
+		);
+
+
+		// 3. Transition back to GENERAL (so LOAD_OP_CLEAR works next frame)
+		VkImageMemoryBarrier2 toGeneralBarrier = toTransferBarrier;
+		toGeneralBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		toGeneralBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		toGeneralBarrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+		toGeneralBarrier.dstAccessMask = 0;
+		toGeneralBarrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+
+		VkDependencyInfo toGeneralDep = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = 1,
+			.pImageMemoryBarriers = &toGeneralBarrier
+		};
+		vkCmdPipelineBarrier2(commandBuffer, &toGeneralDep);
+	}
+	
+
+
+	VkImageMemoryBarrier2 endBarrier[]={
+
+		 (VkImageMemoryBarrier2){
+			 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			 .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+			 .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			 .dstAccessMask = 0,
+			 .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			 .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			 .image = swapchainImages[imageIndex],
+			 .subresourceRange = { 
+				 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
+				 .baseMipLevel = 0, 
+				 .levelCount = 1, 
+				 .baseArrayLayer = 0, 
+				 .layerCount = 1 
+			 },
+		 },
+		  (VkImageMemoryBarrier2){
+			 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			 .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+			 .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			 .dstAccessMask = 0,
+			 .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			 .newLayout =  VK_IMAGE_LAYOUT_GENERAL,
+			 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			 .image = frame->pickImage,
+			 .subresourceRange = { 
+				 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
+				 .baseMipLevel = 0, 
+				 .levelCount = 1, 
+				 .baseArrayLayer = 0, 
+				 .layerCount = 1 
+			 },
+		 }
+	 };
+   
+
+    VkDependencyInfo dependencyInfo = {
         .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &endBarrier
+        .imageMemoryBarrierCount = sizeof(endBarrier)/ sizeof(VkImageMemoryBarrier2), 
+        .pImageMemoryBarriers = endBarrier
     };
-    vkCmdPipelineBarrier2(commandBuffer, &depInfo);
+    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
     vkEndCommandBuffer(commandBuffer);
 }
@@ -2882,10 +3033,20 @@ void drawFrame3() {
 		&frame->inFlightFence,
 		VK_TRUE, UINT64_MAX
 	);
+
+
 	
 	if(result != VK_SUCCESS)
 	{
 		EXIT_CLEAN("failed to wait for fence!");
+	}
+
+
+	uint32_t pickedObjectId = *(uint32_t*)frame->pickMappedMem;
+	frame->pickedID = pickedObjectId;
+	if(frame->pickedID != 0)
+	{
+		printf("pickedObjectId %d\n",frame->pickedID);
 	}
 
 	uint32_t imageIndex =  -1;
@@ -4077,16 +4238,32 @@ void createGraphicsPipeline() {
 
 
 	//Color blending
+	//needed for picking
+	// const uint32_t colorBlendAttachmentStateCnt = 2;
+	VkPipelineColorBlendAttachmentState colorBlendAttachmentState[COLOR_ATTACHMENTS]=
+	{
 
-	VkPipelineColorBlendAttachmentState colorBlendAttachmentState ={
-		.blendEnable = VK_FALSE,
-		.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-		.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
-		.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-		.colorBlendOp = VK_BLEND_OP_ADD,
-		.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-		.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-		.alphaBlendOp = VK_BLEND_OP_ADD,
+		(VkPipelineColorBlendAttachmentState){
+			.blendEnable = VK_FALSE, // true of false?
+			.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+			.colorBlendOp = VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+			.alphaBlendOp = VK_BLEND_OP_ADD,
+		},
+
+		(VkPipelineColorBlendAttachmentState){
+			.blendEnable = VK_FALSE,
+			.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+			.colorBlendOp = VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+			.alphaBlendOp = VK_BLEND_OP_ADD,
+		},
 	};
 
 
@@ -4094,8 +4271,8 @@ void createGraphicsPipeline() {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		.logicOpEnable = VK_FALSE,
 		.logicOp = VK_LOGIC_OP_COPY,
-		.attachmentCount = 1,
-		.pAttachments = &colorBlendAttachmentState,
+		.attachmentCount = COLOR_ATTACHMENTS,
+		.pAttachments = colorBlendAttachmentState,
 	};
 
 
@@ -4117,33 +4294,39 @@ void createGraphicsPipeline() {
 
 	VkFormat depthFormat = findDepthFormat();
 
-	 
+
+
+	// const uint32_t colorAttachmentFormatsCount = 2;
+	VkFormat formats[COLOR_ATTACHMENTS] = {
+		swapchainSurfaceFormat,   // color
+		VK_FORMAT_R32_UINT          // picking (or UNORM if encoded)
+	};
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-		.colorAttachmentCount = 1,
-		.pColorAttachmentFormats = &swapchainSurfaceFormat,
+		.colorAttachmentCount = COLOR_ATTACHMENTS,
+		.pColorAttachmentFormats = formats,
 		.depthAttachmentFormat = depthFormat,
 	};
 	
 
 
-	VkSubpassDependency subpassDependency = {
-		.srcSubpass = VK_SUBPASS_EXTERNAL,
-		.dstSubpass = 0,
-		.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-		.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-		.srcAccessMask = 0 ,
-		.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-	};
-	VkAttachmentDescription colorAttachment = {
-		.format = swapchainSurfaceFormat,
-		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-		.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-	};
+	// VkSubpassDependency subpassDependency = {
+	// 	.srcSubpass = VK_SUBPASS_EXTERNAL,
+	// 	.dstSubpass = 0,
+	// 	.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 	.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 	.srcAccessMask = 0 ,
+	// 	.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+	// };
+	// VkAttachmentDescription colorAttachment = {
+	// 	.format = swapchainSurfaceFormat,
+	// 	.samples = VK_SAMPLE_COUNT_1_BIT,
+	// 	.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+	// 	.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+	// 	.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	// 	.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+	// };
 
 
 
@@ -4165,8 +4348,7 @@ void createGraphicsPipeline() {
 		.basePipelineHandle = VK_NULL_HANDLE,
 		.basePipelineIndex = - 1,
 		.pDepthStencilState = &depthStencil,
-		
-		
+			
 	};
 
 	vkCreateGraphicsPipelines(

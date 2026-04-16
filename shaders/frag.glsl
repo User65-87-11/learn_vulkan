@@ -29,7 +29,7 @@ layout(binding = 3) uniform sampler2D  tex[];
 layout(push_constant) uniform Push {
     int textureIndex;
 	int hasColor;
-
+	int selectedId;
 } pc;
 
 
@@ -38,6 +38,10 @@ void main() {
 
 	outID = in_objectId;
 	vec4 texColor = texture(tex[pc.textureIndex], texCoord);
+
+	if(in_objectId == pc.selectedId){
+		texColor = lightColor; 
+	}
 
 	if(pc.hasColor != 0)
 	{

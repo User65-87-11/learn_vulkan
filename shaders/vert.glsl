@@ -4,6 +4,7 @@ struct ModelData {
 	
     mat4 model;
 	uint objectId;
+	 
 };
 
 
@@ -25,8 +26,7 @@ layout(std430, binding = 1) readonly buffer  Models
 {
 
 	ModelData modelData[];
- 	// mat4 model[];
-	// float objectId[];
+
 };
  
 
