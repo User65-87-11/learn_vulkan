@@ -481,6 +481,9 @@ struct GameObject {
 
 struct GmArray gameObejctInstances;
 
+
+struct GmArray arrayGameObjects;
+
 struct GameObject    gameObjectsCubes ;
 
  
@@ -1941,6 +1944,8 @@ void initGameObjects3(){
 	
 	// assert(GAME_OBJECT_TYPES == 3);
 
+	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3);
+
 	printf("sizeof(struct UBOModel) = %d\n",sizeof(struct UBOModel));
 	// assert(sizeof(struct UBOModel) ==  96);
 
@@ -2005,6 +2010,8 @@ void initGameObjects3(){
 		gameObjectsCubes.mesh = &modelVertexData[vertexData_index];
 		gameObjectsCubes.uboLight = NULL;
 
+		gmArrayPush(&arrayGameObjects, &gameObjectsCubes, NULL);
+
 	}
 
 	texture_index = 1;
@@ -2018,6 +2025,7 @@ void initGameObjects3(){
 		gameObjectsRooms0.mesh = &modelVertexData[vertexData_index];
 		gameObjectsRooms0.uboLight = NULL;
 
+		gmArrayPush(&arrayGameObjects, &gameObjectsRooms0, NULL);
 		
 	}
 	assert(gameObjectsRooms0.mesh->vertextBuffer != NULL);
@@ -2035,6 +2043,7 @@ void initGameObjects3(){
 		gameObjectsRooms1.uboLight = NULL;
 	
 
+		gmArrayPush(&arrayGameObjects, &gameObjectsRooms1, NULL);
 	}
 
 
@@ -2545,58 +2554,9 @@ void createCommandPool(){
 	vkAllocateCommandBuffers(device, &allocInfo, &transferCommandBuffers);
 
 	
-
 }
 
 
-/**
-
-vkBeginCommandBuffer
-
-// --- transition swapchain → color ---
-beginBarrier
-
-// --- render scene normally (what user sees) ---
-vkCmdBeginRendering
-    drawScene();   // same transforms, same objects
-vkCmdEndRendering
-
-// --- render picking (same scene, ID shader) ---
-vkCmdBeginRendering
-    drawScenePicking(); // identical draw calls, different pipeline
-vkCmdEndRendering
-
-// --- pick image: color → transfer ---
-barrier (to transfer)
-
-// --- copy pixel ---
-vkCmdCopyImageToBuffer
-
-// --- pick image: transfer → color ---
-barrier (back)
-
-// --- transition swapchain → present ---
-endBarrier
-
-vkEndCommandBuffer
-
-
-TODO
-
-
-[validation layer]: 256 2 vkCmdDrawIndexed(): Inside the fragment shader, it writes to output Location 1 but there is no VkRenderingInfo::pColorAttachments[1] and this write is unused.
-
-
-
-
-NO need to provide extra uniforms
-
-
-1. draw normally
-2. draw for picking
-
-
-*/
 
 void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
@@ -2746,117 +2706,124 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
     VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    VkDeviceSize offset = 0;
+
+
 	
-	//draw Room0
+	for(int i=0; i< arrayGameObjects.len;i++)
 	{
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsRooms0.mesh->vertextBuffer, &offset);
-		vkCmdBindIndexBuffer(commandBuffer, gameObjectsRooms0.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-		vkCmdBindDescriptorSets(
-			commandBuffer, 
-			VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pipelineLayout, 0, 1, 
-			descriptorSet, 0, NULL
-		);
-
-		struct PushConst constants0 = {
-			.hasColor = false,
-			.texIdx = gameObjectsRooms0.tex->textureIdx,
-			.objectId = frame->pickedID
-		};
-		// int textureIndex = 0; // choose texture
-		vkCmdPushConstants(
-			commandBuffer,
-			pipelineLayout,
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			0,
-			sizeof(struct PushConst),
-			&constants0
-		);
-
-		 vkCmdDrawIndexed(
-			commandBuffer, 
-			gameObjectsRooms0.mesh->indices_num, 
-			gameObjectsRooms0.uboModelView.len , 
-			0, 
-			0,
-			gameObjectsRooms0.uboModelView.offset
-		);
+		VkDeviceSize offset = 0;
+		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
+		//draw Room0
+		{
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObject->mesh->vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(commandBuffer, gameObject->mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	
+			vkCmdBindDescriptorSets(
+				commandBuffer, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS, 
+				pipelineLayout, 0, 1, 
+				descriptorSet, 0, NULL
+			);
+	
+			struct PushConst constants0 = {
+				.hasColor = false,
+				.texIdx = gameObject->tex->textureIdx,
+				.objectId = frame->pickedID
+			};
+			// int textureIndex = 0; // choose texture
+			vkCmdPushConstants(
+				commandBuffer,
+				pipelineLayout,
+				VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(struct PushConst),
+				&constants0
+			);
+	
+			 vkCmdDrawIndexed(
+				commandBuffer, 
+				gameObject->mesh->indices_num, 
+				gameObject->uboModelView.len , 
+				0, 
+				0,
+				gameObject->uboModelView.offset
+			);
+		}
 	}
+	
 
-	//draw Room1
-	{
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsRooms1.mesh->vertextBuffer, &offset);
-		vkCmdBindIndexBuffer(commandBuffer, gameObjectsRooms1.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	// //draw Room1
+	// {
+	// 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsRooms1.mesh->vertextBuffer, &offset);
+	// 	vkCmdBindIndexBuffer(commandBuffer, gameObjectsRooms1.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdBindDescriptorSets(
-			commandBuffer, 
-			VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pipelineLayout, 0, 1, 
-			descriptorSet, 0, NULL
-		);
+	// 	vkCmdBindDescriptorSets(
+	// 		commandBuffer, 
+	// 		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+	// 		pipelineLayout, 0, 1, 
+	// 		descriptorSet, 0, NULL
+	// 	);
 
-		struct PushConst constants0 = {
-			.hasColor = false,
-			.texIdx = gameObjectsRooms1.tex->textureIdx,
-			.objectId = frame->pickedID
-		};
-		// int textureIndex = 0; // choose texture
-		vkCmdPushConstants(
-			commandBuffer,
-			pipelineLayout,
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			0,
-			sizeof(struct PushConst),
-			&constants0
-		);
+	// 	struct PushConst constants0 = {
+	// 		.hasColor = false,
+	// 		.texIdx = gameObjectsRooms1.tex->textureIdx,
+	// 		.objectId = frame->pickedID
+	// 	};
+	// 	// int textureIndex = 0; // choose texture
+	// 	vkCmdPushConstants(
+	// 		commandBuffer,
+	// 		pipelineLayout,
+	// 		VK_SHADER_STAGE_FRAGMENT_BIT,
+	// 		0,
+	// 		sizeof(struct PushConst),
+	// 		&constants0
+	// 	);
 
-		 vkCmdDrawIndexed(
-			commandBuffer, 
-			gameObjectsRooms1.mesh->indices_num, 
-			gameObjectsRooms1.uboModelView.len , 
-			0, 
-			0,
-			gameObjectsRooms1.uboModelView.offset
-		);
-	}
-	//draw Cube
-	{
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsCubes.mesh->vertextBuffer, &offset);
-		vkCmdBindIndexBuffer(commandBuffer, gameObjectsCubes.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	// 	 vkCmdDrawIndexed(
+	// 		commandBuffer, 
+	// 		gameObjectsRooms1.mesh->indices_num, 
+	// 		gameObjectsRooms1.uboModelView.len , 
+	// 		0, 
+	// 		0,
+	// 		gameObjectsRooms1.uboModelView.offset
+	// 	);
+	// }
+	// //draw Cube
+	// {
+	// 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsCubes.mesh->vertextBuffer, &offset);
+	// 	vkCmdBindIndexBuffer(commandBuffer, gameObjectsCubes.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdBindDescriptorSets(
-			commandBuffer, 
-			VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pipelineLayout, 0, 1, 
-			descriptorSet, 0, NULL
-		);
+	// 	vkCmdBindDescriptorSets(
+	// 		commandBuffer, 
+	// 		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+	// 		pipelineLayout, 0, 1, 
+	// 		descriptorSet, 0, NULL
+	// 	);
 
-		struct PushConst constants0 = {
-			.hasColor = false,
-			.texIdx = gameObjectsCubes.tex->textureIdx,
-			.objectId = frame->pickedID
-		};
-		// int textureIndex = 0; // choose texture
-		vkCmdPushConstants(
-			commandBuffer,
-			pipelineLayout,
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			0,
-			sizeof(struct PushConst),
-			&constants0
-		);
+	// 	struct PushConst constants0 = {
+	// 		.hasColor = false,
+	// 		.texIdx = gameObjectsCubes.tex->textureIdx,
+	// 		.objectId = frame->pickedID
+	// 	};
+	// 	// int textureIndex = 0; // choose texture
+	// 	vkCmdPushConstants(
+	// 		commandBuffer,
+	// 		pipelineLayout,
+	// 		VK_SHADER_STAGE_FRAGMENT_BIT,
+	// 		0,
+	// 		sizeof(struct PushConst),
+	// 		&constants0
+	// 	);
 
-		 vkCmdDrawIndexed(
-			commandBuffer, 
-			gameObjectsCubes.mesh->indices_num, 
-			gameObjectsCubes.uboModelView.len , 
-			0, 
-			0,
-			gameObjectsCubes.uboModelView.offset
-		);
-	}
+	// 	 vkCmdDrawIndexed(
+	// 		commandBuffer, 
+	// 		gameObjectsCubes.mesh->indices_num, 
+	// 		gameObjectsCubes.uboModelView.len , 
+	// 		0, 
+	// 		0,
+	// 		gameObjectsCubes.uboModelView.offset
+	// 	);
+	// }
 
 
 
