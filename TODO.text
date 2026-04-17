@@ -1,0 +1,22 @@
+VkRenderingAttachmentInfo colorAttachmentInfo{};
+colorAttachmentInfo.imageView = offscreenImageView; // 👈 THIS replaces framebuffer
+colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+
+vkCmdBeginRendering(cmd, &renderingInfo);
+
+
+
+VkImageCreateInfo imageInfo{};
+imageInfo.format = VK_FORMAT_R32_UINT; // 👈 HERE
+
+
+
+---
+If you're rendering object IDs:
+
+Use a non-normalized format, e.g.:
+VK_FORMAT_R32_UINT (best)
+or R32_SFLOAT
+
+layout(location = 0) out uint outId;

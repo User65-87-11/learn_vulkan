@@ -1,0 +1,57 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(location = 0) in vec2 texCoord;
+
+layout(location = 1) in vec4 fragColor;
+
+// layout(location = 3) in vec4 in_objectId;
+
+// layout(location = 3) flat in uint in_objectId;
+
+layout(location = 0) out vec4 outColor;
+
+// layout(location = 1) out uint outID;
+
+
+// layout(binding = 3) uniform Light
+// {
+//   vec4 lightPos; 
+//   vec4 viewPos; 
+//   vec4 lightColor;
+
+// };
+
+
+
+layout(binding = 3) uniform sampler2D  tex[];
+
+layout(push_constant) uniform Push {
+    uint textureIndex;
+	uint hasColor;
+
+} pc;
+
+
+void main() {
+	// // vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
+
+	
+	vec4 texColor = texture(tex[pc.textureIndex], texCoord);
+
+	if(pc.hasColor != 0)
+	{
+		texColor = fragColor;
+	}
+
+    outColor = texColor;
+
+
+
+   
+	
+	
+	
+
+}
+

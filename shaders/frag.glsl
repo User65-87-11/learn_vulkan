@@ -16,7 +16,7 @@ layout(location = 0) out vec4 outColor;
 layout(location = 1) out uint outID;
 
 
-layout(binding = 2) uniform Light
+layout(binding = 3) uniform Light
 {
   vec4 lightPos; 
   vec4 viewPos; 
@@ -24,7 +24,7 @@ layout(binding = 2) uniform Light
 
 };
 
-layout(binding = 3) uniform sampler2D  tex[];
+layout(binding = 4) uniform sampler2D  tex[];
 
 layout(push_constant) uniform Push {
     int textureIndex;

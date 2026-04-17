@@ -247,6 +247,13 @@ struct Frame{
 	void * bufferModelMapped ;
 
 
+	VkBuffer bufferObjectIds;
+
+	VkDeviceMemory bufferMemoryObjectIds ;
+
+	void * bufferMappedObjectIds ;
+
+
 	VkBuffer buffersViewProjection ;
 
 	VkDeviceMemory buffersViewProjectionMemory ;
@@ -397,10 +404,22 @@ struct PushConst{
 	int objectId;
 };
 
+
+struct PushConst2D{
+	uint32_t texIdx;
+	uint32_t hasColor;
+};
+
 struct Vertex{
 
 	vec3 pos;
 	vec3 norm;
+	vec2 texCoords;
+};
+
+struct Vertex2D{
+
+	vec2 pos;
 	vec2 texCoords;
 };
 //alignas(16)?
@@ -425,12 +444,19 @@ uint32_t instanceNum = INSTANCE_NUM;
 //__attribute__((packed)) 
 //__attribute__((aligned(16)))
 // 
-struct __attribute__((aligned(16))) UBOModel  {
+// struct __attribute__((aligned(16))) UBOModel  {
 
-	float model[16];
-	uint32_t objectId;
+// 	float model[16];
+// 	uint32_t objectId;
+// };
+
+
+struct UBOobjectId{
+		uint32_t objectId;
 };
- 
+struct UBOModel{
+	mat4 model;
+};
 struct UBOCommon {
 
     mat4 view;
@@ -477,11 +503,13 @@ struct GameObject {
 
 
 	struct ModelVertexData * mesh;
+
 	struct TextureRes * tex;
 
 
 	struct GmArrayView arrayViewUboModel;
 	
+	struct GmArrayView arrayViewUboObjectIds;
 
 	struct UBOPointLight * uboLight;
 
@@ -499,6 +527,8 @@ struct GmArray arrayGameObjects;
 
 
 struct GmArray arrayUboModels;
+
+struct GmArray arrayUboObjectIds;
 
 
 
@@ -557,7 +587,7 @@ void createIndexBuffer(
 
 void clearUniformBuffers();
 
-void createDescriptorSetLayout(struct Pipeline * pipeline);
+void createShaderDescriptorSetLayout(struct Pipeline * pipeline);
 
 // void createDescriptorSets();
 
@@ -1813,6 +1843,16 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 			.range = sizeof(struct UBOModel) * arrayUboModels.len
 		};
 
+
+		
+		VkDescriptorBufferInfo bufferObjectIds = { 
+			.buffer = frame->bufferObjectIds, 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOobjectId) * arrayUboObjectIds.len
+		};
+
+
 		VkDescriptorBufferInfo bufferInfoLight = { 
 			.buffer = frame->buffersDirectionalLight, 
 			.offset = 0, 
@@ -1854,11 +1894,22 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
 				.pBufferInfo = &bufferInfoModel
 			},
-			
+
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
 				.dstBinding = 2, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+				.pBufferInfo = &bufferObjectIds
+			},
+			
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frame->descriptorSets, 
+				.dstBinding = 3, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -1868,7 +1919,7 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = 3, 
+				.dstBinding = 4, 
 				.descriptorCount = TEXTURE_COUNT, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
@@ -1916,6 +1967,25 @@ void clearUniformBuffers3(){
 			frame->buffersViewProjectionMemory= NULL;
 		}
 		
+
+		if(frame->bufferMappedObjectIds != NULL)
+		{
+			 
+			vkUnmapMemory(device,frame->bufferMemoryObjectIds);
+			frame->bufferMappedObjectIds = NULL;
+		}
+		if(frame->bufferObjectIds != NULL){
+
+			vkDestroyBuffer(device, frame->bufferObjectIds, NULL);
+			frame->bufferObjectIds = NULL;
+		}
+		if(frame->bufferMemoryObjectIds != NULL){
+
+			vkFreeMemory(device, frame->bufferMemoryObjectIds, NULL);
+			frame->bufferMemoryObjectIds= NULL;
+		}
+
+
 
 
 		if(frame->bufferModelMapped != NULL)
@@ -1987,6 +2057,9 @@ void initGameObjects3(){
 
 	
 	gmArrayInit(&arrayUboModels, sizeof(struct UBOModel), instancesCount);
+
+	gmArrayInit(&arrayUboObjectIds, sizeof(struct UBOobjectId), instancesCount);
+
 	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), instancesCount);
 	
 
@@ -1995,10 +2068,11 @@ void initGameObjects3(){
 	for(int i=0; i < instancesCount; i++)
 	{
 
-		struct UBOModel *m = gmArrayPush(&arrayUboModels, NULL);
-		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances,  NULL);
+		struct UBOModel m ;
+		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances);
+		struct UBOobjectId o ;
 
-		m->objectId = i +1;
+		o.objectId = i +1;
 
 		
 		GLM_VEC3_SET(g->position, rand_float(), 0.0, rand_float());
@@ -2007,15 +2081,24 @@ void initGameObjects3(){
 		// GLM_VEC4_SET(m.objectId, i, 0.0, 0.0, 1.0);
 		
 
-	
-		alignas(32) float mat[16];
-		// mat4 mat;
-		GLM_MAT4_COPY(mat,m->model);
-		
-		glm_mat4_identity((void*)mat) ;
-		glm_translate((void*)mat, g->position);
 
-		GLM_MAT4_COPY(m->model,mat);
+		glm_mat4_identity(m.model) ;
+		glm_translate(m.model, g->position);
+
+	
+		gmArrayPushValue(&arrayUboObjectIds,&o);
+
+		gmArrayPushValue(&arrayUboModels,&m);
+
+
+		// alignas(32) float mat[16];
+		// // mat4 mat;
+		// GLM_MAT4_COPY(mat,m->model);
+		
+		// glm_mat4_identity((void*)mat) ;
+		// glm_translate((void*)mat, g->position);
+
+		// GLM_MAT4_COPY(m->model,mat);
 		
 	}
 	
@@ -2027,10 +2110,11 @@ void initGameObjects3(){
 	//for(int i=0;i<gmArrayLength(gameObjectsCubes);i++)
 	
 	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects, NULL);
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
 		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
 
 		// gmArrayInit(&gameObjectsCubes.instances, sizeof(struct GameObjectInstance), 10);
 
@@ -2045,10 +2129,11 @@ void initGameObjects3(){
 	texture_index = 1;
 	vertexData_index = 0;
 	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects, NULL);
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
 		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
 		
 		gameObjectsTemp->tex = &textures[texture_index];
 		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
@@ -2065,10 +2150,11 @@ void initGameObjects3(){
 	texture_index = 0;
 	vertexData_index = 0;
 	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects, NULL);
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
 		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
 	
 		gameObjectsTemp->tex = &textures[texture_index];
 		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
@@ -2086,6 +2172,9 @@ void freeGameObjects(){
 	
 
 	gmArrayFree(&arrayUboModels);
+
+	gmArrayFree(&arrayUboObjectIds);
+	
 	gmArrayFree(&arrayGameObjectInstances);
 
 	gmArrayFree(&arrayGameObjects);
@@ -2156,6 +2245,34 @@ void createUniformBuffers3(){
 			//----------------
 		}
 
+		
+		{
+		
+			//object ids
+			VkDeviceSize bufferSize = sizeof(struct UBOobjectId) * arrayUboObjectIds.len;
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			frame->bufferObjectIds= buffer;
+			frame->bufferMemoryObjectIds = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			frame->bufferMappedObjectIds= memptr;
+			
+			//----------------
+		}
+
 		{
 			// directional light uniform buffers
 			VkDeviceSize bufferSize = sizeof(struct UBODirectionalLight);
@@ -2199,6 +2316,10 @@ void createDescriptorPool() {
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
 		},
 		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+		},
+		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
 		},
@@ -2220,14 +2341,86 @@ void createDescriptorPool() {
 	vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, NULL, &descriptorPool);
 };
 
-void createDescriptorSetLayout(struct Pipeline * pipeline){
-
-	// uniform buffer object
+void createHUDShaderDescriptorSetLayout(struct Pipeline * pipeline){
+	PRINT_FNAME;
 	/*
-	// .descriptorCount > 1 is used for transformation for each of the bones in a skeleton for skeletal animation
+	vertex
+	layout(binding = 0) uniform Matrices
+
+	layout(std430, binding = 1) readonly buffer  Models
 	
+	layout(std430, binding = 2) readonly buffer  Colors
+
+
+	//fragment
+
+	layout(binding = 3) uniform sampler2D  tex[];
+
+	layout(push_constant) uniform Push {
+		uint textureIndex;
+		uint hasColor;
+
+	} pc;
+
+
 	*/
-	// assert(UNIFORM_BUFFER_COUNT == 2);
+
+
+	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = {
+		//PV
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		//models
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 1,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		// colors
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 2,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		//texture sampler
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 3,
+			.descriptorCount = TEXTURE_COUNT,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.pImmutableSamplers = NULL,
+		},
+	};
+
+
+
+
+	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = sizeof(descriptorSetLayoutBindings) / sizeof(VkDescriptorSetLayoutBinding),
+		.pBindings = descriptorSetLayoutBindings,
+	};
+
+	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &pipeline->descriptorSetLayout);
+
+	if(res != VK_SUCCESS){
+		EXIT_CLEAN("vkCreateDescriptorSetLayout failed");
+	}
+}
+
+
+void createShaderDescriptorSetLayout(struct Pipeline * pipeline){
+
+
 
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = {
 		(VkDescriptorSetLayoutBinding) {
@@ -2247,12 +2440,19 @@ void createDescriptorSetLayout(struct Pipeline * pipeline){
 		(VkDescriptorSetLayoutBinding) {
 			.binding = 2,
 			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = 3,
+			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.pImmutableSamplers = NULL,
 		},
 		(VkDescriptorSetLayoutBinding) {
-			.binding = 3,
+			.binding = 4,
 			.descriptorCount = TEXTURE_COUNT,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -2310,6 +2510,7 @@ void createBuffer(
 		.size = size,
 		.usage = usage,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		
 		
 	};
 	 
@@ -2509,6 +2710,7 @@ uint32_t createShaderFromFile(const char * path, uint8_t** buffer){
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
 		printf("Current working directory:\n");
         printf("%s\n", cwd);
+		printf("%s\n", path);
     } else {
         perror("getcwd() error");
     }
@@ -2645,9 +2847,9 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		 (VkImageMemoryBarrier2){
 
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-			.srcAccessMask = 0,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
 			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -2665,7 +2867,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		(VkImageMemoryBarrier2){
 
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 			.srcAccessMask = 0,
 			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -2821,7 +3023,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 				&constants0
 			);
 	
-			 vkCmdDrawIndexed(
+			vkCmdDrawIndexed(
 				commandBuffer, 
 				gameObject->mesh->indices_num, 
 				gameObject->arrayViewUboModel.len , 
@@ -2842,8 +3044,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		VkImageMemoryBarrier2 toTransferBarrier = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 			.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 			.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+			.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 			.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
 			.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -2864,7 +3066,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		};
 		vkCmdPipelineBarrier2(commandBuffer, &toTransferDep);
 		
-		// 2. Copy pick image to staging buffer
+	
 		VkBufferImageCopy region = {
 			.bufferOffset = 0,
 			.bufferRowLength = 0,
@@ -2885,13 +3087,11 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			&region
 		);
 
-
-		// 3. Transition back to GENERAL (so LOAD_OP_CLEAR works next frame)
 		VkImageMemoryBarrier2 toGeneralBarrier = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,          // ✅ Correct stage
-			.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,            // ✅ Correct access
-			.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,           
+			.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+			.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,      
 			.dstAccessMask = 0,
 			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			.newLayout = VK_IMAGE_LAYOUT_GENERAL,
@@ -2922,7 +3122,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 			 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 			 .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			 .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			 .dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 			 .dstAccessMask = 0,
 			 .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			 .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -2975,6 +3175,8 @@ void updateUniformBuffer3(uint32_t currentFrame){
 
 
 	memcpy(frame->bufferModelMapped, arrayUboModels.data, sizeof(struct UBOModel)* arrayUboModels.len);
+
+	memcpy(frame->bufferMappedObjectIds, arrayUboObjectIds.data, sizeof(struct UBOobjectId)* arrayUboObjectIds.len);
 
 	
 	// gmArrayCopyBySize(frame->bufferModelMapped, &arrayUboModels);
@@ -4047,17 +4249,352 @@ void createInstance(){
 
 
 }
+void createHUDPipeline(struct  Pipeline * pipeline){
+
+	PRINT_FNAME;
+
+	/*
+	vkCmdDrawIndexed(
+		VkCommandBuffer commandBuffer,
+		uint32_t indexCount, 
+		uint32_t instanceCount, 
+		uint32_t firstIndex, 
+		int32_t vertexOffset, 
+		uint32_t firstInstance
+	);
+
+	{
+		shaders
+		layout(location = 0) in vec2 in_position;
+		layout(location = 1) in vec2 in_texCoord;
+	
+	}
+
+	"shaders/frag_hud.spv"
+	"shaders/vert_hud.spv"
+
+
+	mat4 ortho = ortho_matrix(
+    	0.0f, (float)width,
+		(float)height, 0.0f,   // flip Y if needed
+		-1.0f, 1.0f
+	);
+
+
+	1. everything is a square
+	2. instance count 
+	3. what is instance data?
+		3.1 texture idx
+		3.2 model transform
+		3.3 selected/highlighted
+		3.4 grayed out
+
+	*/
+
+
+
+	
+
+	// char * path ="shaders/frag.spv";
+	char * path = pipeline->frag_path;
+	uint8_t* data = NULL;
+	uint32_t dataSize = createShaderFromFile(path, &data);
+	
+	//--- FRAGMENT
+
+ 
+		
+
+	if(dataSize == 0)
+	{
+
+		printf("Shader path: %s\n",path);
+		EXIT_CLEAN("failed to read fragment shader file\n");
+	
+	}
+	VkShaderModuleCreateInfo createInfo={
+		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		.pCode = (uint32_t*)data,
+		.codeSize = dataSize,
+	 
+		
+	};
+ 
+	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleFrag);
+
+	free(data);
+
+
+
+
+	//--- VERTEX
+	
+	path = pipeline->vert_path;
+
+	dataSize = createShaderFromFile(path, &data);
+	
+	 
+	if(dataSize == 0)
+	{
+		printf("Shader path: %s\n",path);
+		EXIT_CLEAN("failed to read vertext shader file\n");
+		
+	}
+
+	createInfo = (VkShaderModuleCreateInfo) {
+		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		.pCode = (uint32_t*)data,
+		.codeSize = dataSize,
+		
+	};
+	
+	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleVert);
+	free(data);
+	//---------
+
+	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+		.stage = VK_SHADER_STAGE_VERTEX_BIT,
+		.module = pipeline->shaderModuleVert,
+		.pName = "main",
+		
+
+	};
+
+	VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+		.module = pipeline->shaderModuleFrag,
+		.pName = "main",
+
+	};
+
+	uint32_t dynamicStateCount = 2;
+
+	/*
+	INFO
+		set during command buffer recording part
+		vkCmdSetViewport
+	*/
+	VkDynamicState dynamicState[]={VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+
+	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.dynamicStateCount = dynamicStateCount,
+		.pDynamicStates = dynamicState,
+		
+	};
+
+	
+	VkPipelineShaderStageCreateInfo shaderStageCreateInf[] = {
+		shaderStageCreateInfoVert,
+		shaderStageCreateInfoFrag
+	};
+
+	uint32_t shaderStageCreateInfCnt = sizeof(shaderStageCreateInf) /  sizeof(VkPipelineShaderStageCreateInfo);
+
+
+	VkVertexInputBindingDescription vertexInputBindingDescription={
+		.binding = 0,
+		.stride = sizeof(struct Vertex2D),
+		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+	};
+
+  
+
+	VkVertexInputAttributeDescription vertexInputAttributeDescriptions[2];
+
+	vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){0, 0, VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex2D, pos)};
+	vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){1, 0, VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex2D, texCoords)};
+ 
+
+	uint32_t vertexInputAttributeDescriptionsCount = sizeof(vertexInputAttributeDescriptions) / (sizeof(VkVertexInputAttributeDescription));
+
+
+
+	VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		.vertexBindingDescriptionCount = 1,
+		.pVertexBindingDescriptions = &vertexInputBindingDescription,
+		.vertexAttributeDescriptionCount = vertexInputAttributeDescriptionsCount,
+		.pVertexAttributeDescriptions = vertexInputAttributeDescriptions,
+	
+	};
+
+	VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+	};
+
+ 
+	//viewport is dynamic
+
+	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+		.pViewports = 0,
+		.viewportCount = 1,
+		.pScissors = 0,
+		.scissorCount  =1,
+	};
+
+ 
+
+	VkPipelineRasterizationStateCreateInfo rasterizer = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		.depthClampEnable = VK_FALSE,
+		.rasterizerDiscardEnable = VK_FALSE,
+		.polygonMode = VK_POLYGON_MODE_FILL,
+		.cullMode = VK_CULL_MODE_BACK_BIT,
+		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		.depthBiasEnable = VK_FALSE,
+		.depthBiasSlopeFactor = 1.0f,
+		.lineWidth = 1.0f,
+		
+	};
+
+ 
+	VkPipelineMultisampleStateCreateInfo multisampling = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+		.sampleShadingEnable = VK_FALSE,
+	};
+
+ 
+	VkPipelineDepthStencilStateCreateInfo depthStencil={
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		.depthTestEnable = VK_FALSE,
+		.depthWriteEnable = VK_FALSE,
+
+		.depthCompareOp = VK_COMPARE_OP_ALWAYS,
+
+		.depthBoundsTestEnable = VK_FALSE,
+		.stencilTestEnable = VK_FALSE,
+	};
+
+
+	//Color blending
+	//needed for picking
+	// const uint32_t colorBlendAttachmentStateCnt = 2;
+	VkPipelineColorBlendAttachmentState colorBlendAttachmentState[]=
+	{
+
+		(VkPipelineColorBlendAttachmentState){
+			.blendEnable = VK_FALSE, // true of false?
+			.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+			.colorBlendOp = VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+			.alphaBlendOp = VK_BLEND_OP_ADD,
+		},
+
+		// (VkPipelineColorBlendAttachmentState){
+		// 	.blendEnable = VK_FALSE,
+		// 	.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		// 	.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+		// 	.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+		// 	.colorBlendOp = VK_BLEND_OP_ADD,
+		// 	.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+		// 	.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+		// 	.alphaBlendOp = VK_BLEND_OP_ADD,
+		// },
+	};
+
+
+	VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo={
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+		.logicOpEnable = VK_FALSE,
+		.logicOp = VK_LOGIC_OP_COPY,
+		.attachmentCount = sizeof(colorBlendAttachmentState) / sizeof(VkPipelineColorBlendAttachmentState),
+		.pAttachments = colorBlendAttachmentState,
+	};
+
+
+	VkPushConstantRange pushRange = {};
+	pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	pushRange.offset = 0;
+	pushRange.size = sizeof(struct PushConst2D);
+
+	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		.setLayoutCount = 1,
+		.pSetLayouts = &pipeline->descriptorSetLayout,
+		.pushConstantRangeCount  = 1,
+		.pPushConstantRanges = &pushRange
+	};
+
+	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipeline->pipelineLayout );
+
+
+	VkFormat depthFormat = findDepthFormat();
+
+
+
+	// const uint32_t colorAttachmentFormatsCount = 2;
+	VkFormat formats[] = {
+		swapchainSurfaceFormat,   // color
+		// VK_FORMAT_R32_UINT          // picking (or UNORM if encoded)
+	};
+
+	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+		.colorAttachmentCount = 1,
+		
+		.pColorAttachmentFormats = formats,
+		// .depthAttachmentFormat = depthFormat,
+		.depthAttachmentFormat = VK_FORMAT_UNDEFINED
+	};
+	
+
+
+ 
+
+
+
+	VkGraphicsPipelineCreateInfo  graphicsPipelineCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO , 
+		.pNext = &pipelineRenderingCreateInfo,
+		.stageCount = shaderStageCreateInfCnt,
+		.pStages = shaderStageCreateInf,
+		.pVertexInputState = &pipelineVertexInputStateCreateInfo,
+		.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo,
+		.pViewportState = &viewportStateCreateInfo,
+		.pRasterizationState = &rasterizer,
+		.pMultisampleState = &multisampling,
+		.pColorBlendState = &colorBlendStateCreateInfo,
+		.pDynamicState = &dynamicStateCreateInfo,
+		.layout = pipeline->pipelineLayout,
+		.renderPass = VK_NULL_HANDLE,
+		.basePipelineHandle = VK_NULL_HANDLE,
+		.basePipelineIndex = - 1,
+		.pDepthStencilState = &depthStencil,
+			
+	};
+
+	vkCreateGraphicsPipelines(
+		device,
+		NULL, 
+		1, 
+		&graphicsPipelineCreateInfo,
+		NULL, 
+		&pipeline->graphicsPipeline
+	);
+
+
+	
+
+}
 void createPipelines(){
 
 	gmArrayInit(&arrayPipelines,sizeof(struct Pipeline),3);
 
-	struct Pipeline * worldPipeline  = 	gmArrayPush(&arrayPipelines, NULL);
+	struct Pipeline * worldPipeline  = 	gmArrayPush(&arrayPipelines);
 
 	worldPipeline->frag_path = "shaders/frag.spv";
 	worldPipeline->vert_path = "shaders/vert.spv";
 
-	createDescriptorSetLayout(worldPipeline);
-
+	createShaderDescriptorSetLayout(worldPipeline);
 
 
 	createGraphicsPipeline(worldPipeline);
@@ -4067,8 +4604,33 @@ void createPipelines(){
 		create pipeline
 	
 	*/
+
+
+	struct Pipeline * hudPipeline = gmArrayPush(&arrayPipelines);
+
+	hudPipeline->frag_path = "shaders/frag_hud.spv";
+	hudPipeline->vert_path = "shaders/vert_hud.spv";
+
+	createHUDShaderDescriptorSetLayout(hudPipeline);
+	createHUDPipeline(hudPipeline);
+
+	/*
+	
+		createDescriptorPool();
+
+		
+		// for( int i=0;i<TEXTURE_COUNT ;i++)
+		{
+			// struct TextureRes * t = &textures[i];
+			struct Pipeline * pipeline = gmArrayGet(&arrayPipelines, 0);
+			createDescriptorSets3(pipeline);
+		}
+	
+		check here
+	*/
 	
 }
+
 void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 
 	PRINT_FNAME;
@@ -4395,7 +4957,7 @@ void initVulkan(){
 
 	createPipelines();
 
-	// createDescriptorSetLayout();
+	// createShaderDescriptorSetLayout();
 
 	// createGraphicsPipeline();
 

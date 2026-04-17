@@ -1,3 +1,8 @@
 glslangValidator -V -S frag ./shaders/frag.glsl -o ./shaders/frag.spv -e main
 
 glslangValidator -V -S vert ./shaders/vert.glsl -o ./shaders/vert.spv -e main
+
+
+glslangValidator -V -S frag ./shaders/frag_hud.glsl -o ./shaders/frag_hud.spv -e main
+
+glslangValidator -V -S vert ./shaders/vert_hud.glsl -o ./shaders/vert_hud.spv -e main
