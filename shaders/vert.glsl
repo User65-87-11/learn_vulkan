@@ -4,7 +4,7 @@ struct ModelData {
 	
     mat4 model;
 	uint objectId;
-	 
+
 };
 
 
@@ -15,7 +15,6 @@ layout(location = 2) in vec2 in_texCoord;
 
 layout(binding = 0) uniform Matrices
 {
-
   mat4 view;
   mat4 projection;
 };

@@ -77,6 +77,8 @@ const uint32_t HEIGHT = 600;
 		dst[2]=src[2];\
 	}while(0)\
 
+#define GLM_MAT4_COPY(dst,src) memcpy(dst,src,sizeof(mat4))
+
 #define GLM_VEC4_COPY(dst,src)\
 	do{\
 		dst[0]=src[0];\
@@ -184,27 +186,39 @@ VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 
 
 
+struct Pipeline{
+	
+	char * frag_path;
 
+	char * vert_path;
 
-VkShaderModule shaderModuleFrag = NULL;
+	VkShaderModule shaderModuleFrag ;
+	
+	VkShaderModule shaderModuleVert ;
+	
+	VkDescriptorSetLayout descriptorSetLayout ;
+	
+	VkPipelineLayout pipelineLayout ;
+	
+	VkPipeline graphicsPipeline ;
 
-VkShaderModule shaderModuleVert = NULL;
+};
 
-VkDescriptorSetLayout descriptorSetLayout = NULL;
+// #define PIPELINE_CNT 3 
 
-VkPipelineLayout pipelineLayout = NULL;
+// struct Pipeline pipelines[PIPELINE_CNT];
 
-VkPipeline graphicsPipeline = NULL;
+struct GmArray arrayPipelines;
+
 
 
 uint32_t frameIndex = 0;
 
 VkCommandBuffer graphicsCommandBuffers[MAX_FRAMES_IN_FLIGHT];
 
+VkCommandPool graphicsCommnadPool = NULL;
 
 VkCommandBuffer transferCommandBuffers;
-
-VkCommandPool graphicsCommnadPool = NULL;
 
 VkCommandPool transferCommnadPool = NULL;
 
@@ -410,12 +424,11 @@ uint32_t instanceNum = INSTANCE_NUM;
 
 //__attribute__((packed)) 
 //__attribute__((aligned(16)))
+// 
 struct __attribute__((aligned(16))) UBOModel  {
 
-	
 	float model[16];
 	uint32_t objectId;
-	
 };
  
 struct UBOCommon {
@@ -467,34 +480,29 @@ struct GameObject {
 	struct TextureRes * tex;
 
 
-	struct GmArrayView uboModelView;
+	struct GmArrayView arrayViewUboModel;
 	
 
 	struct UBOPointLight * uboLight;
 
 	
-	struct GmArrayView instancesView;
+	struct GmArrayView arrayViewGameObjectInstances;
 
 
 };
 
 
-struct GmArray gameObejctInstances;
+struct GmArray arrayGameObjectInstances;
 
 
 struct GmArray arrayGameObjects;
 
-struct GameObject    gameObjectsCubes ;
 
- 
-struct GameObject   gameObjectsRooms0 ;
-
- 
-struct GameObject   gameObjectsRooms1 ;
+struct GmArray arrayUboModels;
 
 
 
-struct GmArray uboModels3;
+void createPipelines();
 
 
 void procMouseInput(GLFWwindow* window);
@@ -549,9 +557,9 @@ void createIndexBuffer(
 
 void clearUniformBuffers();
 
-void createDescriptorSetLayout();
+void createDescriptorSetLayout(struct Pipeline * pipeline);
 
-void createDescriptorSets();
+// void createDescriptorSets();
 
 void createTextureImage(
 	char * path, 
@@ -632,6 +640,8 @@ bool hasStencilComponent(VkFormat format);
 
 void processInput(GLFWwindow *window);
  
+void createGraphicsPipeline(struct  Pipeline * pipeline );
+
 
 float rand_float()
 {
@@ -1178,7 +1188,8 @@ void createDepthResources3(VkImage *depthImage,VkImageView *depthImageView,VkDev
 		transferCommandBuffers,
         depthImage,
         VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        // VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, FIX
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         0,
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -1496,6 +1507,9 @@ void createPickImage(
 		
 		vkMapMemory(device, frame->pickStagingMemory, 0, VK_WHOLE_SIZE, 0, &frame->pickMappedMem);
 		
+		memset(frame->pickMappedMem, 0, sizeof(uint32_t));
+		frame->pickedID = 0;
+
 		createImage(
 			swapChainExtent.width, 
 			swapChainExtent.height, 
@@ -1750,7 +1764,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
 }
 
 
-void createDescriptorSets3(){
+void createDescriptorSets3(struct Pipeline * pipeline){
 	PRINT_FNAME;
 
 
@@ -1760,7 +1774,7 @@ void createDescriptorSets3(){
 	};
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-   		layouts[i] = descriptorSetLayout;
+   		layouts[i] = pipeline->descriptorSetLayout;
 	}
 
 
@@ -1796,7 +1810,7 @@ void createDescriptorSets3(){
 			.buffer = frame->bufferModel, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOModel) * uboModels3.len
+			.range = sizeof(struct UBOModel) * arrayUboModels.len
 		};
 
 		VkDescriptorBufferInfo bufferInfoLight = { 
@@ -1946,6 +1960,13 @@ void initGameObjects3(){
 
 	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3);
 
+
+	
+
+	// struct GameObject   gameObjectsRooms0 ;
+	
+	// struct GameObject   gameObjectsRooms1 ;
+
 	printf("sizeof(struct UBOModel) = %d\n",sizeof(struct UBOModel));
 	// assert(sizeof(struct UBOModel) ==  96);
 
@@ -1965,8 +1986,8 @@ void initGameObjects3(){
 	
 
 	
-	gmArrayInit(&uboModels3, sizeof(struct UBOModel), instancesCount);
-	gmArrayInit(&gameObejctInstances, sizeof(struct GameObjectInstance), instancesCount);
+	gmArrayInit(&arrayUboModels, sizeof(struct UBOModel), instancesCount);
+	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), instancesCount);
 	
 
 
@@ -1974,23 +1995,28 @@ void initGameObjects3(){
 	for(int i=0; i < instancesCount; i++)
 	{
 
-		struct UBOModel m;
-		struct GameObjectInstance g;
+		struct UBOModel *m = gmArrayPush(&arrayUboModels, NULL);
+		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances,  NULL);
 
-		m.objectId = i +1;
+		m->objectId = i +1;
 
 		
-		GLM_VEC3_SET(g.position, rand_float(), 0.0, rand_float());
-		g.uboModelIndex = i;
+		GLM_VEC3_SET(g->position, rand_float(), 0.0, rand_float());
+		g->uboModelIndex = i;
 
 		// GLM_VEC4_SET(m.objectId, i, 0.0, 0.0, 1.0);
 		
-		
-		glm_mat4_identity((void*)m.model) ;
-		glm_translate((void*)m.model, g.position);
 
-		gmArrayPush(&uboModels3, &m, NULL);
-		gmArrayPush(&gameObejctInstances, &g, NULL);
+	
+		alignas(32) float mat[16];
+		// mat4 mat;
+		GLM_MAT4_COPY(mat,m->model);
+		
+		glm_mat4_identity((void*)mat) ;
+		glm_translate((void*)mat, g->position);
+
+		GLM_MAT4_COPY(m->model,mat);
+		
 	}
 	
 
@@ -1999,51 +2025,57 @@ void initGameObjects3(){
 	uint32_t vertexData_index = 1;
 
 	//for(int i=0;i<gmArrayLength(gameObjectsCubes);i++)
-	{
 	
-		gmArrayViewCreateSlice(&uboModels3, &gameObjectsCubes.uboModelView ,0, 10);	
-		gmArrayViewCreateSlice(&gameObejctInstances, &gameObjectsCubes.instancesView ,0, 10);	
+	{
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects, NULL);
+	
+		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
 
 		// gmArrayInit(&gameObjectsCubes.instances, sizeof(struct GameObjectInstance), 10);
 
-		gameObjectsCubes.tex = &textures[texture_index];
-		gameObjectsCubes.mesh = &modelVertexData[vertexData_index];
-		gameObjectsCubes.uboLight = NULL;
+		gameObjectsTemp->tex = &textures[texture_index];
+		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		gameObjectsTemp->uboLight = NULL;
 
-		gmArrayPush(&arrayGameObjects, &gameObjectsCubes, NULL);
+		
 
 	}
 
 	texture_index = 1;
 	vertexData_index = 0;
 	{
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects, NULL);
 	
-		gmArrayViewCreateSlice(&uboModels3, &gameObjectsRooms0.uboModelView ,10, 10);	
-		gmArrayViewCreateSlice(&gameObejctInstances, &gameObjectsRooms0.instancesView ,10, 10);	
+		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
 		
-		gameObjectsRooms0.tex = &textures[texture_index];
-		gameObjectsRooms0.mesh = &modelVertexData[vertexData_index];
-		gameObjectsRooms0.uboLight = NULL;
+		gameObjectsTemp->tex = &textures[texture_index];
+		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		gameObjectsTemp->uboLight = NULL;
 
-		gmArrayPush(&arrayGameObjects, &gameObjectsRooms0, NULL);
+		 
+
+		assert(gameObjectsTemp->mesh->vertextBuffer != NULL);
 		
 	}
-	assert(gameObjectsRooms0.mesh->vertextBuffer != NULL);
+	
 
 
 	texture_index = 0;
 	vertexData_index = 0;
 	{
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects, NULL);
 	
-		gmArrayViewCreateSlice(&uboModels3, &gameObjectsRooms1.uboModelView ,20, 10);	
-		gmArrayViewCreateSlice(&gameObejctInstances, &gameObjectsRooms1.instancesView ,20, 10);	
+		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
 	
-		gameObjectsRooms1.tex = &textures[texture_index];
-		gameObjectsRooms1.mesh = &modelVertexData[vertexData_index];
-		gameObjectsRooms1.uboLight = NULL;
+		gameObjectsTemp->tex = &textures[texture_index];
+		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		gameObjectsTemp->uboLight = NULL;
 	
 
-		gmArrayPush(&arrayGameObjects, &gameObjectsRooms1, NULL);
+	 
 	}
 
 
@@ -2053,9 +2085,10 @@ void freeGameObjects(){
 
 	
 
-	gmArrayFree(&uboModels3);
-	gmArrayFree(&gameObejctInstances);
+	gmArrayFree(&arrayUboModels);
+	gmArrayFree(&arrayGameObjectInstances);
 
+	gmArrayFree(&arrayGameObjects);
 	
 };
 void createUniformBuffers3(){
@@ -2099,7 +2132,7 @@ void createUniformBuffers3(){
 
 		{
 			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOModel) * uboModels3.len;
+			VkDeviceSize bufferSize = sizeof(struct UBOModel) * arrayUboModels.len;
 			VkBuffer buffer;
 			VkDeviceMemory bufferMemory;
 
@@ -2187,7 +2220,7 @@ void createDescriptorPool() {
 	vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, NULL, &descriptorPool);
 };
 
-void createDescriptorSetLayout(){
+void createDescriptorSetLayout(struct Pipeline * pipeline){
 
 	// uniform buffer object
 	/*
@@ -2236,7 +2269,7 @@ void createDescriptorSetLayout(){
 		.pBindings = descriptorSetLayoutBindings,
 	};
 
-	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
+	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &pipeline->descriptorSetLayout);
 
 	if(res != VK_SUCCESS){
 		EXIT_CLEAN("vkCreateDescriptorSetLayout failed");
@@ -2556,7 +2589,39 @@ void createCommandPool(){
 	
 }
 
+/*
+TODO:
 
+
+vkCmdBeginRendering(cmd, &info);
+
+// World
+vkCmdBindPipeline(cmd, ..., worldPipeline);
+recordWorld(cmd);
+
+// HUD
+vkCmdBindPipeline(cmd, ..., uiPipeline);
+recordHUD(cmd);
+
+// Menu
+vkCmdBindPipeline(cmd, ..., uiPipeline);
+recordMenu(cmd);
+
+vkCmdEndRendering(cmd);
+
+----
+vkCmdBeginRendering(... HUD ...)
+drawWorld
+vkCmdEndRendering(...)
+VkTransitionMousePick
+
+
+vkCmdBeginRendering(... HUD ...)
+bind HUD pipeline
+draw UI
+vkCmdEndRendering(...)
+
+*/
 
 void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
@@ -2690,7 +2755,23 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+	// for(int i=0;i<arrayPipelines.len;i++)
+	
+	struct Pipeline *  pipeline = gmArrayGet(&arrayPipelines, 0);
+
+	if (!pipeline || pipeline->graphicsPipeline == VK_NULL_HANDLE) {
+		printf("ERROR: pipeline or graphicsPipeline is invalid!\n");
+		printf("  pipeline ptr: %p\n", pipeline);
+		if (pipeline) {
+			printf("  frag_path: %s\n", pipeline->frag_path);
+			printf("  vert_path: %s\n", pipeline->vert_path);
+			printf("  graphicsPipeline: %llu\n", (unsigned long long)pipeline->graphicsPipeline);
+		}
+		fflush(stdout);
+		return; // or EXIT_CLEAN
+	}
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
     
     VkViewport viewPort = {
         .x = 0, 
@@ -2721,7 +2802,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			vkCmdBindDescriptorSets(
 				commandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				pipelineLayout, 0, 1, 
+				 pipeline->pipelineLayout, 0, 1, 
 				descriptorSet, 0, NULL
 			);
 	
@@ -2733,7 +2814,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			// int textureIndex = 0; // choose texture
 			vkCmdPushConstants(
 				commandBuffer,
-				pipelineLayout,
+				 pipeline->pipelineLayout,
 				VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
 				sizeof(struct PushConst),
@@ -2743,88 +2824,14 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			 vkCmdDrawIndexed(
 				commandBuffer, 
 				gameObject->mesh->indices_num, 
-				gameObject->uboModelView.len , 
+				gameObject->arrayViewUboModel.len , 
 				0, 
 				0,
-				gameObject->uboModelView.offset
+				gameObject->arrayViewUboModel.offset
 			);
 		}
 	}
 	
-
-	// //draw Room1
-	// {
-	// 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsRooms1.mesh->vertextBuffer, &offset);
-	// 	vkCmdBindIndexBuffer(commandBuffer, gameObjectsRooms1.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-	// 	vkCmdBindDescriptorSets(
-	// 		commandBuffer, 
-	// 		VK_PIPELINE_BIND_POINT_GRAPHICS, 
-	// 		pipelineLayout, 0, 1, 
-	// 		descriptorSet, 0, NULL
-	// 	);
-
-	// 	struct PushConst constants0 = {
-	// 		.hasColor = false,
-	// 		.texIdx = gameObjectsRooms1.tex->textureIdx,
-	// 		.objectId = frame->pickedID
-	// 	};
-	// 	// int textureIndex = 0; // choose texture
-	// 	vkCmdPushConstants(
-	// 		commandBuffer,
-	// 		pipelineLayout,
-	// 		VK_SHADER_STAGE_FRAGMENT_BIT,
-	// 		0,
-	// 		sizeof(struct PushConst),
-	// 		&constants0
-	// 	);
-
-	// 	 vkCmdDrawIndexed(
-	// 		commandBuffer, 
-	// 		gameObjectsRooms1.mesh->indices_num, 
-	// 		gameObjectsRooms1.uboModelView.len , 
-	// 		0, 
-	// 		0,
-	// 		gameObjectsRooms1.uboModelView.offset
-	// 	);
-	// }
-	// //draw Cube
-	// {
-	// 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObjectsCubes.mesh->vertextBuffer, &offset);
-	// 	vkCmdBindIndexBuffer(commandBuffer, gameObjectsCubes.mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-	// 	vkCmdBindDescriptorSets(
-	// 		commandBuffer, 
-	// 		VK_PIPELINE_BIND_POINT_GRAPHICS, 
-	// 		pipelineLayout, 0, 1, 
-	// 		descriptorSet, 0, NULL
-	// 	);
-
-	// 	struct PushConst constants0 = {
-	// 		.hasColor = false,
-	// 		.texIdx = gameObjectsCubes.tex->textureIdx,
-	// 		.objectId = frame->pickedID
-	// 	};
-	// 	// int textureIndex = 0; // choose texture
-	// 	vkCmdPushConstants(
-	// 		commandBuffer,
-	// 		pipelineLayout,
-	// 		VK_SHADER_STAGE_FRAGMENT_BIT,
-	// 		0,
-	// 		sizeof(struct PushConst),
-	// 		&constants0
-	// 	);
-
-	// 	 vkCmdDrawIndexed(
-	// 		commandBuffer, 
-	// 		gameObjectsCubes.mesh->indices_num, 
-	// 		gameObjectsCubes.uboModelView.len , 
-	// 		0, 
-	// 		0,
-	// 		gameObjectsCubes.uboModelView.offset
-	// 	);
-	// }
-
 
 
 
@@ -2880,13 +2887,25 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
 
 		// 3. Transition back to GENERAL (so LOAD_OP_CLEAR works next frame)
-		VkImageMemoryBarrier2 toGeneralBarrier = toTransferBarrier;
-		toGeneralBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		toGeneralBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		toGeneralBarrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-		toGeneralBarrier.dstAccessMask = 0;
-		toGeneralBarrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
-
+		VkImageMemoryBarrier2 toGeneralBarrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,          // ✅ Correct stage
+			.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,            // ✅ Correct access
+			.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+			.dstAccessMask = 0,
+			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			.newLayout = VK_IMAGE_LAYOUT_GENERAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = frame->pickImage,
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		};
 		VkDependencyInfo toGeneralDep = {
 			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
 			.imageMemoryBarrierCount = 1,
@@ -2918,25 +2937,25 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 				 .layerCount = 1 
 			 },
 		 },
-		  (VkImageMemoryBarrier2){
-			 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-			 .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			 .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-			 .dstAccessMask = 0,
-			 .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			 .newLayout =  VK_IMAGE_LAYOUT_GENERAL,
-			 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			 .image = frame->pickImage,
-			 .subresourceRange = { 
-				 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
-				 .baseMipLevel = 0, 
-				 .levelCount = 1, 
-				 .baseArrayLayer = 0, 
-				 .layerCount = 1 
-			 },
-		 }
+		//   (VkImageMemoryBarrier2){
+		// 	 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+		// 	 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+		// 	 .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+		// 	 .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+		// 	 .dstAccessMask = 0,
+		// 	 .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		// 	 .newLayout =  VK_IMAGE_LAYOUT_GENERAL,
+		// 	 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		// 	 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		// 	 .image = frame->pickImage,
+		// 	 .subresourceRange = { 
+		// 		 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
+		// 		 .baseMipLevel = 0, 
+		// 		 .levelCount = 1, 
+		// 		 .baseArrayLayer = 0, 
+		// 		 .layerCount = 1 
+		// 	 },
+		//  }
 	 };
    
 
@@ -2955,8 +2974,10 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	struct Frame * frame = &frames[currentFrame];
 
 
-	memcpy(frame->bufferModelMapped, uboModels3.data, sizeof(struct UBOModel)* uboModels3.len);
+	memcpy(frame->bufferModelMapped, arrayUboModels.data, sizeof(struct UBOModel)* arrayUboModels.len);
+
 	
+	// gmArrayCopyBySize(frame->bufferModelMapped, &arrayUboModels);
 
 	
 	struct UBOCommon ubo = {};
@@ -2977,6 +2998,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 
 	memcpy(frame->buffersViewProjectionMapped, &ubo, sizeof(struct UBOCommon));
 
+	// gmArrayCopyBySize(frame->buffersViewProjectionMapped, ubo);
 
 	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
 
@@ -3013,7 +3035,7 @@ void drawFrame3() {
 	frame->pickedID = pickedObjectId;
 	if(frame->pickedID != 0)
 	{
-		printf("pickedObjectId %d\n",frame->pickedID);
+		// printf("pickedObjectId %d\n",frame->pickedID);
 	}
 
 	uint32_t imageIndex =  -1;
@@ -3998,6 +4020,8 @@ void createInstance(){
 	 
 	
 
+
+
 	VkInstanceCreateInfo instanceCreateInfo={
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pApplicationInfo = &applicationInfo,
@@ -4023,11 +4047,34 @@ void createInstance(){
 
 
 }
-void createGraphicsPipeline() {
+void createPipelines(){
+
+	gmArrayInit(&arrayPipelines,sizeof(struct Pipeline),3);
+
+	struct Pipeline * worldPipeline  = 	gmArrayPush(&arrayPipelines, NULL);
+
+	worldPipeline->frag_path = "shaders/frag.spv";
+	worldPipeline->vert_path = "shaders/vert.spv";
+
+	createDescriptorSetLayout(worldPipeline);
+
+
+
+	createGraphicsPipeline(worldPipeline);
+	/*
+		create shaders
+		create descriptsors
+		create pipeline
+	
+	*/
+	
+}
+void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 
 	PRINT_FNAME;
 
-	char * path ="shaders/frag.spv";
+	// char * path ="shaders/frag.spv";
+	char * path = pipeline->frag_path;
 	uint8_t* data = NULL;
 	uint32_t dataSize = createShaderFromFile(path, &data);
 	
@@ -4051,7 +4098,7 @@ void createGraphicsPipeline() {
 		
 	};
  
-	vkCreateShaderModule(device, &createInfo, NULL, &shaderModuleFrag);
+	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleFrag);
 
 	free(data);
 
@@ -4060,7 +4107,7 @@ void createGraphicsPipeline() {
 
 	//--- VERTEX
 	
-	path = "shaders/vert.spv";
+	path = pipeline->vert_path;
 
 	dataSize = createShaderFromFile(path, &data);
 	
@@ -4079,14 +4126,14 @@ void createGraphicsPipeline() {
 		
 	};
 	
-	vkCreateShaderModule(device, &createInfo, NULL, &shaderModuleVert);
+	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleVert);
 	free(data);
 	//---------
 
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
-		.module = shaderModuleVert,
+		.module = pipeline->shaderModuleVert,
 		.pName = "main",
 		
 
@@ -4095,7 +4142,7 @@ void createGraphicsPipeline() {
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-		.module = shaderModuleFrag,
+		.module = pipeline->shaderModuleFrag,
 		.pName = "main",
 
 	};
@@ -4251,12 +4298,12 @@ void createGraphicsPipeline() {
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = 1,
-		.pSetLayouts = &descriptorSetLayout,
+		.pSetLayouts = &pipeline->descriptorSetLayout,
 		.pushConstantRangeCount  = 1,
 		.pPushConstantRanges = &pushRange
 	};
 
-	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipelineLayout );
+	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipeline->pipelineLayout );
 
 
 	VkFormat depthFormat = findDepthFormat();
@@ -4278,23 +4325,7 @@ void createGraphicsPipeline() {
 	
 
 
-	// VkSubpassDependency subpassDependency = {
-	// 	.srcSubpass = VK_SUBPASS_EXTERNAL,
-	// 	.dstSubpass = 0,
-	// 	.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-	// 	.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-	// 	.srcAccessMask = 0 ,
-	// 	.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-	// };
-	// VkAttachmentDescription colorAttachment = {
-	// 	.format = swapchainSurfaceFormat,
-	// 	.samples = VK_SAMPLE_COUNT_1_BIT,
-	// 	.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-	// 	.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-	// 	.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	// 	.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-	// };
-
+ 
 
 
 
@@ -4310,7 +4341,7 @@ void createGraphicsPipeline() {
 		.pMultisampleState = &multisampling,
 		.pColorBlendState = &colorBlendStateCreateInfo,
 		.pDynamicState = &dynamicStateCreateInfo,
-		.layout = pipelineLayout,
+		.layout = pipeline->pipelineLayout,
 		.renderPass = VK_NULL_HANDLE,
 		.basePipelineHandle = VK_NULL_HANDLE,
 		.basePipelineIndex = - 1,
@@ -4324,7 +4355,7 @@ void createGraphicsPipeline() {
 		1, 
 		&graphicsPipelineCreateInfo,
 		NULL, 
-		&graphicsPipeline
+		&pipeline->graphicsPipeline
 	);
 
 }
@@ -4357,11 +4388,16 @@ void initVulkan(){
 	createPickImage();
 	
 
+
+
 	createQueue();
 
-	createDescriptorSetLayout();
 
-	createGraphicsPipeline();
+	createPipelines();
+
+	// createDescriptorSetLayout();
+
+	// createGraphicsPipeline();
 
 	createCommandPool();
 
@@ -4451,10 +4487,12 @@ void initVulkan(){
 
 	createDescriptorPool();
 
+	
 	// for( int i=0;i<TEXTURE_COUNT ;i++)
 	{
 		// struct TextureRes * t = &textures[i];
-		createDescriptorSets3();
+		struct Pipeline * pipeline = gmArrayGet(&arrayPipelines, 0);
+		createDescriptorSets3(pipeline);
 	}
 	
 
@@ -4556,7 +4594,23 @@ void cleanup(){
 		vkDestroyImage(device, t->textureImage, NULL);
 		vkFreeMemory(device, t->textureImageMemory, NULL);
 	}
-	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
+
+	for(int i=0;i<arrayPipelines.len;i++)
+	{
+		struct Pipeline * pipeline = gmArrayGet(&arrayPipelines, i);
+
+		vkDestroyDescriptorSetLayout(device, pipeline->descriptorSetLayout, NULL);
+
+		vkDestroyPipeline(device, pipeline->graphicsPipeline, NULL);
+
+		vkDestroyPipelineLayout(device,pipeline->pipelineLayout, NULL);
+
+		vkDestroyShaderModule(device, pipeline->shaderModuleFrag, NULL);
+		
+		vkDestroyShaderModule(device, pipeline->shaderModuleVert, NULL);
+	}
+
+	
 
 
 	vkFreeDescriptorSets(device,descriptorPool, MAX_FRAMES_IN_FLIGHT,descriptorSets);
@@ -4569,20 +4623,12 @@ void cleanup(){
 	vkFreeCommandBuffers(device, transferCommnadPool, 1, &transferCommandBuffers);
 
 
-	
-
 
 	vkDestroyCommandPool(device, graphicsCommnadPool, NULL);
 
 	vkDestroyCommandPool(device, transferCommnadPool, NULL);
 	
-	vkDestroyPipeline(device, graphicsPipeline, NULL);
 
-	vkDestroyPipelineLayout(device,pipelineLayout, NULL);
-
-	vkDestroyShaderModule(device, shaderModuleFrag, NULL);
-	
-	vkDestroyShaderModule(device, shaderModuleVert, NULL);
 
 	for(int i=0; i < MODEL_NUM; i++)
 	{
