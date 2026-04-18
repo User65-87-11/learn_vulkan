@@ -154,7 +154,6 @@ VkQueue graphicsQueue = NULL;
 VkQueue transferQueue = NULL;
 
 
-uint32_t instancesCount = 0;
 
 uint32_t queueFamilyIndexCount = 2;
 
@@ -167,7 +166,6 @@ uint32_t queueFamilyIndeces[2] = {
 };
 
 
-uint32_t colorAttachmentsInfosCnt = 0;
 
 
 
@@ -544,7 +542,7 @@ struct GmArray arrayUboModels;
 struct GmArray arrayUboObjectIds;
 
 
-
+struct GmArray arrayColors;
 
 
 void initVariables();
@@ -860,17 +858,20 @@ void initVariables(){
 
 	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3);
 
-	instancesCount  = 30;
+
 	
-	gmArrayInit(&arrayUboModels, sizeof(struct UBOModel), instancesCount);
+	gmArrayInit(&arrayUboModels, sizeof(struct UBOModel), 30);
 
-	gmArrayInit(&arrayUboObjectIds, sizeof(struct UBOobjectId), instancesCount);
+	gmArrayInit(&arrayUboObjectIds, sizeof(struct UBOobjectId), 30);
 
-	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), instancesCount);
+	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), 30);
+
+	gmArrayInit(&arrayColors, sizeof(vec4), 1);
 
 }
 void freeVariables(){
 
+	gmArrayFree(&arrayColors);
 
 	gmArrayFree(&arrayPipelines);
 
@@ -1914,6 +1915,12 @@ void createDescriptorSets3(){
 			.range = sizeof(struct UBOobjectId) * arrayUboObjectIds.len
 		};
 
+		VkDescriptorBufferInfo bufferColors = { 
+			.buffer = frame->bufferObjectIds, 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(vec4) * arrayColors.len
+		};
 
 		VkDescriptorBufferInfo bufferInfoLight = { 
 			.buffer = frame->buffersDirectionalLight, 
@@ -1966,6 +1973,16 @@ void createDescriptorSets3(){
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
 				.pBufferInfo = &bufferObjectIds
+			},
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frame->descriptorSets, 
+				.dstBinding = BINDING_VERT_SSBO_Colors, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+				.pBufferInfo = &bufferColors
 			},
 			
 			(VkWriteDescriptorSet){
@@ -2114,12 +2131,16 @@ void initGameObjects3(){
 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
 
 
-	
+	for(int i=0;i<1;i++)
+	{
+		vec4 color ={1.0,1.0,1.0,1.0};
+		gmArrayPushValue(&arrayColors,color);
+	}
 	
 
 
 	
-	for(int i=0; i < instancesCount; i++)
+	for(int i=0; i < 30; i++)
 	{
 
 		struct UBOModel m ;
@@ -2362,6 +2383,10 @@ void createDescriptorPool() {
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
 		},
 		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+		},
+		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
 		},
@@ -2418,6 +2443,13 @@ void createShaderDescriptorSetLayout(){
 		},
 		(VkDescriptorSetLayoutBinding) {
 			.binding = BINDING_VERT_SSBO_ObjectIDS,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = BINDING_VERT_SSBO_Colors,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -2826,11 +2858,11 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		 (VkImageMemoryBarrier2){
 
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
 			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED ,  //UNDEFINES
 			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -2847,8 +2879,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 			.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-			.srcAccessMask = 0,
 			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
 			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -3104,8 +3136,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		 (VkImageMemoryBarrier2){
 			 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 			 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+			 .dstStageMask = VK_PIPELINE_STAGE_2_NONE,
 			 .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			 .dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 			 .dstAccessMask = 0,
 			 .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			 .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -3120,25 +3152,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 				 .layerCount = 1 
 			 },
 		 },
-		//   (VkImageMemoryBarrier2){
-		// 	 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-		// 	 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-		// 	 .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-		// 	 .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-		// 	 .dstAccessMask = 0,
-		// 	 .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		// 	 .newLayout =  VK_IMAGE_LAYOUT_GENERAL,
-		// 	 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		// 	 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		// 	 .image = frame->pickImage,
-		// 	 .subresourceRange = { 
-		// 		 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
-		// 		 .baseMipLevel = 0, 
-		// 		 .levelCount = 1, 
-		// 		 .baseArrayLayer = 0, 
-		// 		 .layerCount = 1 
-		// 	 },
-		//  }
+		
 	 };
    
 
@@ -4353,7 +4367,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 
 	};
 
-	uint32_t dynamicStateCount = 2;
+	// uint32_t dynamicStateCount = 2;
 
 	/*
 	INFO
@@ -4364,7 +4378,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		.dynamicStateCount = dynamicStateCount,
+		.dynamicStateCount = sizeof(dynamicState)/sizeof(VkDynamicState),
 		.pDynamicStates = dynamicState,
 		
 	};

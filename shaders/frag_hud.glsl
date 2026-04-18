@@ -1,5 +1,8 @@
 #version 450
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "shader_inc.glsl"
 
 layout(location = 0) in vec2 texCoord;
 
@@ -22,9 +25,19 @@ layout(location = 0) out vec4 outColor;
 
 // };
 
+/*
+#define BINDING_VERT_UBO_ViewProjection  0
+#define BINDING_VERT_SSBO_Models   10
+#define BINDING_VERT_SSBO_ObjectIDS   11
+#define BINDING_VERT_SSBO_Colors   12
+
+#define BINDING_FRAG_UBO_Lights   30
+#define BINDING_FRAG_SAMPLER  40
+
+*/
 
 
-layout(binding = 3) uniform sampler2D  tex[];
+layout(binding = BINDING_FRAG_SAMPLER) uniform sampler2D  tex[];
 
 layout(push_constant) uniform Push {
     uint textureIndex;

@@ -1,6 +1,9 @@
 #version 450
 
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_GOOGLE_include_directive : require
 
+#include "shader_inc.glsl"
 
 layout(location = 0) in vec2 in_position;
 layout(location = 1) in vec2 in_texCoord;
@@ -8,20 +11,32 @@ layout(location = 1) in vec2 in_texCoord;
 layout(location = 0) out vec2 out_texCoord;
 layout(location = 1) out vec4 out_color;
 
-layout(binding = 0) uniform Matrices
+
+/*
+#define BINDING_VERT_UBO_ViewProjection  0
+#define BINDING_VERT_SSBO_Models   10
+#define BINDING_VERT_SSBO_ObjectIDS   11
+#define BINDING_VERT_SSBO_Colors   12
+
+#define BINDING_FRAG_UBO_Lights   30
+#define BINDING_FRAG_SAMPLER  40
+
+*/
+
+layout(binding = BINDING_VERT_UBO_ViewProjection) uniform Matrices
 {
   mat4 view;
   mat4 projection;
 };
 
 
-layout(std430, binding = 1) readonly buffer  Models
+layout(std430, binding = BINDING_VERT_SSBO_Models) readonly buffer  Models
 {
 	mat4 models[];
 };
 
 
-layout(std430, binding = 2) readonly buffer  Colors
+layout(std430, binding = BINDING_VERT_SSBO_Colors) readonly buffer  Colors
 {
 	vec4 colors[];
  

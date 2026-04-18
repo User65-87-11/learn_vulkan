@@ -20,7 +20,6 @@ layout(location = 0) out vec4 outColor;
 layout(location = 1) out uint outID;
 
 
-
 layout(binding = BINDING_FRAG_UBO_Lights) uniform Light
 {
   vec4 lightPos; 
