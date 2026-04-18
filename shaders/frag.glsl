@@ -1,5 +1,9 @@
 #version 450
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "shader_inc.glsl"
+
 
 layout(location = 0) in vec2 texCoord;
 
@@ -16,7 +20,8 @@ layout(location = 0) out vec4 outColor;
 layout(location = 1) out uint outID;
 
 
-layout(binding = 3) uniform Light
+
+layout(binding = BINDING_FRAG_UBO_Lights) uniform Light
 {
   vec4 lightPos; 
   vec4 viewPos; 
@@ -24,7 +29,7 @@ layout(binding = 3) uniform Light
 
 };
 
-layout(binding = 4) uniform sampler2D  tex[];
+layout(binding = BINDING_FRAG_SAMPLER) uniform sampler2D  tex[];
 
 layout(push_constant) uniform Push {
     int textureIndex;

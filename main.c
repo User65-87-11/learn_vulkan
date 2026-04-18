@@ -5,6 +5,7 @@
 #include <vulkan/vulkan_core.h>
 #include <time.h>
 
+#include "shaders/shader_inc.glsl"
 
 
 
@@ -115,6 +116,7 @@ const bool enableValidationLayers = true;
 
 
 
+
 const uint32_t validationLayerCount = 1;
 
 const char* validationLayers[] = {
@@ -185,6 +187,8 @@ uint32_t swapchainImageViewCount = 0;
 VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 
 
+VkDescriptorSetLayout descriptorSetLayout;
+
 
 struct Pipeline{
 	
@@ -195,8 +199,6 @@ struct Pipeline{
 	VkShaderModule shaderModuleFrag ;
 	
 	VkShaderModule shaderModuleVert ;
-	
-	VkDescriptorSetLayout descriptorSetLayout ;
 	
 	VkPipelineLayout pipelineLayout ;
 	
@@ -587,7 +589,7 @@ void createIndexBuffer(
 
 void clearUniformBuffers();
 
-void createShaderDescriptorSetLayout(struct Pipeline * pipeline);
+void createShaderDescriptorSetLayout();
 
 // void createDescriptorSets();
 
@@ -1794,7 +1796,7 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
 }
 
 
-void createDescriptorSets3(struct Pipeline * pipeline){
+void createDescriptorSets3(){
 	PRINT_FNAME;
 
 
@@ -1804,7 +1806,7 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 	};
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-   		layouts[i] = pipeline->descriptorSetLayout;
+   		layouts[i] = descriptorSetLayout;
 	}
 
 
@@ -1876,7 +1878,7 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = 0, 
+				.dstBinding = BINDING_VERT_UBO_ViewProjection, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -1887,7 +1889,7 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = 1, 
+				.dstBinding = BINDING_VERT_SSBO_Models, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -1898,7 +1900,7 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = 2, 
+				.dstBinding = BINDING_VERT_SSBO_ObjectIDS, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -1909,7 +1911,7 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = 3, 
+				.dstBinding = BINDING_FRAG_UBO_Lights, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
@@ -1919,7 +1921,7 @@ void createDescriptorSets3(struct Pipeline * pipeline){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = 4, 
+				.dstBinding = BINDING_FRAG_SAMPLER, 
 				.descriptorCount = TEXTURE_COUNT, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
@@ -2341,59 +2343,55 @@ void createDescriptorPool() {
 	vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, NULL, &descriptorPool);
 };
 
-void createHUDShaderDescriptorSetLayout(struct Pipeline * pipeline){
-	PRINT_FNAME;
+
+void createShaderDescriptorSetLayout(){
+
 	/*
-	vertex
-	layout(binding = 0) uniform Matrices
-
-	layout(std430, binding = 1) readonly buffer  Models
 	
-	layout(std430, binding = 2) readonly buffer  Colors
+		vkCmdBindDescriptorSets(
+				commandBuffer, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS, 
+				pipeline->pipelineLayout, 0, 1, 
+				descriptorSet, 
+				0, 
+				NULL
+				//  dynamicOffset = cameraIndex * sizeof(Camera)
 
-
-	//fragment
-
-	layout(binding = 3) uniform sampler2D  tex[];
-
-	layout(push_constant) uniform Push {
-		uint textureIndex;
-		uint hasColor;
-
-	} pc;
-
-
+			);
 	*/
 
-
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = {
-		//PV
 		(VkDescriptorSetLayoutBinding) {
-			.binding = 0,
+			.binding = BINDING_VERT_UBO_ViewProjection,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.pImmutableSamplers = NULL,
 		},
-		//models
 		(VkDescriptorSetLayoutBinding) {
-			.binding = 1,
+			.binding = BINDING_VERT_SSBO_Models,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			
+			.pImmutableSamplers = NULL,
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = BINDING_VERT_SSBO_ObjectIDS,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.pImmutableSamplers = NULL,
 		},
-		// colors
 		(VkDescriptorSetLayoutBinding) {
-			.binding = 2,
+			.binding = BINDING_FRAG_UBO_Lights,
 			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.pImmutableSamplers = NULL,
 		},
-		//texture sampler
 		(VkDescriptorSetLayoutBinding) {
-			.binding = 3,
+			.binding = BINDING_FRAG_SAMPLER,
 			.descriptorCount = TEXTURE_COUNT,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -2410,66 +2408,7 @@ void createHUDShaderDescriptorSetLayout(struct Pipeline * pipeline){
 		.pBindings = descriptorSetLayoutBindings,
 	};
 
-	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &pipeline->descriptorSetLayout);
-
-	if(res != VK_SUCCESS){
-		EXIT_CLEAN("vkCreateDescriptorSetLayout failed");
-	}
-}
-
-
-void createShaderDescriptorSetLayout(struct Pipeline * pipeline){
-
-
-
-	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = {
-		(VkDescriptorSetLayoutBinding) {
-			.binding = 0,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			.pImmutableSamplers = NULL,
-		},
-		(VkDescriptorSetLayoutBinding) {
-			.binding = 1,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			.pImmutableSamplers = NULL,
-		},
-		(VkDescriptorSetLayoutBinding) {
-			.binding = 2,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-			.pImmutableSamplers = NULL,
-		},
-		(VkDescriptorSetLayoutBinding) {
-			.binding = 3,
-			.descriptorCount = 1,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.pImmutableSamplers = NULL,
-		},
-		(VkDescriptorSetLayoutBinding) {
-			.binding = 4,
-			.descriptorCount = TEXTURE_COUNT,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.pImmutableSamplers = NULL,
-		},
-	};
-
-
-
-
-	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = sizeof(descriptorSetLayoutBindings) / sizeof(VkDescriptorSetLayoutBinding),
-		.pBindings = descriptorSetLayoutBindings,
-	};
-
-	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &pipeline->descriptorSetLayout);
+	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout);
 
 	if(res != VK_SUCCESS){
 		EXIT_CLEAN("vkCreateDescriptorSetLayout failed");
@@ -3004,8 +2943,12 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			vkCmdBindDescriptorSets(
 				commandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				 pipeline->pipelineLayout, 0, 1, 
-				descriptorSet, 0, NULL
+				pipeline->pipelineLayout, 0, 1, 
+				descriptorSet, 
+				0, 
+				NULL
+				//  dynamicOffset = cameraIndex * sizeof(Camera)
+
 			);
 	
 			struct PushConst constants0 = {
@@ -4352,6 +4295,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 	free(data);
 	//---------
 
+	printf("here\n");
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
@@ -4519,7 +4463,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = 1,
-		.pSetLayouts = &pipeline->descriptorSetLayout,
+		.pSetLayouts = &descriptorSetLayout,
 		.pushConstantRangeCount  = 1,
 		.pPushConstantRanges = &pushRange
 	};
@@ -4594,7 +4538,7 @@ void createPipelines(){
 	worldPipeline->frag_path = "shaders/frag.spv";
 	worldPipeline->vert_path = "shaders/vert.spv";
 
-	createShaderDescriptorSetLayout(worldPipeline);
+	
 
 
 	createGraphicsPipeline(worldPipeline);
@@ -4605,13 +4549,13 @@ void createPipelines(){
 	
 	*/
 
-
+	printf("herehre?'\n");
 	struct Pipeline * hudPipeline = gmArrayPush(&arrayPipelines);
 
 	hudPipeline->frag_path = "shaders/frag_hud.spv";
 	hudPipeline->vert_path = "shaders/vert_hud.spv";
 
-	createHUDShaderDescriptorSetLayout(hudPipeline);
+	// createHUDShaderDescriptorSetLayout(hudPipeline);
 	createHUDPipeline(hudPipeline);
 
 	/*
@@ -4860,7 +4804,7 @@ void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = 1,
-		.pSetLayouts = &pipeline->descriptorSetLayout,
+		.pSetLayouts = &descriptorSetLayout,
 		.pushConstantRangeCount  = 1,
 		.pPushConstantRanges = &pushRange
 	};
@@ -4954,10 +4898,9 @@ void initVulkan(){
 
 	createQueue();
 
+	createShaderDescriptorSetLayout();
 
 	createPipelines();
-
-	// createShaderDescriptorSetLayout();
 
 	// createGraphicsPipeline();
 
@@ -5053,8 +4996,8 @@ void initVulkan(){
 	// for( int i=0;i<TEXTURE_COUNT ;i++)
 	{
 		// struct TextureRes * t = &textures[i];
-		struct Pipeline * pipeline = gmArrayGet(&arrayPipelines, 0);
-		createDescriptorSets3(pipeline);
+		// struct Pipeline * pipeline = gmArrayGet(&arrayPipelines, 0);
+		createDescriptorSets3();
 	}
 	
 
@@ -5161,7 +5104,7 @@ void cleanup(){
 	{
 		struct Pipeline * pipeline = gmArrayGet(&arrayPipelines, i);
 
-		vkDestroyDescriptorSetLayout(device, pipeline->descriptorSetLayout, NULL);
+		
 
 		vkDestroyPipeline(device, pipeline->graphicsPipeline, NULL);
 
@@ -5174,6 +5117,7 @@ void cleanup(){
 
 	
 
+	vkDestroyDescriptorSetLayout(device, descriptorSetLayout, NULL);
 
 	vkFreeDescriptorSets(device,descriptorPool, MAX_FRAMES_IN_FLIGHT,descriptorSets);
 
