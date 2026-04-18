@@ -148,6 +148,7 @@ VkQueue graphicsQueue = NULL;
 VkQueue transferQueue = NULL;
 
 
+uint32_t instancesCount = 0;
 
 uint32_t queueFamilyIndexCount = 2;
 
@@ -360,7 +361,8 @@ struct TextureRes{
 };
 
 #define TEXTURE_COUNT  3
-struct TextureRes textures[TEXTURE_COUNT]= {
+
+struct TextureRes textures[]= {
 	{
 		.path = "models_gltf/viking_room.png"
 	},
@@ -534,6 +536,12 @@ struct GmArray arrayUboObjectIds;
 
 
 
+
+
+void initVars();
+void freeVars();
+
+
 void createPipelines();
 
 
@@ -542,6 +550,7 @@ void procMouseInput(GLFWwindow* window);
 void mouseCallback(GLFWwindow* window, double xposIn, double yposIn);
 
 uint32_t createShaderFromFile(const char * path, uint8_t** buffer);
+
 
 void loadModel(
 	
@@ -822,6 +831,34 @@ void processInput(GLFWwindow *window){
 		
 	}
 	
+}
+
+void initVariables(){
+	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3);
+
+	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3);
+
+	instancesCount  = 30;
+	
+	gmArrayInit(&arrayUboModels, sizeof(struct UBOModel), instancesCount);
+
+	gmArrayInit(&arrayUboObjectIds, sizeof(struct UBOobjectId), instancesCount);
+
+	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), instancesCount);
+
+}
+void freeVariables(){
+
+	gmArrayFree(&arrayPipelines);
+
+	gmArrayFree(&arrayGameObjects);
+	
+	gmArrayFree(&arrayUboModels);
+
+	gmArrayFree(&arrayUboObjectIds);
+
+	gmArrayFree(&arrayGameObjectInstances);
+
 }
 void loadModel(
 	char *fname,
@@ -2030,7 +2067,7 @@ void initGameObjects3(){
 	
 	// assert(GAME_OBJECT_TYPES == 3);
 
-	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3);
+	
 
 
 	
@@ -2054,15 +2091,7 @@ void initGameObjects3(){
 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
 
 
-	uint32_t instancesCount = 30;
 	
-
-	
-	gmArrayInit(&arrayUboModels, sizeof(struct UBOModel), instancesCount);
-
-	gmArrayInit(&arrayUboObjectIds, sizeof(struct UBOobjectId), instancesCount);
-
-	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), instancesCount);
 	
 
 
@@ -2169,19 +2198,7 @@ void initGameObjects3(){
 
 }
 
-void freeGameObjects(){
 
-	
-
-	gmArrayFree(&arrayUboModels);
-
-	gmArrayFree(&arrayUboObjectIds);
-	
-	gmArrayFree(&arrayGameObjectInstances);
-
-	gmArrayFree(&arrayGameObjects);
-	
-};
 void createUniformBuffers3(){
 
 
@@ -4295,7 +4312,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 	free(data);
 	//---------
 
-	printf("here\n");
+	 
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
@@ -4531,7 +4548,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 }
 void createPipelines(){
 
-	gmArrayInit(&arrayPipelines,sizeof(struct Pipeline),3);
+	
 
 	struct Pipeline * worldPipeline  = 	gmArrayPush(&arrayPipelines);
 
@@ -4549,13 +4566,13 @@ void createPipelines(){
 	
 	*/
 
-	printf("herehre?'\n");
+	 
 	struct Pipeline * hudPipeline = gmArrayPush(&arrayPipelines);
 
 	hudPipeline->frag_path = "shaders/frag_hud.spv";
 	hudPipeline->vert_path = "shaders/vert_hud.spv";
 
-	// createHUDShaderDescriptorSetLayout(hudPipeline);
+
 	createHUDPipeline(hudPipeline);
 
 	/*
@@ -5005,6 +5022,8 @@ void initVulkan(){
 void mainLoop(){
 	PRINT_FNAME;
 
+
+
 	startTime = glfwGetTime();
 
 
@@ -5178,8 +5197,6 @@ void cleanup(){
 	clearUniformBuffers3();
 
 
-	freeGameObjects();
-
 	vkDestroyDevice(device, NULL);
 
 	// INSTANCE
@@ -5236,12 +5253,16 @@ void initWindow(){
 
 int main(){
 
-	printf("%s\n", __FUNCTION__ );
+	PRINT_FNAME;
+
+	initVariables();
+
 	initWindow();
 	initVulkan();
 	mainLoop();
 	cleanup();
 
+	freeVariables();
 
 	return 0;
 };
