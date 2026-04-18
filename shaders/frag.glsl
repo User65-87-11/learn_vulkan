@@ -20,7 +20,9 @@ layout(location = 0) out vec4 outColor;
 layout(location = 1) out uint outID;
 
 
-layout(binding = BINDING_FRAG_UBO_Lights) uniform Light
+
+
+layout(binding = BINDING_FRAG_1_UBO_Lights) uniform Light
 {
   vec4 lightPos; 
   vec4 viewPos; 
@@ -28,7 +30,7 @@ layout(binding = BINDING_FRAG_UBO_Lights) uniform Light
 
 };
 
-layout(binding = BINDING_FRAG_SAMPLER) uniform sampler2D  tex[];
+layout(binding = BINDING_FRAG_1_SAMPLER) uniform sampler2D  tex[];
 
 layout(push_constant) uniform Push {
     int textureIndex;

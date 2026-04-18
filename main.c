@@ -233,7 +233,27 @@ VkCommandPool transferCommnadPool = NULL;
 
 
 VkFence transferFence;
+struct Buffer{
+	uint32_t binding;
 
+	VkBuffer buffer ;
+
+	VkDeviceMemory bufferMemory ;
+
+	void * bufferMapped  ;
+
+	VkDescriptorType descriptorType;
+
+	struct GmArray  * arrayData;
+
+	uint32_t range;
+
+	uint32_t descriptorCount ;
+
+	VkShaderStageFlags stageFlag;
+
+		
+};
 
 struct Frame{
 
@@ -248,34 +268,59 @@ struct Frame{
 	VkFence inFlightFence ;
 
 
+	struct GmArray arrayBuffers;
 
 
-	VkBuffer bufferModel ;
 
-	VkDeviceMemory bufferModelMemory ;
+	VkBuffer buffer_Model_1 ;
 
-	void * bufferModelMapped ;
+	VkDeviceMemory bufferMemory_Model_1  ;
 
-
-	VkBuffer bufferObjectIds;
-
-	VkDeviceMemory bufferMemoryObjectIds ;
-
-	void * bufferMappedObjectIds ;
+	void * bufferMapped_Model_1  ;
 
 
-	VkBuffer buffersViewProjection ;
+	VkBuffer buffer_Model_2  ;
 
-	VkDeviceMemory buffersViewProjectionMemory ;
+	VkDeviceMemory bufferMemory_Model_2 ;
 
-	void * buffersViewProjectionMapped ;
+	void * bufferMapped_Model_2 ;
 
 
-	VkBuffer buffersDirectionalLight ;
 
-	VkDeviceMemory buffersDirectionalLightMemory ;
+	VkBuffer buffer_Colors_2  ;
 
-	void * buffersDirectionalLightMapped ;
+	VkDeviceMemory bufferMemory_Colors_2 ;
+
+	void * bufferMapped_Colors_2 ;
+
+
+	VkBuffer buffer_ObjectIds_1;
+
+	VkDeviceMemory bufferMemory_ObjectIds_1 ;
+
+	void * bufferMapped_ObjectIds_1 ;
+
+
+	VkBuffer buffers_ViewProjection_1 ;
+
+	VkDeviceMemory buffersMemory_ViewProjection_1 ;
+
+	void * buffersMapped_ViewProjection_1 ;
+
+
+	VkBuffer buffers_ViewProjection_2 ;
+
+	VkDeviceMemory buffersMemory_ViewProjection_2 ;
+
+	void * buffersMapped_ViewProjection_2 ;
+
+
+
+	VkBuffer buffers_DirectionalLight ;
+
+	VkDeviceMemory buffersMemory_DirectionalLight ;
+
+	void * buffersMapped_DirectionalLight ;
 
 
 	VkImage depthImage ;
@@ -367,7 +412,7 @@ struct TextureRes{
 	uint32_t textureIdx;
 };
 
-#define TEXTURE_COUNT  3
+#define TEXTURE_COUNT_PIPE_1  3
 
 struct TextureRes textures[]= {
 	{
@@ -381,6 +426,13 @@ struct TextureRes textures[]= {
 	},
 };
 
+#define TEXTURE_COUNT_PIPE_2  1
+
+struct TextureRes textures_2[]= {
+	{
+		.path = "models_gltf/wooden_small.jpg"
+	},
+};
 
 
 
@@ -537,12 +589,14 @@ struct GmArray arrayGameObjectInstances;
 struct GmArray arrayGameObjects;
 
 
-struct GmArray arrayUboModels;
+struct GmArray arrayUboModels_1;
 
-struct GmArray arrayUboObjectIds;
+struct GmArray arrayUboModels_2;
+
+struct GmArray arrayUboObjectIds_1;
 
 
-struct GmArray arrayColors;
+struct GmArray arrayColors_2;
 
 
 void initVariables();
@@ -860,26 +914,30 @@ void initVariables(){
 
 
 	
-	gmArrayInit(&arrayUboModels, sizeof(struct UBOModel), 30);
+	gmArrayInit(&arrayUboModels_1, sizeof(struct UBOModel), 30);
 
-	gmArrayInit(&arrayUboObjectIds, sizeof(struct UBOobjectId), 30);
+	gmArrayInit(&arrayUboModels_2, sizeof(struct UBOModel), 1);
+
+	gmArrayInit(&arrayUboObjectIds_1, sizeof(struct UBOobjectId), 30);
 
 	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), 30);
 
-	gmArrayInit(&arrayColors, sizeof(vec4), 1);
+	gmArrayInit(&arrayColors_2, sizeof(vec4), 1);
 
 }
 void freeVariables(){
 
-	gmArrayFree(&arrayColors);
+	gmArrayFree(&arrayColors_2);
 
 	gmArrayFree(&arrayPipelines);
 
 	gmArrayFree(&arrayGameObjects);
 	
-	gmArrayFree(&arrayUboModels);
+	gmArrayFree(&arrayUboModels_1);
 
-	gmArrayFree(&arrayUboObjectIds);
+	gmArrayFree(&arrayUboModels_2);
+
+	gmArrayFree(&arrayUboObjectIds_1);
 
 	gmArrayFree(&arrayGameObjectInstances);
 
@@ -1358,7 +1416,7 @@ void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, Vk
 
 void createTextureImageView(){
 
-	for(int i=0;i<TEXTURE_COUNT;i++)
+	for(int i=0;i<TEXTURE_COUNT_PIPE_1;i++)
 	{
 	
 		 createImageView(
@@ -1366,6 +1424,17 @@ void createTextureImageView(){
 			&textures[i].textureImage,
 			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
 			textures[i].mipLevels
+		);
+	}
+
+	for(int i=0;i<TEXTURE_COUNT_PIPE_2;i++)
+	{
+	
+		 createImageView(
+			&textures_2[i].textureImageView,
+			&textures_2[i].textureImage,
+			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+			textures_2[i].mipLevels
 		);
 	}
 }
@@ -1889,8 +1958,15 @@ void createDescriptorSets3(){
 
 		frame->descriptorSets = &descriptorSets[i];
 
-		VkDescriptorBufferInfo bufferInfo = { 
-			.buffer = frame->buffersViewProjection, 
+		VkDescriptorBufferInfo bufferInfo_ViewProjection_1 = { 
+			.buffer = frame->buffers_ViewProjection_1, 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOCommon) 
+		};
+
+		VkDescriptorBufferInfo bufferInfo_ViewProjection_2 = { 
+			.buffer = frame->buffers_ViewProjection_2, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
 			.range = sizeof(struct UBOCommon) 
@@ -1899,42 +1975,61 @@ void createDescriptorSets3(){
 
 		
 
-		VkDescriptorBufferInfo bufferInfoModel = { 
-			.buffer = frame->bufferModel, 
+		VkDescriptorBufferInfo bufferInfo_Model_1 = { 
+			.buffer = frame->buffer_Model_1, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOModel) * arrayUboModels.len
+			.range = sizeof(struct UBOModel) * arrayUboModels_1.len
+		};
+
+		VkDescriptorBufferInfo bufferInfo_Model_2= { 
+			.buffer = frame->buffer_Model_2, 
+			.offset = 0, 
+			//.range = VK_WHOLE_SIZE 
+			.range = sizeof(struct UBOModel) * arrayUboModels_2.len
 		};
 
 
 		
-		VkDescriptorBufferInfo bufferObjectIds = { 
-			.buffer = frame->bufferObjectIds, 
+		VkDescriptorBufferInfo bufferObjectIds_1 = { 
+			.buffer = frame->buffer_ObjectIds_1, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOobjectId) * arrayUboObjectIds.len
+			.range = sizeof(struct UBOobjectId) * arrayUboObjectIds_1.len
 		};
 
-		VkDescriptorBufferInfo bufferColors = { 
-			.buffer = frame->bufferObjectIds, 
+		VkDescriptorBufferInfo bufferColors_2 = { 
+			.buffer = frame->buffer_Colors_2, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(vec4) * arrayColors.len
+			.range = sizeof(vec4) * arrayColors_2.len
 		};
 
-		VkDescriptorBufferInfo bufferInfoLight = { 
-			.buffer = frame->buffersDirectionalLight, 
+		VkDescriptorBufferInfo bufferInfoLight_1 = { 
+			.buffer = frame->buffers_DirectionalLight, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
+			
 			.range = sizeof(struct UBODirectionalLight) 
+			
 		};
 
 
-		VkDescriptorImageInfo imageInfos[TEXTURE_COUNT];
-		for(int j=0;j<TEXTURE_COUNT;j++){
-			imageInfos[j] = (VkDescriptorImageInfo ){
+		VkDescriptorImageInfo imageInfos_1[TEXTURE_COUNT_PIPE_1];
+		for(int j=0;j<TEXTURE_COUNT_PIPE_1;j++){
+			imageInfos_1[j] = (VkDescriptorImageInfo ){
 				.sampler = textures[j].textureSampler,
 				.imageView = textures[j].textureImageView,
+				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			};
+
+		}
+
+		VkDescriptorImageInfo imageInfos_2[TEXTURE_COUNT_PIPE_2];
+		for(int j=0;j<TEXTURE_COUNT_PIPE_2;j++){
+			imageInfos_2[j] = (VkDescriptorImageInfo ){
+				.sampler = textures_2[j].textureSampler,
+				.imageView = textures_2[j].textureImageView,
 				.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			};
 
@@ -1945,65 +2040,97 @@ void createDescriptorSets3(){
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = BINDING_VERT_UBO_ViewProjection, 
+				.dstBinding = BINDING_VERT_1_UBO_ViewProjection, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-				.pBufferInfo = &bufferInfo
+				.pBufferInfo = &bufferInfo_ViewProjection_1
 			},
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frame->descriptorSets, 
+				.dstBinding = BINDING_VERT_2_UBO_ViewProjection, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+				.pBufferInfo = &bufferInfo_ViewProjection_2
+			},
+
 			
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = BINDING_VERT_SSBO_Models, 
+				.dstBinding = BINDING_VERT_1_SSBO_Models, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-				.pBufferInfo = &bufferInfoModel
+				.pBufferInfo = &bufferInfo_Model_1
+			},
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frame->descriptorSets, 
+				.dstBinding = BINDING_VERT_2_SSBO_Models, 
+				.dstArrayElement = 0, 
+				.descriptorCount = 1, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+				.pBufferInfo = &bufferInfo_Model_2
 			},
 
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = BINDING_VERT_SSBO_ObjectIDS, 
+				.dstBinding = BINDING_VERT_1_SSBO_ObjectIDS, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-				.pBufferInfo = &bufferObjectIds
+				.pBufferInfo = &bufferObjectIds_1
 			},
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = BINDING_VERT_SSBO_Colors, 
+				.dstBinding = BINDING_VERT_2_SSBO_Colors, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-				.pBufferInfo = &bufferColors
+				.pBufferInfo = &bufferColors_2
 			},
 			
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = BINDING_FRAG_UBO_Lights, 
+				.dstBinding = BINDING_FRAG_1_UBO_Lights, 
 				.dstArrayElement = 0, 
 				.descriptorCount = 1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-				.pBufferInfo = &bufferInfoLight
+				.pBufferInfo = &bufferInfoLight_1
 			},
 			(VkWriteDescriptorSet){
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets, 
-				.dstBinding = BINDING_FRAG_SAMPLER, 
-				.descriptorCount = TEXTURE_COUNT, 
+				.dstBinding = BINDING_FRAG_1_SAMPLER, 
+				.descriptorCount = TEXTURE_COUNT_PIPE_1, 
 				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
 				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
 				// .pBufferInfo = &bufferInfo
-				.pImageInfo = imageInfos,
+				.pImageInfo = imageInfos_1,
+			},
+
+			(VkWriteDescriptorSet){
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frame->descriptorSets, 
+				.dstBinding = BINDING_FRAG_2_SAMPLER, 
+				.descriptorCount = TEXTURE_COUNT_PIPE_2, 
+				// .descriptorType = vk::DescriptorType::eUniformBuffer, 
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+				// .pBufferInfo = &bufferInfo
+				.pImageInfo = imageInfos_2,
 			},
 			
 		};
@@ -2029,77 +2156,77 @@ void clearUniformBuffers3(){
 
 		struct Frame * frame = &frames[i];
 		
-		if(frame->buffersViewProjectionMapped != NULL)
+		if(frame->buffersMapped_ViewProjection_1 != NULL)
 		{
 			 
-			vkUnmapMemory(device,frame->buffersViewProjectionMemory);
-			frame->buffersViewProjectionMapped = NULL;
+			vkUnmapMemory(device,frame->buffersMemory_ViewProjection_1);
+			frame->buffersMapped_ViewProjection_1 = NULL;
 		}
-		if(frame->buffersViewProjection != NULL){
+		if(frame->buffers_ViewProjection_1 != NULL){
 
-			vkDestroyBuffer(device, frame->buffersViewProjection, NULL);
-			frame->buffersViewProjection = NULL;
+			vkDestroyBuffer(device, frame->buffers_ViewProjection_1, NULL);
+			frame->buffers_ViewProjection_1 = NULL;
 		}
-		if(frame->buffersViewProjectionMemory != NULL){
+		if(frame->buffersMemory_ViewProjection_1 != NULL){
 
-			vkFreeMemory(device, frame->buffersViewProjectionMemory, NULL);
-			frame->buffersViewProjectionMemory= NULL;
+			vkFreeMemory(device, frame->buffersMemory_ViewProjection_1, NULL);
+			frame->buffersMemory_ViewProjection_1= NULL;
 		}
 		
 
-		if(frame->bufferMappedObjectIds != NULL)
+		if(frame->bufferMapped_ObjectIds_1 != NULL)
 		{
 			 
-			vkUnmapMemory(device,frame->bufferMemoryObjectIds);
-			frame->bufferMappedObjectIds = NULL;
+			vkUnmapMemory(device,frame->bufferMemory_ObjectIds_1);
+			frame->bufferMapped_ObjectIds_1 = NULL;
 		}
-		if(frame->bufferObjectIds != NULL){
+		if(frame->buffer_ObjectIds_1 != NULL){
 
-			vkDestroyBuffer(device, frame->bufferObjectIds, NULL);
-			frame->bufferObjectIds = NULL;
+			vkDestroyBuffer(device, frame->buffer_ObjectIds_1, NULL);
+			frame->buffer_ObjectIds_1 = NULL;
 		}
-		if(frame->bufferMemoryObjectIds != NULL){
+		if(frame->bufferMemory_ObjectIds_1 != NULL){
 
-			vkFreeMemory(device, frame->bufferMemoryObjectIds, NULL);
-			frame->bufferMemoryObjectIds= NULL;
+			vkFreeMemory(device, frame->bufferMemory_ObjectIds_1, NULL);
+			frame->bufferMemory_ObjectIds_1= NULL;
 		}
 
 
 
 
-		if(frame->bufferModelMapped != NULL)
+		if(frame->bufferMapped_Model_1 != NULL)
 		{
 			 
-			vkUnmapMemory(device,frame->bufferModelMemory);
-			frame->bufferModelMapped = NULL;
+			vkUnmapMemory(device,frame->bufferMemory_Model_1);
+			frame->bufferMapped_Model_1 = NULL;
 		}
-		if(frame->bufferModel != NULL){
+		if(frame->buffer_Model_1 != NULL){
 
-			vkDestroyBuffer(device, frame->bufferModel, NULL);
-			frame->bufferModel = NULL;
+			vkDestroyBuffer(device, frame->buffer_Model_1, NULL);
+			frame->buffer_Model_1 = NULL;
 		}
-		if(frame->bufferModelMemory != NULL){
+		if(frame->bufferMemory_Model_1 != NULL){
 
-			vkFreeMemory(device, frame->bufferModelMemory, NULL);
-			frame->bufferModelMemory= NULL;
+			vkFreeMemory(device, frame->bufferMemory_Model_1, NULL);
+			frame->bufferMemory_Model_1= NULL;
 		}
 
 		
-		if(frame->buffersDirectionalLightMapped != NULL)
+		if(frame->buffersMapped_DirectionalLight != NULL)
 		{
 			 
-			vkUnmapMemory(device,frame->buffersDirectionalLightMemory);
-			frame->buffersDirectionalLightMapped = NULL;
+			vkUnmapMemory(device,frame->buffersMemory_DirectionalLight);
+			frame->buffersMapped_DirectionalLight = NULL;
 		}
-		if(frame->buffersDirectionalLight != NULL){
+		if(frame->buffers_DirectionalLight != NULL){
 
-			vkDestroyBuffer(device, frame->buffersDirectionalLight, NULL);
-			frame->buffersDirectionalLight = NULL;
+			vkDestroyBuffer(device, frame->buffers_DirectionalLight, NULL);
+			frame->buffers_DirectionalLight = NULL;
 		}
-		if(frame->buffersDirectionalLightMemory != NULL){
+		if(frame->buffersMemory_DirectionalLight != NULL){
 
-			vkFreeMemory(device, frame->buffersDirectionalLightMemory, NULL);
-			frame->buffersDirectionalLightMemory= NULL;
+			vkFreeMemory(device, frame->buffersMemory_DirectionalLight, NULL);
+			frame->buffersMemory_DirectionalLight= NULL;
 		}
 	}
 }
@@ -2133,8 +2260,15 @@ void initGameObjects3(){
 
 	for(int i=0;i<1;i++)
 	{
-		vec4 color ={1.0,1.0,1.0,1.0};
-		gmArrayPushValue(&arrayColors,color);
+		vec4 color ={1.0,0.0,1.0,1.0};
+		gmArrayPushValue(&arrayColors_2,color);
+		struct UBOModel m ;
+		glm_mat4_identity(m.model) ;
+
+		vec4 pos = {(float) swapChainExtent.width / 2, (float)swapChainExtent.height / 2, 0.0, 1.0};
+		glm_translate(m.model, pos);
+
+		gmArrayPushValue(&arrayUboModels_2,&m);
 	}
 	
 
@@ -2161,9 +2295,9 @@ void initGameObjects3(){
 		glm_translate(m.model, g->position);
 
 	
-		gmArrayPushValue(&arrayUboObjectIds,&o);
+		gmArrayPushValue(&arrayUboObjectIds_1,&o);
 
-		gmArrayPushValue(&arrayUboModels,&m);
+		gmArrayPushValue(&arrayUboModels_1,&m);
 
 
 		// alignas(32) float mat[16];
@@ -2187,9 +2321,9 @@ void initGameObjects3(){
 	{
 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
+		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
 
 		// gmArrayInit(&gameObjectsCubes.instances, sizeof(struct GameObjectInstance), 10);
 
@@ -2206,9 +2340,9 @@ void initGameObjects3(){
 	{
 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
+		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
 		
 		gameObjectsTemp->tex = &textures[texture_index];
 		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
@@ -2227,9 +2361,9 @@ void initGameObjects3(){
 	{
 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
+		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
 	
 		gameObjectsTemp->tex = &textures[texture_index];
 		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
@@ -2269,22 +2403,49 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frame->buffersViewProjection= buffer;
-			frame->buffersViewProjectionMemory = bufferMemory;
+			frame->buffers_ViewProjection_1= buffer;
+			frame->buffersMemory_ViewProjection_1 = bufferMemory;
 
 			void * memptr = NULL;
 			
 
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->buffersViewProjectionMapped = memptr;
+			frame->buffersMapped_ViewProjection_1 = memptr;
+			
+			//----------------
+		}
+	// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
+		{
+			// MVP uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			frame->buffers_ViewProjection_2= buffer;
+			frame->buffersMemory_ViewProjection_2 = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			frame->buffersMapped_ViewProjection_2 = memptr;
 			
 			//----------------
 		}
 
+
 		{
 			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOModel) * arrayUboModels.len;
+			VkDeviceSize bufferSize = sizeof(struct UBOModel) * arrayUboModels_1.len;
 			VkBuffer buffer;
 			VkDeviceMemory bufferMemory;
 
@@ -2295,15 +2456,38 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frame->bufferModel = buffer;
-			frame->bufferModelMemory = bufferMemory;
+			frame->buffer_Model_1 = buffer;
+			frame->bufferMemory_Model_1 = bufferMemory;
 
 			void * memptr = NULL;
 			
-
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->bufferModelMapped= memptr;
+			frame->bufferMapped_Model_1= memptr;
+			
+			//----------------
+		}
+		{
+			// MVP uniform buffers
+			VkDeviceSize bufferSize = sizeof(struct UBOModel) * arrayUboModels_2.len;
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			frame->buffer_Model_2 = buffer;
+			frame->bufferMemory_Model_2 = bufferMemory;
+
+			void * memptr = NULL;
+			
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			frame->bufferMapped_Model_2= memptr;
 			
 			//----------------
 		}
@@ -2312,7 +2496,7 @@ void createUniformBuffers3(){
 		{
 		
 			//object ids
-			VkDeviceSize bufferSize = sizeof(struct UBOobjectId) * arrayUboObjectIds.len;
+			VkDeviceSize bufferSize = sizeof(struct UBOobjectId) * arrayUboObjectIds_1.len;
 			VkBuffer buffer;
 			VkDeviceMemory bufferMemory;
 
@@ -2323,15 +2507,42 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frame->bufferObjectIds= buffer;
-			frame->bufferMemoryObjectIds = bufferMemory;
+			frame->buffer_ObjectIds_1= buffer;
+			frame->bufferMemory_ObjectIds_1 = bufferMemory;
 
 			void * memptr = NULL;
 			
 
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->bufferMappedObjectIds= memptr;
+			frame->bufferMapped_ObjectIds_1= memptr;
+			
+			//----------------
+		}
+
+		{
+		
+			//object ids
+			VkDeviceSize bufferSize = sizeof(vec4) * arrayColors_2.len;
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			frame->buffer_Colors_2= buffer;
+			frame->bufferMemory_Colors_2 = bufferMemory;
+
+			void * memptr = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+
+			frame->bufferMapped_Colors_2= memptr;
 			
 			//----------------
 		}
@@ -2349,15 +2560,15 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frame->buffersDirectionalLight = buffer;
-			frame->buffersDirectionalLightMemory = bufferMemory;
+			frame->buffers_DirectionalLight = buffer;
+			frame->buffersMemory_DirectionalLight= bufferMemory;
 
 			void * memptr = NULL;
 			
 
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->buffersDirectionalLightMapped = memptr;
+			frame->buffersMapped_DirectionalLight = memptr;
 			
 			//----------------
 		}
@@ -2372,6 +2583,15 @@ void createDescriptorPool() {
 	VkDescriptorPoolSize poolSize[]={
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+		},
+		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
+		},
+
+		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT,
 		},
 		(VkDescriptorPoolSize){
@@ -2392,7 +2612,12 @@ void createDescriptorPool() {
 		},
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = MAX_FRAMES_IN_FLIGHT * TEXTURE_COUNT,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT * TEXTURE_COUNT_PIPE_1,
+			
+		},
+		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT * TEXTURE_COUNT_PIPE_2,
 			
 		},
 	};
@@ -2427,14 +2652,14 @@ void createShaderDescriptorSetLayout(){
 
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = {
 		(VkDescriptorSetLayoutBinding) {
-			.binding = BINDING_VERT_UBO_ViewProjection,
+			.binding = BINDING_VERT_1_UBO_ViewProjection,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.pImmutableSamplers = NULL,
 		},
 		(VkDescriptorSetLayoutBinding) {
-			.binding = BINDING_VERT_SSBO_Models,
+			.binding = BINDING_VERT_1_SSBO_Models,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -2442,29 +2667,51 @@ void createShaderDescriptorSetLayout(){
 			.pImmutableSamplers = NULL,
 		},
 		(VkDescriptorSetLayoutBinding) {
-			.binding = BINDING_VERT_SSBO_ObjectIDS,
+			.binding = BINDING_VERT_2_UBO_ViewProjection,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = BINDING_VERT_2_SSBO_Models,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+			
+			.pImmutableSamplers = NULL,
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = BINDING_VERT_1_SSBO_ObjectIDS,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.pImmutableSamplers = NULL,
 		},
 		(VkDescriptorSetLayoutBinding) {
-			.binding = BINDING_VERT_SSBO_Colors,
+			.binding = BINDING_VERT_2_SSBO_Colors,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 			.pImmutableSamplers = NULL,
 		},
 		(VkDescriptorSetLayoutBinding) {
-			.binding = BINDING_FRAG_UBO_Lights,
+			.binding = BINDING_FRAG_1_UBO_Lights,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.pImmutableSamplers = NULL,
 		},
 		(VkDescriptorSetLayoutBinding) {
-			.binding = BINDING_FRAG_SAMPLER,
-			.descriptorCount = TEXTURE_COUNT,
+			.binding = BINDING_FRAG_1_SAMPLER,
+			.descriptorCount = TEXTURE_COUNT_PIPE_1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+			.pImmutableSamplers = NULL,
+		},
+		(VkDescriptorSetLayoutBinding) {
+			.binding = BINDING_FRAG_2_SAMPLER,
+			.descriptorCount = TEXTURE_COUNT_PIPE_2,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 			.pImmutableSamplers = NULL,
@@ -3171,11 +3418,14 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	struct Frame * frame = &frames[currentFrame];
 
 
-	memcpy(frame->bufferModelMapped, arrayUboModels.data, sizeof(struct UBOModel)* arrayUboModels.len);
+	memcpy(frame->bufferMapped_Model_1, arrayUboModels_1.data, sizeof(struct UBOModel)* arrayUboModels_1.len);
 
-	memcpy(frame->bufferMappedObjectIds, arrayUboObjectIds.data, sizeof(struct UBOobjectId)* arrayUboObjectIds.len);
+	memcpy(frame->bufferMapped_Model_2, arrayUboModels_2.data, sizeof(struct UBOModel)* arrayUboModels_2.len);
 
-	
+	memcpy(frame->bufferMapped_ObjectIds_1, arrayUboObjectIds_1.data, sizeof(struct UBOobjectId)* arrayUboObjectIds_1.len);
+
+	memcpy(frame->bufferMapped_Colors_2, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
+
 	// gmArrayCopyBySize(frame->bufferModelMapped, &arrayUboModels);
 
 	
@@ -3195,7 +3445,10 @@ void updateUniformBuffer3(uint32_t currentFrame){
 
 	ubo.proj[1][1] *= -1;
 
-	memcpy(frame->buffersViewProjectionMapped, &ubo, sizeof(struct UBOCommon));
+	memcpy(frame->buffersMapped_ViewProjection_1, &ubo, sizeof(struct UBOCommon));
+
+
+	memcpy(frame->buffersMapped_ViewProjection_2, &ubo, sizeof(struct UBOCommon));
 
 	// gmArrayCopyBySize(frame->buffersViewProjectionMapped, ubo);
 
@@ -3206,7 +3459,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
 	
 
-	memcpy(frame->buffersDirectionalLightMapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+	memcpy(frame->buffersMapped_DirectionalLight, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
 	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
 
 
@@ -4972,7 +5225,7 @@ void initVulkan(){
 	}
 	
 
-	for( int i=0;i < TEXTURE_COUNT ;i++)
+	for( int i=0;i < TEXTURE_COUNT_PIPE_1 ;i++)
 	{
 		struct TextureRes * t = &textures[i];
 		createTextureImage(
@@ -4982,14 +5235,39 @@ void initVulkan(){
 			&t->mipLevels
 		);
 		t->textureIdx = i;
-	}
-	createTextureImageView();
 
-	for( int i=0;i<TEXTURE_COUNT ;i++)
-	{
-		struct TextureRes * t = &textures[i];
+		 createImageView(
+			&t->textureImageView,
+			&t->textureImage,
+			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+			t->mipLevels
+		);
+
 		createTextureSampler(&t->textureSampler);
 	}
+
+	for( int i=0;i < TEXTURE_COUNT_PIPE_2 ;i++)
+	{
+		struct TextureRes * t = &textures_2[i];
+		createTextureImage(
+			t->path,
+			&t->textureImage,
+			&t->textureImageMemory,
+			&t->mipLevels
+		);
+		t->textureIdx = i;
+
+		 createImageView(
+			&t->textureImageView,
+			&t->textureImage,
+			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+			t->mipLevels
+		);
+
+		createTextureSampler(&t->textureSampler);
+	}
+
+
 	for(int i=0;i<MODEL_NUM;i++)
 	{
 
@@ -5044,13 +5322,8 @@ void initVulkan(){
 
 	createDescriptorPool();
 
-	
-	// for( int i=0;i<TEXTURE_COUNT ;i++)
-	{
-		// struct TextureRes * t = &textures[i];
-		// struct Pipeline * pipeline = gmArrayGet(&arrayPipelines, 0);
-		createDescriptorSets3();
-	}
+
+	createDescriptorSets3();
 	
 
 }
@@ -5144,9 +5417,19 @@ void cleanup(){
 
 	}
 
-	for( int i=0;i<TEXTURE_COUNT ;i++)
+	for( int i=0;i<TEXTURE_COUNT_PIPE_1 ;i++)
 	{
 		struct TextureRes * t = &textures[i];
+
+		vkDestroyImageView(device, t->textureImageView,  NULL);
+		vkDestroySampler(device, t->textureSampler, NULL);
+		vkDestroyImage(device, t->textureImage, NULL);
+		vkFreeMemory(device, t->textureImageMemory, NULL);
+	}
+
+	for( int i=0;i<TEXTURE_COUNT_PIPE_2 ;i++)
+	{
+		struct TextureRes * t = &textures_2[i];
 
 		vkDestroyImageView(device, t->textureImageView,  NULL);
 		vkDestroySampler(device, t->textureSampler, NULL);

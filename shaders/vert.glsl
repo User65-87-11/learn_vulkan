@@ -7,7 +7,9 @@ layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_norm;
 layout(location = 2) in vec2 in_texCoord;
 
-layout(binding = BINDING_VERT_UBO_ViewProjection) uniform Matrices
+
+
+layout(binding = BINDING_VERT_1_UBO_ViewProjection) uniform Matrices
 {
   mat4 view;
   mat4 projection;
@@ -18,12 +20,12 @@ layout(binding = BINDING_VERT_UBO_ViewProjection) uniform Matrices
 
 
 
-layout(std430, binding = BINDING_VERT_SSBO_Models) readonly buffer  Models
+layout(std430, binding = BINDING_VERT_1_SSBO_Models) readonly buffer  Models
 {
 	mat4 model[];
 };
 
-layout(std430, binding = BINDING_VERT_SSBO_ObjectIDS) readonly buffer  ObjectIds
+layout(std430, binding = BINDING_VERT_1_SSBO_ObjectIDS) readonly buffer  ObjectIds
 {
 	uint objectId[];
 };

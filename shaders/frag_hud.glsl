@@ -26,18 +26,17 @@ layout(location = 0) out vec4 outColor;
 // };
 
 /*
-#define BINDING_VERT_UBO_ViewProjection  0
-#define BINDING_VERT_SSBO_Models   10
-#define BINDING_VERT_SSBO_ObjectIDS   11
-#define BINDING_VERT_SSBO_Colors   12
 
-#define BINDING_FRAG_UBO_Lights   30
-#define BINDING_FRAG_SAMPLER  40
-
+#define BINDING_VERT_2_UBO_ViewProjection  1
+#define BINDING_VERT_2_SSBO_Models   11
+#define BINDING_VERT_2_SSBO_Colors   21
+#define BINDING_FRAG_2_SAMPLER  51
 */
 
 
-layout(binding = BINDING_FRAG_SAMPLER) uniform sampler2D  tex[];
+
+
+layout(binding = BINDING_FRAG_2_SAMPLER) uniform sampler2D  tex[];
 
 layout(push_constant) uniform Push {
     uint textureIndex;
