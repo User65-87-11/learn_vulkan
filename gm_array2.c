@@ -128,6 +128,7 @@ void* gmArrayGet(struct GmArray * array, uint32_t position ){
 	 
 }
 
+
 void gmArrayFree(struct GmArray * array){
 	assert(array->data != NULL);
 	gm_free_aligned(array->data);

@@ -117,19 +117,25 @@ const bool enableValidationLayers = true;
 
 
 
-const uint32_t validationLayerCount = 1;
+// uint32_t validationLayerCount = 0;
 
-const char* validationLayers[] = {
-        "VK_LAYER_KHRONOS_validation"
+// char** validationLayers ;
+
+// uint32_t requiredDeviceExtensionCount = 0;
+
+// char** requiredDeviceExtensions ;
+
+uint32_t validationLayerCnt = 1;
+const char * validationLayers[]={
+	"VK_LAYER_KHRONOS_validation",
 };
 
-const uint32_t requiredDeviceExtensionCount = 1;
-
-const char* requiredDeviceExtensions[] = {
-
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-		// VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME
+uint32_t requiredDeviceExtensionCnt = 1;
+const char * requiredDeviceExtensions[]={
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
+
+
 
 bool framebufferResized = false;
 
@@ -160,8 +166,8 @@ uint32_t queueFamilyIndeces[2] = {
 	-1,-1,
 };
 
-#define COLOR_ATTACHMENTS 2
-uint32_t colorAttachmentsInfosCnt = COLOR_ATTACHMENTS;
+
+uint32_t colorAttachmentsInfosCnt = 0;
 
 
 
@@ -205,6 +211,8 @@ struct Pipeline{
 	
 	VkPipeline graphicsPipeline ;
 
+	uint32_t colorAttachmentCount;
+
 };
 
 // #define PIPELINE_CNT 3 
@@ -240,6 +248,7 @@ struct Frame{
 	VkSemaphore renderFinishedSemaphore;
 
 	VkFence inFlightFence ;
+
 
 
 
@@ -538,8 +547,8 @@ struct GmArray arrayUboObjectIds;
 
 
 
-void initVars();
-void freeVars();
+void initVariables();
+void freeVariables();
 
 
 void createPipelines();
@@ -834,6 +843,19 @@ void processInput(GLFWwindow *window){
 }
 
 void initVariables(){
+	PRINT_FNAME;
+	// validationLayerCount = 1;
+	// validationLayers = malloc(sizeof(char*)*validationLayerCount);
+	// validationLayers[0] = "VK_LAYER_KHRONOS_validation";
+
+
+       
+	// requiredDeviceExtensionCount = 1;
+	// requiredDeviceExtensions = malloc(sizeof(char*)*requiredDeviceExtensionCount);
+	// requiredDeviceExtensions[0] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+
+
+
 	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3);
 
 	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3);
@@ -848,6 +870,7 @@ void initVariables(){
 
 }
 void freeVariables(){
+
 
 	gmArrayFree(&arrayPipelines);
 
@@ -2858,9 +2881,9 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
     VkClearValue clearDepth = {{{1.0f, 0}}};
     
 	
+	const uint32_t colorAttachmentCnt = 2;
 
-
-	VkRenderingAttachmentInfo colorAttachmentsInfos[COLOR_ATTACHMENTS];
+	VkRenderingAttachmentInfo colorAttachmentsInfos[colorAttachmentCnt];
 	{
 
 		colorAttachmentsInfos[0] = (VkRenderingAttachmentInfo){
@@ -2905,7 +2928,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		},
 		
         .layerCount = 1,
-        .colorAttachmentCount = COLOR_ATTACHMENTS,
+        .colorAttachmentCount = colorAttachmentCnt,
         .pColorAttachments = colorAttachmentsInfos,
 
         .pDepthAttachment = &depthAttachmentInfo,
@@ -3407,7 +3430,7 @@ void physicalDeviceExtensionCheck(){
 
 		// printf("\tphys device extension: %s\n",exp_props[i].extensionName);
 
-		for(int k = 0;k < requiredDeviceExtensionCount ; k++)
+		for(int k = 0;k < requiredDeviceExtensionCnt ; k++)
 		{
 			if(strcmp(exp_props[i].extensionName, requiredDeviceExtensions[k]) == 0){
 				printf("\tExtension found %s\n",requiredDeviceExtensions[k]);
@@ -3418,15 +3441,15 @@ void physicalDeviceExtensionCheck(){
 	}
 	
 	
-	if(!(supportedCnt == requiredDeviceExtensionCount)){
+	if(!(supportedCnt == requiredDeviceExtensionCnt)){
 		printf("No suported extensions\n");
-		printf("supportedCnt: %d of %d\n",supportedCnt, requiredDeviceExtensionCount);
+		printf("supportedCnt: %d of %d\n",supportedCnt, requiredDeviceExtensionCnt);
 
 		for(int i=0;i < deviceExtensionPropertieCount; i++){
 
 			printf("\tfound: %s\n",exp_props[i].extensionName);
 		}
-		for(int i=0;i < requiredDeviceExtensionCount; i++){
+		for(int i=0;i < requiredDeviceExtensionCnt; i++){
 
 			printf("\trequired: %s\n",requiredDeviceExtensions[i]);
 		}
@@ -3620,7 +3643,7 @@ void  createLogicalDevice(){
 		.queueCreateInfoCount = 1,
 		.pNext = &physicalDeviceFeatures2,
 		.ppEnabledExtensionNames = requiredDeviceExtensions,
-		.enabledExtensionCount = requiredDeviceExtensionCount,
+		.enabledExtensionCount = requiredDeviceExtensionCnt,
 	};
 
 	VkResult res = vkCreateDevice(physicalDevice, &deviceCreateInfo, NULL, &device);
@@ -4195,7 +4218,7 @@ void createInstance(){
 
 	if(enableValidationLayers)
 	{
-		instanceCreateInfo.enabledLayerCount = validationLayerCount;
+		instanceCreateInfo.enabledLayerCount = validationLayerCnt;
 		instanceCreateInfo.ppEnabledLayerNames = validationLayers;
 
 	}
@@ -4554,7 +4577,7 @@ void createPipelines(){
 
 	worldPipeline->frag_path = "shaders/frag.spv";
 	worldPipeline->vert_path = "shaders/vert.spv";
-
+	worldPipeline->colorAttachmentCount = 2;
 	
 
 
@@ -4776,8 +4799,8 @@ void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 
 	//Color blending
 	//needed for picking
-	// const uint32_t colorBlendAttachmentStateCnt = 2;
-	VkPipelineColorBlendAttachmentState colorBlendAttachmentState[COLOR_ATTACHMENTS]=
+	// const uint32_t colorAttachmentCount = 2;
+	VkPipelineColorBlendAttachmentState colorBlendAttachmentState[]=
 	{
 
 		(VkPipelineColorBlendAttachmentState){
@@ -4804,11 +4827,13 @@ void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 	};
 
 
+	
+
 	VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo={
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		.logicOpEnable = VK_FALSE,
 		.logicOp = VK_LOGIC_OP_COPY,
-		.attachmentCount = COLOR_ATTACHMENTS,
+		.attachmentCount = sizeof(colorBlendAttachmentState)/ sizeof(VkPipelineColorBlendAttachmentState),
 		.pAttachments = colorBlendAttachmentState,
 	};
 
@@ -4834,22 +4859,18 @@ void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 
 
 	// const uint32_t colorAttachmentFormatsCount = 2;
-	VkFormat formats[COLOR_ATTACHMENTS] = {
+	VkFormat formats[] = {
 		swapchainSurfaceFormat,   // color
 		VK_FORMAT_R32_UINT          // picking (or UNORM if encoded)
 	};
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-		.colorAttachmentCount = COLOR_ATTACHMENTS,
+		.colorAttachmentCount = sizeof(formats)/sizeof(VkFormat),
 		.pColorAttachmentFormats = formats,
 		.depthAttachmentFormat = depthFormat,
 	};
 	
-
-
- 
-
 
 
 	VkGraphicsPipelineCreateInfo  graphicsPipelineCreateInfo = {

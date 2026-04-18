@@ -35,7 +35,11 @@ void* gmArrayPush( struct GmArray * array);
 
 void gmArrayPushValue(struct GmArray * array, void * elem);
 
+
+
 void* gmArrayGet(struct GmArray * array, uint32_t position);
+
+
 
 void gmArrayFree(struct GmArray * array);
 
