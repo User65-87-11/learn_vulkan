@@ -195,6 +195,10 @@ VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 VkDescriptorSetLayout descriptorSetLayout;
 
 
+struct GameObject * gameObjectsA;
+struct GameObject * gameObjectsB;
+struct GameObject * gameObjectsC;
+
 struct Pipeline{
 	
 	char * frag_path;
@@ -262,7 +266,7 @@ struct Buffer{
 	
 	// uint32_t length;
 };
-struct GmArray arrayBuffers;
+// struct GmArray arrayBuffers;
 
 struct DescriptorBindingDesc {
     uint32_t binding;
@@ -279,6 +283,8 @@ struct DescriptorResource {
         VkBufferView texelView;
     };
 };
+
+ 
 struct DescriptorSetLayout {
     VkDescriptorSetLayout handle;
 
@@ -310,7 +316,8 @@ struct Frame{
 	VkFence inFlightFence ;
 
 
-	// struct GmArray arrayBuffers;
+	struct GmArray arrayBuffers;
+	struct GmArray arrayDescriptorResource;
 
 
 	struct Buffer* model_1;
@@ -329,48 +336,48 @@ struct Frame{
 	// void * bufferMapped_Model_1  ;
 
 
-	VkBuffer buffer_Model_2  ;
+	// VkBuffer buffer_Model_2  ;
 
-	VkDeviceMemory bufferMemory_Model_2 ;
+	// VkDeviceMemory bufferMemory_Model_2 ;
 
-	void * bufferMapped_Model_2 ;
-
-
-
-	VkBuffer buffer_Colors_2  ;
-
-	VkDeviceMemory bufferMemory_Colors_2 ;
-
-	void * bufferMapped_Colors_2 ;
-
-
-	VkBuffer buffer_ObjectIds_1;
-
-	VkDeviceMemory bufferMemory_ObjectIds_1 ;
-
-	void * bufferMapped_ObjectIds_1 ;
-
-
-	VkBuffer buffers_ViewProjection_1 ;
-
-	VkDeviceMemory buffersMemory_ViewProjection_1 ;
-
-	void * buffersMapped_ViewProjection_1 ;
-
-
-	VkBuffer buffers_ViewProjection_2 ;
-
-	VkDeviceMemory buffersMemory_ViewProjection_2 ;
-
-	void * buffersMapped_ViewProjection_2 ;
+	// void * bufferMapped_Model_2 ;
 
 
 
-	VkBuffer buffers_DirectionalLight ;
+	// VkBuffer buffer_Colors_2  ;
 
-	VkDeviceMemory buffersMemory_DirectionalLight ;
+	// VkDeviceMemory bufferMemory_Colors_2 ;
 
-	void * buffersMapped_DirectionalLight ;
+	// void * bufferMapped_Colors_2 ;
+
+
+	// VkBuffer buffer_ObjectIds_1;
+
+	// VkDeviceMemory bufferMemory_ObjectIds_1 ;
+
+	// void * bufferMapped_ObjectIds_1 ;
+
+
+	// VkBuffer buffers_ViewProjection_1 ;
+
+	// VkDeviceMemory buffersMemory_ViewProjection_1 ;
+
+	// void * buffersMapped_ViewProjection_1 ;
+
+
+	// VkBuffer buffers_ViewProjection_2 ;
+
+	// VkDeviceMemory buffersMemory_ViewProjection_2 ;
+
+	// void * buffersMapped_ViewProjection_2 ;
+
+
+
+	// VkBuffer buffers_DirectionalLight ;
+
+	// VkDeviceMemory buffersMemory_DirectionalLight ;
+
+	// void * buffersMapped_DirectionalLight ;
 
 
 	VkImage depthImage ;
@@ -559,7 +566,7 @@ uint32_t instanceNum = INSTANCE_NUM;
 //__attribute__((packed)) 
 //__attribute__((aligned(16)))
 // 
-// struct __attribute__((aligned(16))) UBOModel  {
+// struct __attribute__((aligned(16))) SBO_Model  {
 
 // 	float model[16];
 // 	uint32_t objectId;
@@ -569,7 +576,7 @@ uint32_t instanceNum = INSTANCE_NUM;
 struct SSB_ObjectId{
 	uint32_t objectId;
 };
-struct UBOModel{
+struct SBO_Model{
 	mat4 model;
 };
 struct UBOCommon {
@@ -617,10 +624,13 @@ struct GameObjectInstance{
 struct GameObject {
 
 
-	struct ModelVertexData * mesh;
+	// struct ModelVertexData * mesh;
 
-	struct TextureRes * tex;
+	// struct TextureRes * tex;
 
+	uint32_t vertexIdx;
+
+	uint32_t textureIdx;
 
 	struct GmArrayView arrayViewUboModel;
 	
@@ -641,11 +651,11 @@ struct GmArray arrayGameObjectInstances;
 struct GmArray arrayGameObjects;
 
 
-struct GmArray arrayUboModels_1;
+struct GmArray arraySBO_Models_1;
 
-struct GmArray arrayUboModels_2;
+struct GmArray arraySBO_Models_2;
 
-struct GmArray arrayUboObjectIds_1;
+struct GmArray arraySBO_ObjectIds_1;
 
 
 struct GmArray arrayColors_2;
@@ -663,7 +673,7 @@ struct Buffer * iterateBuffer(
 
 void createPipelines();
 
-void initGameObjects3();
+// void initGameObjects3();
 
 void procMouseInput(GLFWwindow* window);
 
@@ -1052,23 +1062,28 @@ void initVariables(){
 	// }
 
 
-	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3);
+	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3,_Alignof(struct Pipeline));
 
-	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3);
+	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3, _Alignof(struct GameObject));
 
 
 	
-	gmArrayInit(&arrayUboModels_1, sizeof(struct UBOModel), 30);
+	gmArrayInit(&arraySBO_Models_1, sizeof(struct SBO_Model), 30, _Alignof(struct SBO_Model));
 
-	gmArrayInit(&arrayUboModels_2, sizeof(struct UBOModel), 1);
+	gmArrayInit(&arraySBO_Models_2, sizeof(struct SBO_Model), 1, _Alignof(struct SBO_Model));
 
-	gmArrayInit(&arrayUboObjectIds_1, sizeof(struct SSB_ObjectId), 30);
+	gmArrayInit(&arraySBO_ObjectIds_1, sizeof(struct SSB_ObjectId), 30, _Alignof(struct SSB_ObjectId));
 
-	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), 30);
+	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), 30, _Alignof(struct GameObjectInstance));
 
-	gmArrayInit(&arrayColors_2, sizeof(vec4), 1);
+	gmArrayInit(&arrayColors_2, sizeof(vec4), 1, _Alignof(vec4));
 
-	gmArrayInit(&arrayBuffers, sizeof(struct Buffer), 10*MAX_FRAMES_IN_FLIGHT);
+	for(int i=0; i< MAX_FRAMES_IN_FLIGHT;i++){
+		struct Frame * frame = &frames[i];
+		gmArrayInit(&frame->arrayBuffers, sizeof(struct Buffer), 10, _Alignof(struct GameObjectInstance));
+		gmArrayInit(&frame->arrayDescriptorResource, sizeof(struct DescriptorResource), 10, _Alignof(struct DescriptorResource));
+	}
+	
 
 
 	// initGameObjects3();
@@ -1088,13 +1103,13 @@ void initVariables(){
 	{
 		vec4 color ={1.0,0.0,1.0,1.0};
 		gmArrayPushValue(&arrayColors_2,color);
-		struct UBOModel m ;
+		struct SBO_Model m ;
 		glm_mat4_identity(m.model) ;
 
 		vec4 pos = {(float) swapChainExtent.width / 2, (float)swapChainExtent.height / 2, 0.0, 1.0};
 		glm_translate(m.model, pos);
 
-		gmArrayPushValue(&arrayUboModels_2,&m);
+		gmArrayPushValue(&arraySBO_Models_2,&m);
 	}
 	
 
@@ -1103,7 +1118,7 @@ void initVariables(){
 	for(int i=0; i < 30; i++)
 	{
 
-		struct UBOModel m ;
+		struct SBO_Model m ;
 		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances);
 		struct SSB_ObjectId o ;
 
@@ -1121,9 +1136,9 @@ void initVariables(){
 		glm_translate(m.model, g->position);
 
 	
-		gmArrayPushValue(&arrayUboObjectIds_1,&o);
+		gmArrayPushValue(&arraySBO_ObjectIds_1,&o);
 
-		gmArrayPushValue(&arrayUboModels_1,&m);
+		gmArrayPushValue(&arraySBO_Models_1,&m);
 
 
 		// alignas(32) float mat[16];
@@ -1145,38 +1160,41 @@ void initVariables(){
 	//for(int i=0;i<gmArrayLength(gameObjectsCubes);i++)
 	
 	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+		gameObjectsA = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
+		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsA->arrayViewUboModel ,0, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsA->arrayViewGameObjectInstances ,0, 10);	
+		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsA->arrayViewUboObjectIds ,0, 10);	
 
 		// gmArrayInit(&gameObjectsCubes.instances, sizeof(struct GameObjectInstance), 10);
 
-		gameObjectsTemp->tex = &textures[texture_index];
-		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
-		gameObjectsTemp->uboLight = NULL;
+		// gameObjectsTemp->tex = &textures[texture_index];
+		// gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		// gameObjectsTemp->uboLight = NULL;
 
-		
+		gameObjectsA->textureIdx = texture_index;
+		gameObjectsA->vertexIdx = vertexData_index;
 
 	}
 
 	texture_index = 1;
 	vertexData_index = 0;
 	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+		gameObjectsB = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
+		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsB->arrayViewUboModel ,10, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsB->arrayViewGameObjectInstances ,10, 10);	
+		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsB->arrayViewUboObjectIds ,10, 10);	
 		
-		gameObjectsTemp->tex = &textures[texture_index];
-		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
-		gameObjectsTemp->uboLight = NULL;
+		// gameObjectsTemp->tex = &textures[texture_index];
+		// gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		// gameObjectsTemp->uboLight = NULL;
 
 		 
+			gameObjectsB->textureIdx = texture_index;
+		gameObjectsB->vertexIdx = vertexData_index;
 
-		assert(gameObjectsTemp->mesh->vertextBuffer != NULL);
+		// assert(gameObjectsTemp->mesh->vertextBuffer != NULL);
 		
 	}
 	
@@ -1185,48 +1203,76 @@ void initVariables(){
 	texture_index = 0;
 	vertexData_index = 0;
 	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+		gameObjectsC = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
+		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsC->arrayViewUboModel ,20, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsC->arrayViewGameObjectInstances ,20, 10);	
+		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsC->arrayViewUboObjectIds ,20, 10);	
 	
-		gameObjectsTemp->tex = &textures[texture_index];
-		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
-		gameObjectsTemp->uboLight = NULL;
+		gameObjectsC->textureIdx = texture_index;
+		gameObjectsC->vertexIdx = vertexData_index;
+		
+		// gameObjectsTemp->tex = &textures[texture_index];
+		// gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		// gameObjectsTemp->uboLight = NULL;
 	
 
 	 
 	}
 
-	
+
 
 	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++){
 
-		struct Buffer * buffer = gmArrayPush(&arrayBuffers);
+		struct GmArray * arrayBuffers = &frames[i].arrayBuffers;
+
+		struct GmArray * arrayDR = &frames[i].arrayDescriptorResource;
+
+		struct Buffer * buffer = gmArrayPush(arrayBuffers);
+		buffer->handle = buffer->mapped = buffer->memory =NULL;
+		buffer->size = sizeof(struct SBO_Model) * arraySBO_Models_1.len;
+		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
 		frames[i].model_1 = buffer;
 		
 
-		buffer = gmArrayPush(&arrayBuffers);
+		buffer = gmArrayPush(arrayBuffers);
+		buffer->handle = buffer->mapped = buffer->memory =NULL;
+		buffer->size = sizeof(struct SBO_Model) * arraySBO_Models_2.len;
+		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
 		frames[i].model_2 = buffer;
 
 		
-		buffer = gmArrayPush(&arrayBuffers);
+		buffer = gmArrayPush(arrayBuffers);
+		buffer->handle = buffer->mapped = buffer->memory =NULL;
+		buffer->size = sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len;
+		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
 		frames[i].objectIds_1= buffer;
 
 		
-		buffer = gmArrayPush(&arrayBuffers);
+		buffer = gmArrayPush(arrayBuffers);
+		buffer->handle = buffer->mapped = buffer->memory =NULL;
+		buffer->size = sizeof(vec4) * arrayColors_2.len;
+		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
 		frames[i].colors_2 = buffer;
 
 		
-		buffer = gmArrayPush(&arrayBuffers);
+		buffer = gmArrayPush(arrayBuffers);
+		buffer->handle = buffer->mapped = buffer->memory =NULL;
+		buffer->size = sizeof(struct UBODirectionalLight) * 1;
+		buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
 		frames[i].directionLight_1 = buffer;
 
 		
-		buffer = gmArrayPush(&arrayBuffers);
+		buffer = gmArrayPush(arrayBuffers);
+		buffer->handle = buffer->mapped = buffer->memory =NULL;
+		buffer->size = sizeof(struct UBOCommon) * 1;
+		buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
 		frames[i].viewProjection_1 = buffer;
 
-		buffer = gmArrayPush(&arrayBuffers);
+		buffer = gmArrayPush(arrayBuffers);
+		buffer->handle = buffer->mapped = buffer->memory =NULL;
+		buffer->size = sizeof(struct UBOCommon) * 1;
+		buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
 		frames[i].viewProjection_2 = buffer;
 	}
 
@@ -1238,7 +1284,14 @@ void freeVariables(){
 	// 	struct Frame * frame = &frames[i];
 	// 	gmArrayFree(&frame->arrayBuffers);
 	// }
-	gmArrayFree(&arrayBuffers);
+	
+
+	for(int i=0; i< MAX_FRAMES_IN_FLIGHT;i++){
+		struct Frame * frame = &frames[i];
+		gmArrayFree(&frame->arrayBuffers);
+		gmArrayFree(&frame->arrayDescriptorResource);
+	}
+	
 
 	gmArrayFree(&arrayColors_2);
 
@@ -1246,11 +1299,11 @@ void freeVariables(){
 
 	gmArrayFree(&arrayGameObjects);
 	
-	gmArrayFree(&arrayUboModels_1);
+	gmArrayFree(&arraySBO_Models_1);
 
-	gmArrayFree(&arrayUboModels_2);
+	gmArrayFree(&arraySBO_Models_2);
 
-	gmArrayFree(&arrayUboObjectIds_1);
+	gmArrayFree(&arraySBO_ObjectIds_1);
 
 	gmArrayFree(&arrayGameObjectInstances);
 
@@ -2292,7 +2345,7 @@ void createDescriptorSets3(){
 			.buffer = frame->model_1->handle, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			// .range = sizeof(struct UBOModel) * arrayUboModels_1.len
+			// .range = sizeof(struct SBO_Model) * arraySBO_Models_1.len
 			.range = frame->model_1->size
 		};
 
@@ -2300,7 +2353,7 @@ void createDescriptorSets3(){
 			.buffer = frame->buffer_Model_2, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOModel) * arrayUboModels_2.len
+			.range = sizeof(struct SBO_Model) * arraySBO_Models_2.len
 		};
 
 
@@ -2309,7 +2362,7 @@ void createDescriptorSets3(){
 			.buffer = frame->buffer_ObjectIds_1, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct SSB_ObjectId) * arrayUboObjectIds_1.len
+			.range = sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len
 		};
 
 		VkDescriptorBufferInfo bufferColors_2 = { 
@@ -2466,25 +2519,50 @@ void clearUniformBuffers3(){
 	
 	PRINT_FNAME;
 
-	for(int i=0;i<arrayBuffers.len;i++)
-	{
-		struct Buffer * b = &arrayBuffers.data[i];
-		if(b->mapped != NULL)
-		{ 
-			vkUnmapMemory(device,b->memory);
-			b->mapped = NULL;
-		}
-		if(b->handle != NULL){
+	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
 
-			vkDestroyBuffer(device, b->handle, NULL);
-			b->handle = NULL;
-		}
-		if(b->memory != NULL){
+		struct GmArray * arrayBuffer = &frames[i].arrayBuffers;
 
-			vkFreeMemory(device, b->memory, NULL);
-			b->memory= NULL;
+
+		for(int j=0;j<arrayBuffer->len;j++)
+		{
+			struct Buffer *b = gmArrayGet(arrayBuffer,j);
+			
+			printf("hadnle %d\n",b->handle);
+			
+			if(b->mapped != NULL)
+			{ 
+				vkUnmapMemory(device,b->memory);
+				b->mapped = NULL;
+			}
+			if(b->handle != NULL){
+
+				vkDestroyBuffer(device,b->handle, NULL);
+				b->handle = NULL;
+			}
+			if(b->memory != NULL){
+
+				vkFreeMemory(device,b->memory, NULL);
+				b->memory= NULL;
+			}
 		}
+		// if(b->mapped != NULL)
+		// { 
+		// 	vkUnmapMemory(device,b->memory);
+		// 	b->mapped = NULL;
+		// }
+		// if(b->handle != NULL){
+
+		// 	vkDestroyBuffer(device, b->handle, NULL);
+		// 	b->handle = NULL;
+		// }
+		// if(b->memory != NULL){
+
+		// 	vkFreeMemory(device, b->memory, NULL);
+		// 	b->memory= NULL;
+		// }
 	}
+	
 
 	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
 
@@ -2576,8 +2654,8 @@ void initGameObjects3(){
 	
 	// struct GameObject   gameObjectsRooms1 ;
 
-	printf("sizeof(struct UBOModel) = %d\n",sizeof(struct UBOModel));
-	// assert(sizeof(struct UBOModel) ==  96);
+	printf("sizeof(struct SBO_Model) = %d\n",sizeof(struct SBO_Model));
+	// assert(sizeof(struct SBO_Model) ==  96);
 
  
 
@@ -2595,13 +2673,13 @@ void initGameObjects3(){
 	{
 		vec4 color ={1.0,0.0,1.0,1.0};
 		gmArrayPushValue(&arrayColors_2,color);
-		struct UBOModel m ;
+		struct SBO_Model m ;
 		glm_mat4_identity(m.model) ;
 
 		vec4 pos = {(float) swapChainExtent.width / 2, (float)swapChainExtent.height / 2, 0.0, 1.0};
 		glm_translate(m.model, pos);
 
-		gmArrayPushValue(&arrayUboModels_2,&m);
+		gmArrayPushValue(&arraySBO_Models_2,&m);
 	}
 	
 
@@ -2610,7 +2688,7 @@ void initGameObjects3(){
 	for(int i=0; i < 30; i++)
 	{
 
-		struct UBOModel m ;
+		struct SBO_Model m ;
 		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances);
 		struct SSB_ObjectId o ;
 
@@ -2628,9 +2706,9 @@ void initGameObjects3(){
 		glm_translate(m.model, g->position);
 
 	
-		gmArrayPushValue(&arrayUboObjectIds_1,&o);
+		gmArrayPushValue(&arraySBO_ObjectIds_1,&o);
 
-		gmArrayPushValue(&arrayUboModels_1,&m);
+		gmArrayPushValue(&arraySBO_Models_1,&m);
 
 
 		// alignas(32) float mat[16];
@@ -2654,15 +2732,15 @@ void initGameObjects3(){
 	{
 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
+		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
+		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
 
 		// gmArrayInit(&gameObjectsCubes.instances, sizeof(struct GameObjectInstance), 10);
 
-		gameObjectsTemp->tex = &textures[texture_index];
-		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
-		gameObjectsTemp->uboLight = NULL;
+		// gameObjectsTemp->tex = &textures[texture_index];
+		// gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		// gameObjectsTemp->uboLight = NULL;
 
 		
 
@@ -2673,17 +2751,17 @@ void initGameObjects3(){
 	{
 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
+		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
+		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
 		
-		gameObjectsTemp->tex = &textures[texture_index];
-		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
-		gameObjectsTemp->uboLight = NULL;
+		// gameObjectsTemp->tex = &textures[texture_index];
+		// gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		// gameObjectsTemp->uboLight = NULL;
 
 		 
 
-		assert(gameObjectsTemp->mesh->vertextBuffer != NULL);
+		// assert(gameObjectsTemp->mesh->vertextBuffer != NULL);
 		
 	}
 	
@@ -2694,13 +2772,13 @@ void initGameObjects3(){
 	{
 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
+		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
-		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
+		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
 	
-		gameObjectsTemp->tex = &textures[texture_index];
-		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
-		gameObjectsTemp->uboLight = NULL;
+		// gameObjectsTemp->tex = &textures[texture_index];
+		// gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		// gameObjectsTemp->uboLight = NULL;
 	
 
 	 
@@ -2722,193 +2800,217 @@ void createUniformBuffers3(){
 
 		struct Frame * frame = &frames[i];
 
-		// for(int j=0;j<frame->arrayBuffers.len;j++){
-		// 	struct Buffer *b = gmArrayGet(&frame->arrayBuffers, j);
 
-		// }
+		
+
+		for(int j=0;j<frame->arrayBuffers.len;j++){
+			struct Buffer *b = gmArrayGet(&frame->arrayBuffers, j);
+
+			VkDeviceSize bufferSize = b->size;
+			VkBuffer buffer;
+			VkDeviceMemory bufferMemory;
+
+			createBuffer(
+				bufferSize, 
+				b->usage, 
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				&buffer, 
+				&bufferMemory
+			);
+			b->handle= buffer;
+			b->memory = bufferMemory;
+
+			void * mapped_mem = NULL;
+			
+
+			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mapped_mem);
+
+			b->mapped = mapped_mem;
+
+		}
 		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
-		{
-			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	// 	{
+	// 		// MVP uniform buffers
+	// 		VkDeviceSize bufferSize = sizeof(struct UBOCommon);
+	// 		VkBuffer buffer;
+	// 		VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			frame->buffers_ViewProjection_1= buffer;
-			frame->buffersMemory_ViewProjection_1 = bufferMemory;
+	// 		createBuffer(
+	// 			bufferSize, 
+	// 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+	// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+	// 			&buffer, 
+	// 			&bufferMemory
+	// 		);
+	// 		frame->buffers_ViewProjection_1= buffer;
+	// 		frame->buffersMemory_ViewProjection_1 = bufferMemory;
 
-			void * memptr = NULL;
+	// 		void * memptr = NULL;
 			
 
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+	// 		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->buffersMapped_ViewProjection_1 = memptr;
+	// 		frame->buffersMapped_ViewProjection_1 = memptr;
 			
-			//----------------
-		}
-	// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
-		{
-			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOCommon);
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	// 		//----------------
+	// 	}
+	// // for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
+	// 	{
+	// 		// MVP uniform buffers
+	// 		VkDeviceSize bufferSize = sizeof(struct UBOCommon);
+	// 		VkBuffer buffer;
+	// 		VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			frame->buffers_ViewProjection_2= buffer;
-			frame->buffersMemory_ViewProjection_2 = bufferMemory;
+	// 		createBuffer(
+	// 			bufferSize, 
+	// 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+	// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+	// 			&buffer, 
+	// 			&bufferMemory
+	// 		);
+	// 		frame->buffers_ViewProjection_2= buffer;
+	// 		frame->buffersMemory_ViewProjection_2 = bufferMemory;
 
-			void * memptr = NULL;
+	// 		void * memptr = NULL;
 			
 
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+	// 		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->buffersMapped_ViewProjection_2 = memptr;
+	// 		frame->buffersMapped_ViewProjection_2 = memptr;
 			
-			//----------------
-		}
+	// 		//----------------
+	// 	}
 
 
-		{
-			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOModel) * arrayUboModels_1.len;
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	// 	{
+	// 		// MVP uniform buffers
+	// 		VkDeviceSize bufferSize = sizeof(struct SBO_Model) * arraySBO_Models_1.len;
+	// 		VkBuffer buffer;
+	// 		VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			frame->model_1->handle = buffer;
-			frame->model_1->memory = bufferMemory;
+	// 		createBuffer(
+	// 			bufferSize, 
+	// 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+	// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+	// 			&buffer, 
+	// 			&bufferMemory
+	// 		);
+	// 		frame->model_1->handle = buffer;
+	// 		frame->model_1->memory = bufferMemory;
 
-			void * memptr = NULL;
+	// 		void * memptr = NULL;
 			
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+	// 		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->model_1->mapped= memptr;
+	// 		frame->model_1->mapped= memptr;
 			
-			//----------------
-		}
-		{
-			// MVP uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBOModel) * arrayUboModels_2.len;
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	// 		//----------------
+	// 	}
+	// 	{
+	// 		// MVP uniform buffers
+	// 		VkDeviceSize bufferSize = sizeof(struct SBO_Model) * arraySBO_Models_2.len;
+	// 		VkBuffer buffer;
+	// 		VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			frame->buffer_Model_2 = buffer;
-			frame->bufferMemory_Model_2 = bufferMemory;
+	// 		createBuffer(
+	// 			bufferSize, 
+	// 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+	// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+	// 			&buffer, 
+	// 			&bufferMemory
+	// 		);
+	// 		frame->buffer_Model_2 = buffer;
+	// 		frame->bufferMemory_Model_2 = bufferMemory;
 
-			void * memptr = NULL;
+	// 		void * memptr = NULL;
 			
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+	// 		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->bufferMapped_Model_2= memptr;
+	// 		frame->bufferMapped_Model_2= memptr;
 			
-			//----------------
-		}
+	// 		//----------------
+	// 	}
 
 		
-		{
+	// 	{
 		
-			//object ids
-			VkDeviceSize bufferSize = sizeof(struct SSB_ObjectId) * arrayUboObjectIds_1.len;
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	// 		//object ids
+	// 		VkDeviceSize bufferSize = sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len;
+	// 		VkBuffer buffer;
+	// 		VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			frame->buffer_ObjectIds_1= buffer;
-			frame->bufferMemory_ObjectIds_1 = bufferMemory;
+	// 		createBuffer(
+	// 			bufferSize, 
+	// 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+	// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+	// 			&buffer, 
+	// 			&bufferMemory
+	// 		);
+	// 		frame->buffer_ObjectIds_1= buffer;
+	// 		frame->bufferMemory_ObjectIds_1 = bufferMemory;
 
-			void * memptr = NULL;
+	// 		void * memptr = NULL;
 			
 
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+	// 		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->bufferMapped_ObjectIds_1= memptr;
+	// 		frame->bufferMapped_ObjectIds_1= memptr;
 			
-			//----------------
-		}
+	// 		//----------------
+	// 	}
 
-		{
+	// 	{
 		
-			//object ids
-			VkDeviceSize bufferSize = sizeof(vec4) * arrayColors_2.len;
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	// 		//object ids
+	// 		VkDeviceSize bufferSize = sizeof(vec4) * arrayColors_2.len;
+	// 		VkBuffer buffer;
+	// 		VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			frame->buffer_Colors_2= buffer;
-			frame->bufferMemory_Colors_2 = bufferMemory;
+	// 		createBuffer(
+	// 			bufferSize, 
+	// 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT , 
+	// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+	// 			&buffer, 
+	// 			&bufferMemory
+	// 		);
+	// 		frame->buffer_Colors_2= buffer;
+	// 		frame->bufferMemory_Colors_2 = bufferMemory;
 
-			void * memptr = NULL;
+	// 		void * memptr = NULL;
 			
 
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+	// 		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->bufferMapped_Colors_2= memptr;
+	// 		frame->bufferMapped_Colors_2= memptr;
 			
-			//----------------
-		}
+	// 		//----------------
+	// 	}
 
-		{
-			// directional light uniform buffers
-			VkDeviceSize bufferSize = sizeof(struct UBODirectionalLight);
-			VkBuffer buffer;
-			VkDeviceMemory bufferMemory;
+	// 	{
+	// 		// directional light uniform buffers
+	// 		VkDeviceSize bufferSize = sizeof(struct UBODirectionalLight);
+	// 		VkBuffer buffer;
+	// 		VkDeviceMemory bufferMemory;
 
-			createBuffer(
-				bufferSize, 
-				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-				&buffer, 
-				&bufferMemory
-			);
-			frame->buffers_DirectionalLight = buffer;
-			frame->buffersMemory_DirectionalLight= bufferMemory;
+	// 		createBuffer(
+	// 			bufferSize, 
+	// 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+	// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+	// 			&buffer, 
+	// 			&bufferMemory
+	// 		);
+	// 		frame->buffers_DirectionalLight = buffer;
+	// 		frame->buffersMemory_DirectionalLight= bufferMemory;
 
-			void * memptr = NULL;
+	// 		void * memptr = NULL;
 			
 
-			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
+	// 		vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->buffersMapped_DirectionalLight = memptr;
+	// 		frame->buffersMapped_DirectionalLight = memptr;
 			
-			//----------------
-		}
+	// 		//----------------
+	// 	}
 	}
 }
 
@@ -2987,6 +3089,7 @@ void createShaderDescriptorSetLayout(){
 			);
 	*/
 
+	
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = {
 		(VkDescriptorSetLayoutBinding) {
 			.binding = BINDING_VERT_1_UBO_ViewProjection,
@@ -3593,8 +3696,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
 		//draw Room0
 		{
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &gameObject->mesh->vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(commandBuffer, gameObject->mesh->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(commandBuffer, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 	
 			vkCmdBindDescriptorSets(
 				commandBuffer, 
@@ -3609,7 +3712,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 	
 			struct PushConst constants0 = {
 				.hasColor = false,
-				.texIdx = gameObject->tex->textureIdx,
+				.texIdx = textures[gameObject->textureIdx].textureIdx,
 				.objectId = frame->pickedID
 			};
 			// int textureIndex = 0; // choose texture
@@ -3624,7 +3727,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 	
 			vkCmdDrawIndexed(
 				commandBuffer, 
-				gameObject->mesh->indices_num, 
+				// gameObject->mesh->indices_num, 
+				modelVertexData[gameObject->vertexIdx].indices_num,
 				gameObject->arrayViewUboModel.len , 
 				0, 
 				0,
@@ -3755,11 +3859,11 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	struct Frame * frame = &frames[currentFrame];
 
 
-	memcpy(frame->model_1->mapped, arrayUboModels_1.data, sizeof(struct UBOModel)* arrayUboModels_1.len);
+	memcpy(frame->model_1->mapped, arraySBO_Models_1.data, sizeof(struct SBO_Model)* arraySBO_Models_1.len);
 
-	memcpy(frame->bufferMapped_Model_2, arrayUboModels_2.data, sizeof(struct UBOModel)* arrayUboModels_2.len);
+	memcpy(frame->bufferMapped_Model_2, arraySBO_Models_2.data, sizeof(struct SBO_Model)* arraySBO_Models_2.len);
 
-	memcpy(frame->bufferMapped_ObjectIds_1, arrayUboObjectIds_1.data, sizeof(struct SSB_ObjectId)* arrayUboObjectIds_1.len);
+	memcpy(frame->bufferMapped_ObjectIds_1, arraySBO_ObjectIds_1.data, sizeof(struct SSB_ObjectId)* arraySBO_ObjectIds_1.len);
 
 	memcpy(frame->bufferMapped_Colors_2, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
 
@@ -5647,6 +5751,7 @@ void initVulkan(){
 		free(vertices);
 		free(indices);
 	}
+	
 
 	// init MODELS
 

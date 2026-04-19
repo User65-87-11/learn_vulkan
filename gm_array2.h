@@ -8,6 +8,7 @@ struct GmArray{
 	uint32_t width;
 	uint32_t stride;
 	uint32_t capacity;
+	uint32_t alignment;
 
 	
 };
@@ -27,7 +28,7 @@ partiition array into  views?
 
 */
 
-void gmArrayInit(struct GmArray * array, uint32_t width, uint32_t initial_size);
+void gmArrayInit(struct GmArray * array, uint32_t width, uint32_t initial_size, uint32_t alignment);
 
 // void gmArrayCopyTo(void * dst, struct GmArray * array);
 

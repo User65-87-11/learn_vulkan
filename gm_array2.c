@@ -26,17 +26,18 @@ static inline uint32_t align_up(uint32_t x, uint32_t a) {
 }
 
 
-void gmArrayInit(struct GmArray * array, uint32_t width, uint32_t initial_size){
+void gmArrayInit(struct GmArray * array, uint32_t width, uint32_t initial_size, uint32_t alignment){
 	assert(array->data == NULL);
 
 	array->len = 0;
     array->capacity = initial_size;
-    array->width = width;
+    array->width = align_up(width,alignment);
 	array->data = NULL;
+	array->alignment = alignment;
 	// array->stride = align_up(width, DEFAULT_ALIGN);
 	if(initial_size !=0 && array->width != 0)
 	{
-		array->data = gm_alloc_aligned(array->width * initial_size, DEFAULT_ALIGN);
+		array->data = gm_alloc_aligned(array->width * initial_size, alignment);
 		// array->data = malloc(array->width * initial_size);
 
 	}
@@ -56,7 +57,7 @@ void* gmArrayPush(
 
 		uint32_t new_size = array->capacity *  array->width;
 
-		void *new_data = gm_alloc_aligned(new_size,DEFAULT_ALIGN);
+		void *new_data = gm_alloc_aligned(new_size,array->alignment);
 		memcpy(new_data, array->data, old_size );
 		gm_free_aligned(array->data);
 		array->data = new_data;
@@ -100,7 +101,7 @@ void gmArrayPushValue(
 
 		uint32_t new_size = array->capacity *  array->width;
 
-		void *new_data = gm_alloc_aligned(new_size,DEFAULT_ALIGN);
+		void *new_data = gm_alloc_aligned(new_size,array->alignment);
 		memcpy(new_data, array->data, old_size );
 		gm_free_aligned(array->data);
 		array->data = new_data;
