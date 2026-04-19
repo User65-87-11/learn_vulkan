@@ -262,6 +262,7 @@ struct Buffer{
 	
 	// uint32_t length;
 };
+struct GmArray arrayBuffers;
 
 struct DescriptorBindingDesc {
     uint32_t binding;
@@ -312,12 +313,20 @@ struct Frame{
 	// struct GmArray arrayBuffers;
 
 
+	struct Buffer* model_1;
+	struct Buffer* objectIds_1;
+	struct Buffer* viewProjection_1;
+	struct Buffer* directionLight_1;
 
-	VkBuffer buffer_Model_1 ;
+	struct Buffer* viewProjection_2;
+	struct Buffer* model_2;
+	struct Buffer* colors_2;
 
-	VkDeviceMemory bufferMemory_Model_1  ;
+	// VkBuffer buffer_Model_1 ;
 
-	void * bufferMapped_Model_1  ;
+	// VkDeviceMemory bufferMemory_Model_1  ;
+
+	// void * bufferMapped_Model_1  ;
 
 
 	VkBuffer buffer_Model_2  ;
@@ -654,6 +663,7 @@ struct Buffer * iterateBuffer(
 
 void createPipelines();
 
+void initGameObjects3();
 
 void procMouseInput(GLFWwindow* window);
 
@@ -946,6 +956,9 @@ void processInput(GLFWwindow *window){
 
 void initVariables(){
 	PRINT_FNAME;
+
+	
+
 	// validationLayerCount = 1;
 	// validationLayers = malloc(sizeof(char*)*validationLayerCount);
 	// validationLayers[0] = "VK_LAYER_KHRONOS_validation";
@@ -1055,6 +1068,169 @@ void initVariables(){
 
 	gmArrayInit(&arrayColors_2, sizeof(vec4), 1);
 
+	gmArrayInit(&arrayBuffers, sizeof(struct Buffer), 10*MAX_FRAMES_IN_FLIGHT);
+
+
+	// initGameObjects3();
+
+	
+	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+	pitch = glm_deg(asin(cameraFront[1]));
+
+	
+	vec4 v = {1.0,1.0,1.0,1.0};
+	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
+	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+
+
+	for(int i=0;i<1;i++)
+	{
+		vec4 color ={1.0,0.0,1.0,1.0};
+		gmArrayPushValue(&arrayColors_2,color);
+		struct UBOModel m ;
+		glm_mat4_identity(m.model) ;
+
+		vec4 pos = {(float) swapChainExtent.width / 2, (float)swapChainExtent.height / 2, 0.0, 1.0};
+		glm_translate(m.model, pos);
+
+		gmArrayPushValue(&arrayUboModels_2,&m);
+	}
+	
+
+
+	
+	for(int i=0; i < 30; i++)
+	{
+
+		struct UBOModel m ;
+		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances);
+		struct SSB_ObjectId o ;
+
+		o.objectId = i +1;
+
+		
+		GLM_VEC3_SET(g->position, rand_float(), 0.0, rand_float());
+		g->uboModelIndex = i;
+
+		// GLM_VEC4_SET(m.objectId, i, 0.0, 0.0, 1.0);
+		
+
+
+		glm_mat4_identity(m.model) ;
+		glm_translate(m.model, g->position);
+
+	
+		gmArrayPushValue(&arrayUboObjectIds_1,&o);
+
+		gmArrayPushValue(&arrayUboModels_1,&m);
+
+
+		// alignas(32) float mat[16];
+		// // mat4 mat;
+		// GLM_MAT4_COPY(mat,m->model);
+		
+		// glm_mat4_identity((void*)mat) ;
+		// glm_translate((void*)mat, g->position);
+
+		// GLM_MAT4_COPY(m->model,mat);
+		
+	}
+	
+
+
+	uint32_t texture_index = 2;
+	uint32_t vertexData_index = 1;
+
+	//for(int i=0;i<gmArrayLength(gameObjectsCubes);i++)
+	
+	{
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+	
+		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
+
+		// gmArrayInit(&gameObjectsCubes.instances, sizeof(struct GameObjectInstance), 10);
+
+		gameObjectsTemp->tex = &textures[texture_index];
+		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		gameObjectsTemp->uboLight = NULL;
+
+		
+
+	}
+
+	texture_index = 1;
+	vertexData_index = 0;
+	{
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+	
+		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
+		
+		gameObjectsTemp->tex = &textures[texture_index];
+		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		gameObjectsTemp->uboLight = NULL;
+
+		 
+
+		assert(gameObjectsTemp->mesh->vertextBuffer != NULL);
+		
+	}
+	
+
+
+	texture_index = 0;
+	vertexData_index = 0;
+	{
+		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+	
+		gmArrayViewCreateSlice(&arrayUboModels_1, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
+		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
+		gmArrayViewCreateSlice(&arrayUboObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
+	
+		gameObjectsTemp->tex = &textures[texture_index];
+		gameObjectsTemp->mesh = &modelVertexData[vertexData_index];
+		gameObjectsTemp->uboLight = NULL;
+	
+
+	 
+	}
+
+	
+
+	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++){
+
+		struct Buffer * buffer = gmArrayPush(&arrayBuffers);
+		frames[i].model_1 = buffer;
+		
+
+		buffer = gmArrayPush(&arrayBuffers);
+		frames[i].model_2 = buffer;
+
+		
+		buffer = gmArrayPush(&arrayBuffers);
+		frames[i].objectIds_1= buffer;
+
+		
+		buffer = gmArrayPush(&arrayBuffers);
+		frames[i].colors_2 = buffer;
+
+		
+		buffer = gmArrayPush(&arrayBuffers);
+		frames[i].directionLight_1 = buffer;
+
+		
+		buffer = gmArrayPush(&arrayBuffers);
+		frames[i].viewProjection_1 = buffer;
+
+		buffer = gmArrayPush(&arrayBuffers);
+		frames[i].viewProjection_2 = buffer;
+	}
+
+	
 }
 void freeVariables(){
 
@@ -1062,6 +1238,8 @@ void freeVariables(){
 	// 	struct Frame * frame = &frames[i];
 	// 	gmArrayFree(&frame->arrayBuffers);
 	// }
+	gmArrayFree(&arrayBuffers);
+
 	gmArrayFree(&arrayColors_2);
 
 	gmArrayFree(&arrayPipelines);
@@ -2111,10 +2289,11 @@ void createDescriptorSets3(){
 		
 
 		VkDescriptorBufferInfo bufferInfo_Model_1 = { 
-			.buffer = frame->buffer_Model_1, 
+			.buffer = frame->model_1->handle, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOModel) * arrayUboModels_1.len
+			// .range = sizeof(struct UBOModel) * arrayUboModels_1.len
+			.range = frame->model_1->size
 		};
 
 		VkDescriptorBufferInfo bufferInfo_Model_2= { 
@@ -2287,6 +2466,26 @@ void clearUniformBuffers3(){
 	
 	PRINT_FNAME;
 
+	for(int i=0;i<arrayBuffers.len;i++)
+	{
+		struct Buffer * b = &arrayBuffers.data[i];
+		if(b->mapped != NULL)
+		{ 
+			vkUnmapMemory(device,b->memory);
+			b->mapped = NULL;
+		}
+		if(b->handle != NULL){
+
+			vkDestroyBuffer(device, b->handle, NULL);
+			b->handle = NULL;
+		}
+		if(b->memory != NULL){
+
+			vkFreeMemory(device, b->memory, NULL);
+			b->memory= NULL;
+		}
+	}
+
 	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
 
 		struct Frame * frame = &frames[i];
@@ -2328,22 +2527,21 @@ void clearUniformBuffers3(){
 
 
 
-
-		if(frame->bufferMapped_Model_1 != NULL)
-		{
-			 
-			vkUnmapMemory(device,frame->bufferMemory_Model_1);
-			frame->bufferMapped_Model_1 = NULL;
+		if(frame->model_1->mapped != NULL)
+		{ 
+			vkUnmapMemory(device,frame->model_1->memory);
+			frame->model_1->mapped = NULL;
 		}
-		if(frame->buffer_Model_1 != NULL){
+	
+		if(frame->model_1->handle != NULL){
 
-			vkDestroyBuffer(device, frame->buffer_Model_1, NULL);
-			frame->buffer_Model_1 = NULL;
+			vkDestroyBuffer(device, frame->model_1->handle, NULL);
+			frame->model_1->handle = NULL;
 		}
-		if(frame->bufferMemory_Model_1 != NULL){
+		if(frame->model_1->memory != NULL){
 
-			vkFreeMemory(device, frame->bufferMemory_Model_1, NULL);
-			frame->bufferMemory_Model_1= NULL;
+			vkFreeMemory(device, frame->model_1->memory, NULL);
+			frame->model_1->memory= NULL;
 		}
 
 		
@@ -2595,14 +2793,14 @@ void createUniformBuffers3(){
 				&buffer, 
 				&bufferMemory
 			);
-			frame->buffer_Model_1 = buffer;
-			frame->bufferMemory_Model_1 = bufferMemory;
+			frame->model_1->handle = buffer;
+			frame->model_1->memory = bufferMemory;
 
 			void * memptr = NULL;
 			
 			vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &memptr);
 
-			frame->bufferMapped_Model_1= memptr;
+			frame->model_1->mapped= memptr;
 			
 			//----------------
 		}
@@ -3557,7 +3755,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	struct Frame * frame = &frames[currentFrame];
 
 
-	memcpy(frame->bufferMapped_Model_1, arrayUboModels_1.data, sizeof(struct UBOModel)* arrayUboModels_1.len);
+	memcpy(frame->model_1->mapped, arrayUboModels_1.data, sizeof(struct UBOModel)* arrayUboModels_1.len);
 
 	memcpy(frame->bufferMapped_Model_2, arrayUboModels_2.data, sizeof(struct UBOModel)* arrayUboModels_2.len);
 
@@ -5452,7 +5650,7 @@ void initVulkan(){
 
 	// init MODELS
 
-	initGameObjects3();
+	// initGameObjects3();
 	
 
 	
