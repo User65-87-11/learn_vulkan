@@ -233,26 +233,67 @@ VkCommandPool transferCommnadPool = NULL;
 
 
 VkFence transferFence;
+
 struct Buffer{
-	uint32_t binding;
+	// uint32_t binding;
 
-	VkBuffer buffer ;
+	// uint32_t descriptorCount ;
 
-	VkDeviceMemory bufferMemory ;
+	// VkShaderStageFlags stageFlag;
 
-	void * bufferMapped  ;
+	// VkDescriptorType descriptorType;
 
-	VkDescriptorType descriptorType;
 
-	struct GmArray  * arrayData;
+	VkBuffer handle ;
 
-	uint32_t range;
+	VkDeviceMemory memory ;
 
-	uint32_t descriptorCount ;
+	void * mapped;
 
-	VkShaderStageFlags stageFlag;
+	VkDeviceSize size;
+    
+	VkBufferUsageFlags usage;
 
-		
+	// struct GmArray  * arrayData;
+
+	// uint32_t range;
+
+	// uint32_t width;
+	
+	// uint32_t length;
+};
+
+struct DescriptorBindingDesc {
+    uint32_t binding;
+    VkDescriptorType type;
+    uint32_t count;
+    VkShaderStageFlags stages;
+};
+struct DescriptorResource {
+    VkDescriptorType type;
+
+    union {
+        VkDescriptorBufferInfo buffer;
+        VkDescriptorImageInfo image;
+        VkBufferView texelView;
+    };
+};
+struct DescriptorSetLayout {
+    VkDescriptorSetLayout handle;
+
+    uint32_t bindingCount;
+	struct DescriptorBindingDesc* bindings;
+};
+
+struct DescriptorSet {
+    VkDescriptorSet handle;
+   struct DescriptorSetLayout* layout;
+};
+struct DescriptorWrite {
+    uint32_t binding;
+    uint32_t dstArrayElement;
+    uint32_t count;
+  	struct  DescriptorResource* resource; // array of size count
 };
 
 struct Frame{
@@ -268,7 +309,7 @@ struct Frame{
 	VkFence inFlightFence ;
 
 
-	struct GmArray arrayBuffers;
+	// struct GmArray arrayBuffers;
 
 
 
@@ -328,6 +369,8 @@ struct Frame{
 	VkDeviceMemory depthImageMemory ;
 
 	VkImageView depthImageView ;
+
+
 
 
 
@@ -514,8 +557,8 @@ uint32_t instanceNum = INSTANCE_NUM;
 // };
 
 
-struct UBOobjectId{
-		uint32_t objectId;
+struct SSB_ObjectId{
+	uint32_t objectId;
 };
 struct UBOModel{
 	mat4 model;
@@ -600,8 +643,14 @@ struct GmArray arrayColors_2;
 
 
 void initVariables();
+
 void freeVariables();
 
+struct Buffer * iterateBuffer(
+	uint32_t binding,
+	uint32_t contextLen,
+	uint32_t *context
+);
 
 void createPipelines();
 
@@ -743,6 +792,7 @@ bool hasStencilComponent(VkFormat format);
 void processInput(GLFWwindow *window);
  
 void createGraphicsPipeline(struct  Pipeline * pipeline );
+
 
 
 float rand_float()
@@ -907,6 +957,87 @@ void initVariables(){
 	// requiredDeviceExtensions[0] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 
 
+	// for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++){
+	// 	struct Frame * frame = &frames[i];
+		// gmArrayInit(&frame->arrayBuffers, sizeof(struct Buffer), 10);
+
+		// {
+		// 	struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+		// 	buffer->binding = BINDING_FRAG_1_SAMPLER;
+		// 	buffer->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		// 	buffer->descriptorCount = TEXTURE_COUNT_PIPE_1;
+		// 	buffer->stageFlag = VK_SHADER_STAGE_FRAGMENT_BIT;
+		// 	buffer->width = 
+		// }
+
+	// 	{
+	// 		struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 		buffer->binding = BINDING_FRAG_1_UBO_Lights;
+	// 		buffer->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	// 		buffer->descriptorCount = 1;
+	// 		buffer->stageFlag = VK_SHADER_STAGE_FRAGMENT_BIT;
+	// 		buffer->width = sizeof(struct UBODirectionalLight);
+	// 	}
+		
+	// 	{
+	// 		struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 		buffer->binding = BINDING_VERT_1_SSBO_Models;
+	// 		buffer->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	// 		buffer->descriptorCount = 1;
+	// 		buffer->stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
+	// 		buffer->width = sizeof(struct UBOModel);
+	// 	}
+	// 	{
+	// 		struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 		buffer->binding = BINDING_VERT_1_SSBO_ObjectIDS;
+	// 		buffer->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	// 		buffer->descriptorCount = 1;
+	// 		buffer->stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
+	// 		buffer->width = sizeof(struct SSB_ObjectId);
+	// 	}
+	// 	{
+	// 		struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 		buffer->binding = BINDING_VERT_1_UBO_ViewProjection;
+	// 		buffer->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	// 		buffer->descriptorCount = 1;
+	// 		buffer->stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
+	// 		buffer->width = sizeof(struct UBOCommon);
+	// 	}
+
+	// 	//2
+	// 	// {
+	// 	// 	struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 	// 	buffer->binding = BINDING_FRAG_2_SAMPLER;
+	// 	// 	buffer->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	// 	// 	buffer->descriptorCount = TEXTURE_COUNT_PIPE_2;
+	// 	// 	buffer->stageFlag = VK_SHADER_STAGE_FRAGMENT_BIT;
+	// 	// }
+	// 	{
+	// 		struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 		buffer->binding = BINDING_VERT_2_SSBO_Colors;
+	// 		buffer->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	// 		buffer->descriptorCount = 1;
+	// 		buffer->stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
+	// 		buffer->width = sizeof(vec4);
+	// 	}
+	// 	{
+	// 		struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 		buffer->binding = BINDING_VERT_2_SSBO_Models;
+	// 		buffer->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	// 		buffer->descriptorCount = 1;
+	// 		buffer->stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
+	// 		buffer->width = sizeof(struct UBOModel);
+	// 	}
+	// 	{
+	// 		struct Buffer * buffer = gmArrayPush(&frame->arrayBuffers);
+	// 		buffer->binding = BINDING_VERT_2_UBO_ViewProjection;
+	// 		buffer->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	// 		buffer->descriptorCount = 1;
+	// 		buffer->stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
+	// 		buffer->width = sizeof(struct UBOCommon);
+	// 	}
+	// }
+
 
 	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3);
 
@@ -918,7 +1049,7 @@ void initVariables(){
 
 	gmArrayInit(&arrayUboModels_2, sizeof(struct UBOModel), 1);
 
-	gmArrayInit(&arrayUboObjectIds_1, sizeof(struct UBOobjectId), 30);
+	gmArrayInit(&arrayUboObjectIds_1, sizeof(struct SSB_ObjectId), 30);
 
 	gmArrayInit(&arrayGameObjectInstances, sizeof(struct GameObjectInstance), 30);
 
@@ -927,6 +1058,10 @@ void initVariables(){
 }
 void freeVariables(){
 
+	// for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++){
+	// 	struct Frame * frame = &frames[i];
+	// 	gmArrayFree(&frame->arrayBuffers);
+	// }
 	gmArrayFree(&arrayColors_2);
 
 	gmArrayFree(&arrayPipelines);
@@ -1995,7 +2130,7 @@ void createDescriptorSets3(){
 			.buffer = frame->buffer_ObjectIds_1, 
 			.offset = 0, 
 			//.range = VK_WHOLE_SIZE 
-			.range = sizeof(struct UBOobjectId) * arrayUboObjectIds_1.len
+			.range = sizeof(struct SSB_ObjectId) * arrayUboObjectIds_1.len
 		};
 
 		VkDescriptorBufferInfo bufferColors_2 = { 
@@ -2279,7 +2414,7 @@ void initGameObjects3(){
 
 		struct UBOModel m ;
 		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances);
-		struct UBOobjectId o ;
+		struct SSB_ObjectId o ;
 
 		o.objectId = i +1;
 
@@ -2389,6 +2524,10 @@ void createUniformBuffers3(){
 
 		struct Frame * frame = &frames[i];
 
+		// for(int j=0;j<frame->arrayBuffers.len;j++){
+		// 	struct Buffer *b = gmArrayGet(&frame->arrayBuffers, j);
+
+		// }
 		// for(int k=0;k< UNIFORM_BUFFER_COUNT;k++)
 		{
 			// MVP uniform buffers
@@ -2496,7 +2635,7 @@ void createUniformBuffers3(){
 		{
 		
 			//object ids
-			VkDeviceSize bufferSize = sizeof(struct UBOobjectId) * arrayUboObjectIds_1.len;
+			VkDeviceSize bufferSize = sizeof(struct SSB_ObjectId) * arrayUboObjectIds_1.len;
 			VkBuffer buffer;
 			VkDeviceMemory bufferMemory;
 
@@ -3422,7 +3561,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 
 	memcpy(frame->bufferMapped_Model_2, arrayUboModels_2.data, sizeof(struct UBOModel)* arrayUboModels_2.len);
 
-	memcpy(frame->bufferMapped_ObjectIds_1, arrayUboObjectIds_1.data, sizeof(struct UBOobjectId)* arrayUboObjectIds_1.len);
+	memcpy(frame->bufferMapped_ObjectIds_1, arrayUboObjectIds_1.data, sizeof(struct SSB_ObjectId)* arrayUboObjectIds_1.len);
 
 	memcpy(frame->bufferMapped_Colors_2, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
 
