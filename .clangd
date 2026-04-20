@@ -11,4 +11,4 @@ CompileFlags:
   - -Wno-unused-variable
   - -Wno-sign-compare
   - -Wno-misleading-indentation
-
+  - -xc
