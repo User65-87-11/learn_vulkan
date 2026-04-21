@@ -217,9 +217,6 @@ struct Pipeline{
 
 };
 
-// #define PIPELINE_CNT 3 
-
-// struct Pipeline pipelines[PIPELINE_CNT];
 
 struct GmArray arrayPipelines;
 
@@ -1328,7 +1325,7 @@ void initVariables(){
 			descr->res_type = GM_RESOURCE_BUFFER;
 			descr->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
  
-			descr->shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
+			descr->shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
 			descr->count = 1;
 		}
 
@@ -3307,80 +3304,93 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
     vkCmdEndRendering(commandBuffer);
 
 
+	
+	VkImageMemoryBarrier2 toTransferBarrier = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+		.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+		.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+		.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+		.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+		.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = frame->pickImage,
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0, .levelCount = 1,
+			.baseArrayLayer = 0, .layerCount = 1
+		},
+	};
+
+	VkDependencyInfo toTransferDep = {
+		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+		.imageMemoryBarrierCount = 1,
+		.pImageMemoryBarriers = &toTransferBarrier
+	};
+	vkCmdPipelineBarrier2(commandBuffer, &toTransferDep);
+	
+
+	VkBufferImageCopy region = {
+		.bufferOffset = 0,
+		.bufferRowLength = 0,
+		.bufferImageHeight = 0,
+		.imageSubresource = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1
+		},
+		.imageOffset = {swapChainExtent.width/2,swapChainExtent.height/2, 0},
+		.imageExtent = {1, 1, 1}
+	};
+	vkCmdCopyImageToBuffer(
+		commandBuffer,
+		frame->pickImage,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		frame->pickStagingBuffer,
+		1, 
+		&region
+	);
+
+	VkImageMemoryBarrier2 toGeneralBarrier = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+		.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,           
+		.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+		.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,      
+		.dstAccessMask = 0,
+		.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		.newLayout = VK_IMAGE_LAYOUT_GENERAL,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = frame->pickImage,
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = 1
+		}
+	};
+	VkDependencyInfo toGeneralDep = {
+		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+		.imageMemoryBarrierCount = 1,
+		.pImageMemoryBarriers = &toGeneralBarrier
+	};
+	vkCmdPipelineBarrier2(commandBuffer, &toGeneralDep);
+
+	
+
+	//bind bipeline 2 START
 	{
-		VkImageMemoryBarrier2 toTransferBarrier = {
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-			.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = frame->pickImage,
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0, .levelCount = 1,
-				.baseArrayLayer = 0, .layerCount = 1
-			},
-		};
-
-		VkDependencyInfo toTransferDep = {
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.imageMemoryBarrierCount = 1,
-			.pImageMemoryBarriers = &toTransferBarrier
-		};
-		vkCmdPipelineBarrier2(commandBuffer, &toTransferDep);
+		/**
+		create uniform buffers
+		update uniform buffers 
+		ssee what else there is missing before darwing
 		
-	
-		VkBufferImageCopy region = {
-			.bufferOffset = 0,
-			.bufferRowLength = 0,
-			.bufferImageHeight = 0,
-			.imageSubresource = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1
-			},
-			.imageOffset = {swapChainExtent.width/2,swapChainExtent.height/2, 0},
-    		.imageExtent = {1, 1, 1}
-		};
-		vkCmdCopyImageToBuffer(
-			commandBuffer,
-			frame->pickImage,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			frame->pickStagingBuffer,
-			1, 
-			&region
-		);
+		*/
 
-		VkImageMemoryBarrier2 toGeneralBarrier = {
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,           
-			.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-			.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,      
-			.dstAccessMask = 0,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			.newLayout = VK_IMAGE_LAYOUT_GENERAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = frame->pickImage,
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1
-			}
-		};
-		VkDependencyInfo toGeneralDep = {
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.imageMemoryBarrierCount = 1,
-			.pImageMemoryBarriers = &toGeneralBarrier
-		};
-		vkCmdPipelineBarrier2(commandBuffer, &toGeneralDep);
 	}
-	
+
+	//bind bipeline 2 END
 
 
 	VkImageMemoryBarrier2 endBarrier[]={
