@@ -40,9 +40,16 @@ layout(location = 2) out vec3 out_fragPos;
 
 layout(location = 3) flat out uint out_objectId;
 
+
+layout(location = 4) out float out_fog_depth;
+
 void main() {
 	
 	vec4 tpos = model[gl_InstanceIndex] * vec4(in_position, 1.0);
+
+	vec4 viewPos = view * tpos;
+
+	out_fog_depth = -viewPos.z;
 
 	gl_Position = projection * view * tpos;
 	
@@ -51,6 +58,7 @@ void main() {
 	out_norm = in_norm;
 	
 	out_fragPos = tpos.xyz;
+
 
 
 	out_objectId = objectId[gl_InstanceIndex];

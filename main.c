@@ -194,6 +194,8 @@ VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 
 VkDescriptorSetLayout descriptorSetLayout;
 
+ 
+
 
 struct GameObject * gameObjectsA;
 struct GameObject * gameObjectsB;
@@ -3317,8 +3319,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			printf("  vert_path: %s\n", pipeline->vert_path);
 			printf("  graphicsPipeline: %llu\n", (unsigned long long)pipeline->graphicsPipeline);
 		}
-		fflush(stdout);
-		return; // or EXIT_CLEAN
+		EXIT_CLEAN("ERROR in PIPELINE");
 	}
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
@@ -3481,7 +3482,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			.layerCount = 1,
 			.colorAttachmentCount = 1,
 			.pColorAttachments = colorAttachmentsInfos,
-			.pDepthAttachment = &depthAttachmentInfo
+			// .pDepthAttachment = &depthAttachmentInfo
 		};
 		vkCmdBeginRendering(commandBuffer, &renderingInfoHUD);
 		{
@@ -3496,10 +3497,10 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 				,0,1,
 				frame->descriptorSets,
 				0, NULL
-				);
-			     // Push constants for HUD if needed
+			);
+	
 			struct PushConst2D hudConstants = {
-				.texIdx = 1,  // Set appropriate texture index
+				.texIdx = 2, 
 				.hasColor = 0
 			};
 			vkCmdPushConstants(

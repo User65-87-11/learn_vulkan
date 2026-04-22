@@ -15,6 +15,9 @@ layout(location = 2) in vec3 fragPos;
 
 layout(location = 3) flat in uint in_objectId;
 
+
+layout(location = 4) in float in_fog_depth;
+
 layout(location = 0) out vec4 outColor;
 
 layout(location = 1) out uint outID;
@@ -76,8 +79,12 @@ void main() {
         
     vec4 result = (ambient + diffuse + specular) * texColor;
 
-    outColor = vec4(result);
-	
+    vec4 fog_color =  vec4(0.0, 0.0, 0.0, 1.0);
+
+	float fogFactor = clamp(in_fog_depth / 10.0, 0.0, 1.0);
+
+	outColor = mix(vec4(result), fog_color, fogFactor);
+
 	
 	
 
