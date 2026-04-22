@@ -420,13 +420,21 @@ struct TextureRes textures[]= {
 	},
 };
 
-#define TEXTURE_COUNT_PIPE_2  1
+// #define TEXTURE_COUNT_PIPE_2  2
 
-struct TextureRes textures_2[]= {
-	{
-		.path = "models_gltf/wooden_small.jpg"
-	},
-};
+
+// struct TextureRes textures_2[]= {
+// 	{
+// 		.path = "models_gltf/wooden_small.jpg"
+// 	},
+// 	{
+// 		.path = "textures/cross32x32.png"
+// 	},
+// 	{
+// 		.path = "textures/cross32x32a.png"
+// 	},
+// };
+struct GmArray arrayTextures_2;
 
 
 
@@ -966,9 +974,9 @@ void createTextures(){
 		createTextureSampler(&t->textureSampler);
 	}
 
-	for( int i=0;i < TEXTURE_COUNT_PIPE_2 ;i++)
+	for( int i=0;i < arrayTextures_2.len ;i++)
 	{
-		struct TextureRes * t = &textures_2[i];
+		struct TextureRes * t = gmArrayGet(&arrayTextures_2, i);
 		createTextureImage(
 			t->path,
 			&t->textureImage,
@@ -993,10 +1001,18 @@ void initVariables(){
 
 
 
+
+
+
 	uint32_t total_objects = 30;
 
 
 	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3,_Alignof(struct Pipeline));
+
+
+	gmArrayInit(&arrayTextures_2, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
+
+
 
 	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3, _Alignof(struct GameObject));
 
@@ -1025,6 +1041,37 @@ void initVariables(){
 	gmArrayInit(&arrayBufferRes,sizeof(struct BufferRes), 12*MAX_FRAMES_IN_FLIGHT, _Alignof(struct BufferRes));
 
 	// initGameObjects3();
+
+
+
+/**
+
+	{
+		.path = "models_gltf/wooden_small.jpg"
+	},
+	{
+		.path = "textures/cross32x32.png"
+	},
+		{
+		.path = "textures/cross32x32a.png"
+	},
+*/
+
+	
+	{
+
+		struct TextureRes * texRes = gmArrayPush(&arrayTextures_2);
+		texRes->path = "models_gltf/wooden_small.jpg";
+
+		texRes = gmArrayPush(&arrayTextures_2);
+		texRes->path = "textures/cross32x32.png";
+
+
+		texRes = gmArrayPush(&arrayTextures_2);
+		texRes->path = "textures/cross32x32a.png";
+	}
+
+
 
 	
 	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
@@ -1350,7 +1397,7 @@ void initVariables(){
 
 		res = gmArrayPush(arrayResources);
 		res->res_type = GM_RESOURCE_TEXTURE;
-		res->texture = textures_2;
+		res->texture = arrayTextures_2.data;
 		if(i ==0)
 		{
 			struct DescriptorResourceBinding * descr = gmArrayPush(arrayDRB);
@@ -1359,7 +1406,7 @@ void initVariables(){
 			descr->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			// descr->texture = textures_2;
 			descr->shaderStages = VK_SHADER_STAGE_FRAGMENT_BIT;
-			descr->count = TEXTURE_COUNT_PIPE_2;
+			descr->count = arrayTextures_2.len;
 		}
 
 
@@ -1389,6 +1436,39 @@ void initVariables(){
 	
 
 	
+}
+void freeVariables(){
+
+
+	gmArrayFree(&arrayTextures_2);
+
+
+
+	for(int i=0; i< MAX_FRAMES_IN_FLIGHT;i++){
+		struct Frame * frame = &frames[i];
+		gmArrayFree(&frame->arrayResources);
+		
+	}
+	gmArrayFree(&arrayBufferRes);
+	
+	gmArrayFree(&arrayDescriptorResourceBindings);
+	
+	gmArrayFree(&arrayDescriptorPoolSizes);
+
+	gmArrayFree(&arrayColors_2);
+
+	gmArrayFree(&arrayPipelines);
+
+	gmArrayFree(&arrayGameObjects);
+	
+	gmArrayFree(&arraySBO_Models_1);
+
+	gmArrayFree(&arraySBO_Models_2);
+
+	gmArrayFree(&arraySBO_ObjectIds_1);
+
+	gmArrayFree(&arrayGameObjectInstances);
+
 }
 void loadModels(){
 	for(int i=0;i<MODEL_NUM;i++)
@@ -1467,35 +1547,7 @@ void loadModels(){
 
 
 }
-void freeVariables(){
 
-
-	for(int i=0; i< MAX_FRAMES_IN_FLIGHT;i++){
-		struct Frame * frame = &frames[i];
-		gmArrayFree(&frame->arrayResources);
-		
-	}
-	gmArrayFree(&arrayBufferRes);
-	
-	gmArrayFree(&arrayDescriptorResourceBindings);
-	
-	gmArrayFree(&arrayDescriptorPoolSizes);
-
-	gmArrayFree(&arrayColors_2);
-
-	gmArrayFree(&arrayPipelines);
-
-	gmArrayFree(&arrayGameObjects);
-	
-	gmArrayFree(&arraySBO_Models_1);
-
-	gmArrayFree(&arraySBO_Models_2);
-
-	gmArrayFree(&arraySBO_ObjectIds_1);
-
-	gmArrayFree(&arrayGameObjectInstances);
-
-}
 void loadModel(
 	char *fname,
 	uint32_t *indicesNum,
@@ -1981,14 +2033,16 @@ void createTextureImageView(){
 		);
 	}
 
-	for(int i=0;i<TEXTURE_COUNT_PIPE_2;i++)
+	for(int i=0;i<arrayTextures_2.len;i++)
 	{
+		struct TextureRes * res = gmArrayGet(&arrayTextures_2, i);
 	
+		
 		 createImageView(
-			&textures_2[i].textureImageView,
-			&textures_2[i].textureImage,
+			&res->textureImageView,
+			&res->textureImage,
 			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-			textures_2[i].mipLevels
+			res->mipLevels
 		);
 	}
 }
@@ -2230,7 +2284,7 @@ void createPickImage(
 			swapChainExtent.width, 
 			swapChainExtent.height, 
 			1,
-			VK_FORMAT_R32_UINT, 
+			VK_FORMAT_R32_UINT,
 			VK_IMAGE_TILING_OPTIMAL, 
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
@@ -3445,7 +3499,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 				);
 			     // Push constants for HUD if needed
 			struct PushConst2D hudConstants = {
-				.texIdx = 0,  // Set appropriate texture index
+				.texIdx = 1,  // Set appropriate texture index
 				.hasColor = 0
 			};
 			vkCmdPushConstants(
@@ -4834,7 +4888,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 	{
 
 		(VkPipelineColorBlendAttachmentState){
-			.blendEnable = VK_FALSE, // true of false?
+			.blendEnable = VK_TRUE, // true of false?
 			.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 			.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
 			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -5465,9 +5519,9 @@ void cleanup(){
 		vkFreeMemory(device, t->textureImageMemory, NULL);
 	}
 
-	for( int i=0;i<TEXTURE_COUNT_PIPE_2 ;i++)
+	for( int i=0;i<arrayTextures_2.len ;i++)
 	{
-		struct TextureRes * t = &textures_2[i];
+		struct TextureRes * t = gmArrayGet(&arrayTextures_2, i);
 
 		vkDestroyImageView(device, t->textureImageView,  NULL);
 		vkDestroySampler(device, t->textureSampler, NULL);

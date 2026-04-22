@@ -49,17 +49,17 @@ void main() {
 	// // vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
 
 	
-	// vec4 texColor = texture(tex[pc.textureIndex], texCoord);
+	vec4 texColor = texture(tex[pc.textureIndex], texCoord);
 
-	// if(pc.hasColor != 0)
-	// {
-	// 	texColor = fragColor;
-	// }
+	if(pc.hasColor != 0)
+	{
+		texColor = fragColor;
+	}
 
-    // outColor = texColor;
+    outColor = texColor;
 
 
-	outColor = vec4(1.0,1.0,1.0,1.0);
+	// outColor = vec4(1.0,1.0,1.0,1.0);
 
    
 	
