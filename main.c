@@ -3415,13 +3415,51 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 	
 
 	//bind bipeline 2 START
+
+	struct Pipeline *pipe2 = gmArrayGet(&arrayPipelines, 1);
 	{
-		/**
-		create uniform buffers
-		update uniform buffers 
-		ssee what else there is missing before darwing
+		colorAttachmentsInfos[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 		
-		*/
+		VkRenderingInfo renderingInfoHUD = {
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+			.renderArea = { {0, 0}, swapChainExtent },
+			.layerCount = 1,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = colorAttachmentsInfos,
+			.pDepthAttachment = &depthAttachmentInfo
+		};
+		vkCmdBeginRendering(commandBuffer, &renderingInfoHUD);
+		{
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe2->graphicsPipeline);
+			VkDeviceSize offset = 0;
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &modelVertexData_HUD.vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(commandBuffer, modelVertexData_HUD.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindDescriptorSets(
+				commandBuffer, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipe2->pipelineLayout
+				,0,1,
+				frame->descriptorSets,
+				0, NULL
+				);
+			     // Push constants for HUD if needed
+			struct PushConst2D hudConstants = {
+				.texIdx = 0,  // Set appropriate texture index
+				.hasColor = 0
+			};
+			vkCmdPushConstants(
+            commandBuffer,
+				pipe2->pipelineLayout,
+				VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(struct PushConst2D),
+				&hudConstants
+			);
+			// Draw HUD elements
+			vkCmdDrawIndexed(commandBuffer, modelVertexData_HUD.indices_num, 1, 0, 0, 0);
+		}
+		vkCmdEndRendering(commandBuffer);
 
 	}
 
@@ -3498,7 +3536,16 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	memcpy(frame->viewProjection_1->mapped, &ubo, sizeof(struct UBOCommon));
 
 
-	memcpy(frame->viewProjection_2->mapped, &ubo, sizeof(struct UBOCommon));
+	struct UBOCommon ubo2 = {};
+	glm_mat4_identity(ubo2.view);
+
+	
+	glm_ortho(0.0f, (float)swapChainExtent.width, 
+          (float)swapChainExtent.height, 0.0f, 
+          -1.0f, 1.0f, ubo2.proj);
+
+
+	memcpy(frame->viewProjection_2->mapped, &ubo2, sizeof(struct UBOCommon));
 
 	// gmArrayCopyBySize(frame->buffersViewProjectionMapped, ubo);
 
@@ -3512,6 +3559,10 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	memcpy(frame->directionLight_1->mapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
 	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
 
+
+
+
+		
 
 };
 void drawFrame3() {
@@ -4846,8 +4897,8 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 		.colorAttachmentCount = 1,
 		
 		.pColorAttachmentFormats = formats,
-		// .depthAttachmentFormat = depthFormat,
-		.depthAttachmentFormat = VK_FORMAT_UNDEFINED
+		.depthAttachmentFormat = depthFormat,
+		// .depthAttachmentFormat = VK_FORMAT_UNDEFINED
 	};
 	
 
