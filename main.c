@@ -374,6 +374,7 @@ struct ModelVertexData modelVertexData[MODEL_NUM]={
 };
 
 
+struct ModelVertexData modelVertexData_HUD = {};
 
 
 
@@ -673,7 +674,8 @@ void cleanup();
 
 void createVertexBuffer(
 	uint32_t verticesNum,
-	struct Vertex * vertices,
+	void * vertices,
+	uint32_t data_size,
 	VkBuffer *vertexBuffer, 
 	VkDeviceMemory *vertexBufferMemory
 
@@ -1042,7 +1044,7 @@ void initVariables(){
 		struct SBO_Model m ;
 		glm_mat4_identity(m.model) ;
 
-		vec4 pos = {(float) swapChainExtent.width / 2, (float)swapChainExtent.height / 2, 0.0, 1.0};
+		vec4 pos = {(float) WIDTH / 2, (float) HEIGHT / 2, 0.0, 1.0};
 		glm_translate(m.model, pos);
 
 		gmArrayPushValue(&arraySBO_Models_2,&m);
@@ -1135,7 +1137,7 @@ void initVariables(){
 	 
 	}
 
-	printf("here\n");
+	
 
 
 	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++){
@@ -1417,6 +1419,7 @@ void loadModels(){
 		createVertexBuffer(
 			verticesCnt,
 			vertices,
+			sizeof(struct Vertex)*verticesCnt,
 			&ref->vertextBuffer,
 			&ref->vertexBufferMemory
 		);
@@ -1431,7 +1434,38 @@ void loadModels(){
 		free(vertices);
 		free(indices);
 	}
+
+
+	struct Vertex2D vertices[4] = {
+		//  pos              // tex
+		{{-10.0f, -10.0f},   {0.0f, 0.0f}}, // bottom-left
+		{{ 10.0f, -10.0f},   {1.0f, 0.0f}}, // bottom-right
+		{{ 10.0f,  10.0f},   {1.0f, 1.0f}}, // top-right
+		{{-10.0f,  10.0f},   {0.0f, 1.0f}}  // top-left
+	};
+	uint32_t indices[6] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+	modelVertexData_HUD.indices_num = sizeof(indices)/sizeof(uint32_t);
+
 	
+	createVertexBuffer(
+		sizeof(vertices)/sizeof(struct Vertex2D),
+		vertices,
+		sizeof(vertices),
+		&modelVertexData_HUD.vertextBuffer,
+		&modelVertexData_HUD.vertexBufferMemory
+	);
+
+	createIndexBuffer(
+		modelVertexData_HUD.indices_num,
+		indices,
+		&modelVertexData_HUD.indexBuffer,
+		&modelVertexData_HUD.indexBufferMemory
+	);
+
+
 }
 void freeVariables(){
 
@@ -2572,109 +2606,109 @@ void clearUniformBuffers3(){
 	
 
 }
-void initGameObjects3(){
+// void initGameObjects3(){
 	
 
-	printf("sizeof(struct SBO_Model) = %d\n",sizeof(struct SBO_Model));
-	// assert(sizeof(struct SBO_Model) ==  96);
+// 	printf("sizeof(struct SBO_Model) = %d\n",sizeof(struct SBO_Model));
+// 	// assert(sizeof(struct SBO_Model) ==  96);
 
  
 
-	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
-	pitch = glm_deg(asin(cameraFront[1]));
+// 	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+// 	pitch = glm_deg(asin(cameraFront[1]));
 
 	
-	vec4 v = {1.0,1.0,1.0,1.0};
-	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+// 	vec4 v = {1.0,1.0,1.0,1.0};
+// 	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
+// 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+// 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
 
 
-	for(int i=0;i<1;i++)
-	{
-		vec4 color ={1.0,0.0,1.0,1.0};
-		gmArrayPushValue(&arrayColors_2,color);
-		struct SBO_Model m ;
-		glm_mat4_identity(m.model) ;
+// 	for(int i=0;i<1;i++)
+// 	{
+// 		vec4 color ={1.0,0.0,1.0,1.0};
+// 		gmArrayPushValue(&arrayColors_2,color);
+// 		struct SBO_Model m ;
+// 		glm_mat4_identity(m.model) ;
 
-		vec4 pos = {(float) swapChainExtent.width / 2, (float)swapChainExtent.height / 2, 0.0, 1.0};
-		glm_translate(m.model, pos);
+// 		vec4 pos = {(float) WIDTH / 2, (float)WIDTH / 2, 0.0, 1.0};
+// 		glm_translate(m.model, pos);
 
-		gmArrayPushValue(&arraySBO_Models_2,&m);
-	}
+// 		gmArrayPushValue(&arraySBO_Models_2,&m);
+// 	}
 	
 
 
 	
-	for(int i=0; i < 30; i++)
-	{
+// 	for(int i=0; i < 30; i++)
+// 	{
 
-		struct SBO_Model m ;
-		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances);
-		struct SSB_ObjectId o ;
+// 		struct SBO_Model m ;
+// 		struct GameObjectInstance * g = gmArrayPush(&arrayGameObjectInstances);
+// 		struct SSB_ObjectId o ;
 
-		o.objectId = i +1;
+// 		o.objectId = i +1;
 
 		
-		GLM_VEC3_SET(g->position, rand_float(), 0.0, rand_float());
-		g->uboModelIndex = i;
+// 		GLM_VEC3_SET(g->position, rand_float(), 0.0, rand_float());
+// 		g->uboModelIndex = i;
 
-		// GLM_VEC4_SET(m.objectId, i, 0.0, 0.0, 1.0);
+// 		// GLM_VEC4_SET(m.objectId, i, 0.0, 0.0, 1.0);
 		
 
 
-		glm_mat4_identity(m.model) ;
-		glm_translate(m.model, g->position);
+// 		glm_mat4_identity(m.model) ;
+// 		glm_translate(m.model, g->position);
 
 	
-		gmArrayPushValue(&arraySBO_ObjectIds_1,&o);
+// 		gmArrayPushValue(&arraySBO_ObjectIds_1,&o);
 
-		gmArrayPushValue(&arraySBO_Models_1,&m);
+// 		gmArrayPushValue(&arraySBO_Models_1,&m);
 
 
 		
-	}
+// 	}
 	
 
  
 
 
 	
-	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+// 	{
+// 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
-		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,0, 10);	
+// 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,0, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,0, 10);	
 
 	
-	}
+// 	}
 
 	 
-	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+// 	{
+// 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
-		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,10, 10);	
+// 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,10, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,10, 10);	
 	
 		
-	}
+// 	}
 	
 
 
 	 
-	{
-		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
+// 	{
+// 		struct GameObject * gameObjectsTemp = gmArrayPush(&arrayGameObjects);
 	
-		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
-		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_Models_1, &gameObjectsTemp->arrayViewUboModel ,20, 10);	
+// 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsTemp->arrayViewGameObjectInstances ,20, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsTemp->arrayViewUboObjectIds ,20, 10);	
 	
-	}
+// 	}
 
 
-}
+// }
 
 
 void createUniformBuffers3(){
@@ -2920,13 +2954,14 @@ void createIndexBuffer(
 void createVertexBuffer(
 
 	uint32_t verticesNum,
-	struct Vertex * vertices,
+	void * vertices,
+	uint32_t data_size,
 	VkBuffer *vertexBuffer, 
 	VkDeviceMemory *vertexBufferMemory
 
 ) {
 
-    VkDeviceSize bufferSize = sizeof(struct Vertex) * verticesNum;
+    VkDeviceSize bufferSize = data_size;
 
 	VkBuffer stagingBuffer;
 	
@@ -2946,7 +2981,7 @@ void createVertexBuffer(
 
 	vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
 
-	memcpy(data, vertices, sizeof(struct Vertex)*verticesNum);
+	memcpy(data, vertices, bufferSize);
 
 	VkMappedMemoryRange mappedMemoryRange = {
 		.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
@@ -4642,7 +4677,10 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 		set during command buffer recording part
 		vkCmdSetViewport
 	*/
-	VkDynamicState dynamicState[]={VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+	VkDynamicState dynamicState[]={
+		VK_DYNAMIC_STATE_VIEWPORT, 
+		VK_DYNAMIC_STATE_SCISSOR
+	};
 
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
@@ -4859,7 +4897,7 @@ void createPipelines(){
 
 	worldPipeline->frag_path = "shaders/frag.spv";
 	worldPipeline->vert_path = "shaders/vert.spv";
-	worldPipeline->colorAttachmentCount = 2;
+	
 	
 
 
@@ -5278,6 +5316,31 @@ void mainLoop(){
 	vkDeviceWaitIdle(device);
 	
 }
+void freeModelVertexData(struct ModelVertexData * ref){
+	if(ref->vertextBuffer != NULL){
+
+			vkDestroyBuffer(device,ref->vertextBuffer,NULL);
+			ref->vertextBuffer = NULL;
+		}
+ 
+		if(ref->vertexBufferMemory != NULL){
+
+			vkFreeMemory(device, ref->vertexBufferMemory, NULL);
+			ref->vertexBufferMemory = NULL;
+		}
+
+		if(ref->indexBuffer != NULL){
+
+			vkDestroyBuffer(device,ref->indexBuffer,NULL);
+			ref->indexBuffer = NULL;
+		}
+
+		if(ref->indexBufferMemory != NULL){
+			
+			vkFreeMemory(device, ref->indexBufferMemory, NULL);
+			ref->indexBufferMemory = NULL;
+		}
+}
 void cleanup(){
 	PRINT_FNAME;
 
@@ -5400,32 +5463,11 @@ void cleanup(){
 	for(int i=0; i < MODEL_NUM; i++)
 	{
 		struct ModelVertexData * ref = &modelVertexData[i];
-
-		if(ref->vertextBuffer != NULL){
-
-			vkDestroyBuffer(device,ref->vertextBuffer,NULL);
-			ref->vertextBuffer = NULL;
-		}
- 
-		if(ref->vertexBufferMemory != NULL){
-
-			vkFreeMemory(device, ref->vertexBufferMemory, NULL);
-			ref->vertexBufferMemory = NULL;
-		}
-
-		if(ref->indexBuffer != NULL){
-
-			vkDestroyBuffer(device,ref->indexBuffer,NULL);
-			ref->indexBuffer = NULL;
-		}
-
-		if(ref->indexBufferMemory != NULL){
-			
-			vkFreeMemory(device, ref->indexBufferMemory, NULL);
-			ref->indexBufferMemory = NULL;
-		}
+		freeModelVertexData(ref);
+		
 	}
 
+	freeModelVertexData(&modelVertexData_HUD);
 
 
 	// for( int i=0;i<TEXTURE_COUNT ;i++)
