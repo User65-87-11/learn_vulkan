@@ -15,3 +15,20 @@
 
 #define BINDING_FRAG_3_UBO_Lights 31
 #define BINDING_VERT_3_SSBO_Models 32
+
+
+
+
+
+
+#define BINDING_SET_0_BIND_0 0
+#define BINDING_SET_0_BIND_1 1
+#define BINDING_SET_0_BIND_2 2
+
+
+#define BINDING_SET_1_BIND_0 0
+#define BINDING_SET_1_BIND_1 1
+#define BINDING_SET_1_BIND_2 2
+
+
+#define BINDING_SET_2_BIND_0  0

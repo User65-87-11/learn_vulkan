@@ -193,6 +193,11 @@ VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 VkDescriptorSetLayout descriptorSetLayout;
 
  
+VkDescriptorSetLayout descriptorLayout_Frame;
+VkDescriptorSetLayout descriptorLayout_Object;
+VkDescriptorSetLayout descriptorLayout_Material;
+
+
 
 
 struct GameObject * gameObjectsA;
@@ -445,7 +450,7 @@ struct TextureRes{
 
 	// VkFormat format;
 
-	VkImageAspectFlagBits aspectFlags;
+	// VkImageAspectFlagBits aspectFlags;
 
 	// uint32_t width;
 
@@ -774,6 +779,10 @@ void createIndexBuffer(
 );
 
 void clearUniformBuffers();
+
+void createDescriptorLayout_Frame();
+void createDescriptorLayout_Object();
+void createDescriptorLayout_Material();
 
 void createShaderDescriptorSetLayout();
 
@@ -2878,7 +2887,93 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     endSingleTimeCommands(transferCommandBuffers);
 }
 
+void createDescriptorSets4(){
+	PRINT_FNAME;
 
+
+	VkDescriptorSetLayout layouts [3]={
+		//C99 designated initializer
+		//  [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
+	};
+
+	
+	layouts[0] = descriptorLayout_Frame;
+	layouts[1] = descriptorLayout_Object;
+	layouts[2] = descriptorLayout_Material;
+
+
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+		.pSetLayouts = layouts,
+	};
+	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets);
+
+	// assert(UNIFORM_BUFFER_COUNT == 2);
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+		struct Frame * frame = &frames[i];
+
+		frame->descriptorSets = &descriptorSets[i];
+
+		
+		for(int j=0;j < frame->arrayResources.len;j++){
+
+			struct Resource * resource =  gmArrayGet(&frame->arrayResources, j);
+			struct DescriptorResourceBinding * drb =  gmArrayGet(&arrayDescriptorResourceBindings,j);
+
+			if(resource->res_type == GM_RESOURCE_BUFFER){
+				//TODO
+				struct BufferRes * res = resource->buffer;
+				VkDescriptorBufferInfo info = {
+					.buffer = res->handle,
+					.offset = 0,
+					.range = res->alloc.size
+				};
+
+				VkWriteDescriptorSet write = {
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.dstSet = *frame->descriptorSets,
+					.dstBinding = drb->binding,
+					.dstArrayElement = 0,   // update one slot at a time
+					.descriptorType = drb->descriptorType,
+					.descriptorCount = 1,
+					.pBufferInfo = &info
+				};
+
+				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+			}
+			else if(resource->res_type == GM_RESOURCE_TEXTURE){
+				struct TextureRes * res = resource->texture;
+
+				for (uint32_t k = 0; k < drb->count; k++) {
+					VkDescriptorImageInfo info = {
+						.imageView = res[k].image.view,
+						.sampler = res[k].textureSampler,
+						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+					};
+
+					VkWriteDescriptorSet write = {
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.dstSet = *frame->descriptorSets,
+						.dstBinding = drb->binding,
+						.dstArrayElement = k,   // update one slot at a time
+						.descriptorType = drb->descriptorType,
+						.descriptorCount = 1,
+						.pImageInfo = &info
+					};
+
+					vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+				}
+			}
+		}
+
+		
+	}
+
+}
 void createDescriptorSets3(){
 	PRINT_FNAME;
 
@@ -3159,7 +3254,98 @@ void createUniformBuffers3(){
 	
 	}
 }
+void createDescriptorLayout_Frame(){
+	PRINT_FNAME;
 
+	VkDescriptorSetLayoutBinding bindings[3] = {};
+	// light position vec4
+    bindings[0].binding = BINDING_SET_0_BIND_0;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings[0].pImmutableSamplers = NULL;
+
+	//view projections
+	bindings[1].binding = BINDING_SET_0_BIND_1;
+    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[1].descriptorCount = 1;
+    bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    bindings[1].pImmutableSamplers = NULL;
+
+	// light position VP
+	bindings[2].binding = BINDING_SET_0_BIND_2;
+    bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].descriptorCount = 1;
+    bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    bindings[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = sizeof(bindings)/ sizeof(VkDescriptorSetLayoutBinding);
+    layoutInfo.pBindings = bindings;
+
+    // VkDescriptorSetLayout layout;
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorLayout_Frame) != VK_SUCCESS) {
+        assert(false);
+        // return VK_NULL_HANDLE;
+    }
+
+}
+void createDescriptorLayout_Object(){
+	
+	VkDescriptorSetLayoutBinding bindings[3] = {};
+	// Models
+	bindings[0].binding = BINDING_SET_1_BIND_0;
+	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[0].descriptorCount = 1;
+	bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[0].pImmutableSamplers = NULL;
+
+	// Object IDs
+	bindings[1].binding = BINDING_SET_1_BIND_1;
+	bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[1].descriptorCount = 1;
+	bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[1].pImmutableSamplers = NULL;
+
+	// Colors
+	bindings[2].binding = BINDING_SET_1_BIND_2;
+	bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[2].descriptorCount = 1;
+	bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {0};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = sizeof(bindings)/ sizeof(VkDescriptorSetLayoutBinding);
+    layoutInfo.pBindings = bindings;
+
+    // VkDescriptorSetLayout layout;
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorLayout_Object) != VK_SUCCESS) {
+        assert(false);
+        // return VK_NULL_HANDLE;
+    }
+}
+void createDescriptorLayout_Material(){
+	VkDescriptorSetLayoutBinding bindings[1] = {};
+	// Textures
+	bindings[0].binding = BINDING_SET_2_BIND_0;
+	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	bindings[0].descriptorCount = 1;
+	bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	bindings[0].pImmutableSamplers = NULL;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = sizeof(bindings)/ sizeof(VkDescriptorSetLayoutBinding);
+    layoutInfo.pBindings = bindings;
+
+    // VkDescriptorSetLayout layout;
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorLayout_Material) != VK_SUCCESS) {
+        assert(false);
+        // return VK_NULL_HANDLE;
+    }
+}
 
 void createDescriptorPool() {
 
@@ -3177,8 +3363,8 @@ void createShaderDescriptorSetLayout(){
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[arrayDescriptorResourceBindings.len];
 
 	for(int i=0;i<arrayDescriptorResourceBindings.len;i++){
-		struct DescriptorResourceBinding * drb = gmArrayGet(&arrayDescriptorResourceBindings, i);
 		VkDescriptorSetLayoutBinding * lb  = &descriptorSetLayoutBindings[i];
+		struct DescriptorResourceBinding * drb = gmArrayGet(&arrayDescriptorResourceBindings, i);
 		
 		lb->binding = drb->binding;
 		lb->descriptorType = drb->descriptorType;
@@ -3518,81 +3704,133 @@ void createCommandPool(){
 
 	
 }
-void buildMainPassRenderInfo(VkCommandBuffer commandBuffer){
+void renderHUD(
+	VkCommandBuffer cmd, 
+	struct Frame * frame,
+	uint32_t imageIndex
 
+){
+		struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
+	{
+		VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+		VkRenderingAttachmentInfo colorAttachmentsInfos[1];
+		{
+
+			colorAttachmentsInfos[0] = (VkRenderingAttachmentInfo){
+				
+				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+				.imageView = swapchainImageViews[imageIndex],
+				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.clearValue = clearColor
+				
+			};
+
+			// colorAttachmentsInfos[1] = (VkRenderingAttachmentInfo){
+				
+			// 	.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+			// 	.imageView = frame->pick.image.view,
+			// 	.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			// 	.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			// 	.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			// 	.clearValue  = { 
+			// 		.color = {{0, 0, 0, 0}} 
+			// 	}
+			// };
+
+		}
+		// colorAttachmentsInfos[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		// depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		
+		VkRenderingInfo renderingInfoHUD = {
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+			.renderArea = { {0, 0}, swapChainExtent },
+			.layerCount = 1,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = colorAttachmentsInfos,
+			// .pDepthAttachment = &depthAttachmentInfo
+		};
+
+		vkCmdBeginRendering(cmd, &renderingInfoHUD);
+		{
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
+			VkDeviceSize offset = 0;
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_HUD.vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData_HUD.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindDescriptorSets(
+				cmd, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipe_HUD->pipelineLayout
+				,0,1,
+				frame->descriptorSets,
+				0, NULL
+			);
+	
+			struct PushConst2D hudConstants = {
+				.texIdx = 2, 
+				.hasColor = 0
+			};
+			vkCmdPushConstants(
+            cmd,
+				pipe_HUD->pipelineLayout,
+				VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(struct PushConst2D),
+				&hudConstants
+			);
+			// Draw HUD elements
+			vkCmdDrawIndexed(cmd, modelVertexData_HUD.indices_num, 1, 0, 0, 0);
+		}
+		vkCmdEndRendering(cmd);
+
+	}
 }
+void renderMainPass(
+	VkCommandBuffer cmd, 
+	struct Frame * frame,
+	uint32_t imageIndex
+){
+//transition pick
+	{
+			VkImageMemoryBarrier2 beginBarrier[]={
 
-void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
+		
+				(VkImageMemoryBarrier2){
 
-	struct Frame * frame = &frames[frameIndex];
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+					.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+					.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.srcAccessMask = 0,
+					.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
+					.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = frame->pick.image.handle,
+					.subresourceRange = {
+						.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+						.baseMipLevel = 0,
+						.levelCount = 1,
+						.baseArrayLayer = 0,
+						.layerCount = 1,
+					},
+				},
 
-	VkCommandBuffer commandBuffer = *frame->graphicsCommandBuffers;
-	VkDescriptorSet * descriptorSet = frame->descriptorSets;
+		};
 
-	VkImageView * pickImageView = &frame->pick.image.view;
+	
+		VkDependencyInfo beginDepInfo = {
 
-	VkCommandBufferBeginInfo beginInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = 0, 
-        .pInheritanceInfo = NULL,
-    };
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
+			.pImageMemoryBarriers = beginBarrier,
+		};
 
+		vkCmdPipelineBarrier2(cmd, &beginDepInfo);
+	}
 
-	VkImageMemoryBarrier2 beginBarrier[]={
-
-		 (VkImageMemoryBarrier2){
-
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
-			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = 0,
-			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED ,  //UNDEFINES
-			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = swapchainImages[imageIndex],
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-		},
-		(VkImageMemoryBarrier2){
-
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = 0,
-			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
-			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = frame->pick.image.handle,
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-		},
-
-	};
-
-   
-    VkDependencyInfo beginDepInfo = {
-
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
-        .pImageMemoryBarriers = beginBarrier,
-    };
-
-    vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
+	//transition pick
 
 
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
@@ -3618,7 +3856,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		colorAttachmentsInfos[1] = (VkRenderingAttachmentInfo){
 			
 			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-			.imageView = *pickImageView,
+			.imageView = frame->pick.image.view,
 			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -3652,7 +3890,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
         .pDepthAttachment = &depthAttachmentInfo,
     };
 
-    vkCmdBeginRendering(commandBuffer, &renderingInfo);
+    vkCmdBeginRendering(cmd, &renderingInfo);
 
 	// for(int i=0;i<arrayPipelines.len;i++)
 	
@@ -3669,7 +3907,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		EXIT_CLEAN("ERROR in PIPELINE");
 	}
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
     
     VkViewport viewPort = {
         .x = 0, 
@@ -3680,10 +3918,10 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.maxDepth = 1.0f
     };
 
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
+    vkCmdSetViewport(cmd, 0, 1, &viewPort);
     
     VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
 
 
 
@@ -3694,14 +3932,14 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
 		//draw Room0
 		{
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(commandBuffer, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 	
 			vkCmdBindDescriptorSets(
-				commandBuffer, 
+				cmd, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
 				pipeline->pipelineLayout, 0, 1, 
-				descriptorSet, 
+				frame->descriptorSets, 
 				0, 
 				NULL
 				//  dynamicOffset = cameraIndex * sizeof(Camera)
@@ -3715,8 +3953,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			};
 			// int textureIndex = 0; // choose texture
 			vkCmdPushConstants(
-				commandBuffer,
-				 pipeline->pipelineLayout,
+				cmd,
+				pipeline->pipelineLayout,
 				VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
 				sizeof(struct PushConst),
@@ -3724,7 +3962,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			);
 	
 			vkCmdDrawIndexed(
-				commandBuffer, 
+				cmd, 
 				// gameObject->mesh->indices_num, 
 				modelVertexData[gameObject->vertexIdx].indices_num,
 				gameObject->arrayViewUboModel.len , 
@@ -3738,7 +3976,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
 
 
-    vkCmdEndRendering(commandBuffer);
+    vkCmdEndRendering(cmd);
 
 
 	
@@ -3765,7 +4003,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.imageMemoryBarrierCount = 1,
 		.pImageMemoryBarriers = &toTransferBarrier
 	};
-	vkCmdPipelineBarrier2(commandBuffer, &toTransferDep);
+	vkCmdPipelineBarrier2(cmd, &toTransferDep);
 	
 
 	VkBufferImageCopy region = {
@@ -3780,7 +4018,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.imageExtent = {1, 1, 1}
 	};
 	vkCmdCopyImageToBuffer(
-		commandBuffer,
+		cmd,
 		frame->pick.image.handle,
 		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		frame->pick.buffer.handle,
@@ -3812,59 +4050,70 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.imageMemoryBarrierCount = 1,
 		.pImageMemoryBarriers = &toGeneralBarrier
 	};
-	vkCmdPipelineBarrier2(commandBuffer, &toGeneralDep);
+	vkCmdPipelineBarrier2(cmd, &toGeneralDep);
+}
+void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
+
+	struct Frame * frame = &frames[frameIndex];
+
+	VkCommandBuffer commandBuffer = *frame->graphicsCommandBuffers;
+	VkDescriptorSet * descriptorSet = frame->descriptorSets;
+
+	VkImageView * pickImageView = &frame->pick.image.view;
+
+	VkCommandBufferBeginInfo beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = 0, 
+        .pInheritanceInfo = NULL,
+    };
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	{
+		
+		VkImageMemoryBarrier2 beginBarrier[]={
+
+			(VkImageMemoryBarrier2){
+
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+				.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+				.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+				.srcAccessMask = 0,
+				.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+				.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED ,  //UNDEFINES
+				.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = swapchainImages[imageIndex],
+				.subresourceRange = {
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+			},
+
+		};
+
+	
+		VkDependencyInfo beginDepInfo = {
+
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
+			.pImageMemoryBarriers = beginBarrier,
+		};
+
+		vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
+	}
+
+	renderMainPass(commandBuffer,frame, imageIndex);
 
 	
 
 	//bind bipeline 2 START
 
-	struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
-	{
-		colorAttachmentsInfos[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		
-		VkRenderingInfo renderingInfoHUD = {
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-			.renderArea = { {0, 0}, swapChainExtent },
-			.layerCount = 1,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = colorAttachmentsInfos,
-			// .pDepthAttachment = &depthAttachmentInfo
-		};
+	renderHUD(commandBuffer,frame, imageIndex);
 
-		vkCmdBeginRendering(commandBuffer, &renderingInfoHUD);
-		{
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
-			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &modelVertexData_HUD.vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(commandBuffer, modelVertexData_HUD.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdBindDescriptorSets(
-				commandBuffer, 
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipe_HUD->pipelineLayout
-				,0,1,
-				frame->descriptorSets,
-				0, NULL
-			);
-	
-			struct PushConst2D hudConstants = {
-				.texIdx = 2, 
-				.hasColor = 0
-			};
-			vkCmdPushConstants(
-            commandBuffer,
-				pipe_HUD->pipelineLayout,
-				VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,
-				sizeof(struct PushConst2D),
-				&hudConstants
-			);
-			// Draw HUD elements
-			vkCmdDrawIndexed(commandBuffer, modelVertexData_HUD.indices_num, 1, 0, 0, 0);
-		}
-		vkCmdEndRendering(commandBuffer);
-
-	}
 
 	//bind bipeline 2 END
 
@@ -5418,8 +5667,8 @@ void createPipelines(){
 
 	struct Pipeline * worldPipeline  = 	gmArrayPush(&arrayPipelines);
 
-	worldPipeline->frag_path = "shaders/frag.spv";
-	worldPipeline->vert_path = "shaders/vert.spv";
+	worldPipeline->frag_path = "shaders/out/frag.spv";
+	worldPipeline->vert_path = "shaders/out/vert.spv";
 	
 	
 
@@ -5435,8 +5684,8 @@ void createPipelines(){
 	 
 	struct Pipeline * hudPipeline = gmArrayPush(&arrayPipelines);
 
-	hudPipeline->frag_path = "shaders/frag_hud.spv";
-	hudPipeline->vert_path = "shaders/vert_hud.spv";
+	hudPipeline->frag_path = "shaders/out/frag_hud.spv";
+	hudPipeline->vert_path = "shaders/out/vert_hud.spv";
 
 
 	createHUDPipeline(hudPipeline);
