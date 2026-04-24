@@ -167,8 +167,6 @@ uint32_t queueFamilyIndeces[2] = {
 
 
 
-
-
 uint32_t presentationSupportQueueFamilyIndex = - 1;
 
 VkSurfaceKHR surface = NULL; 
@@ -201,6 +199,24 @@ struct GameObject * gameObjectsA;
 struct GameObject * gameObjectsB;
 struct GameObject * gameObjectsC;
 
+
+
+/**
+FrameAttachments 
+RenderAttachment
+	FrameAttachments[N]
+	ObjectPick
+
+Pipeline shadow;
+Pipeline main;
+
+	Pipeline
+
+*/
+
+
+
+
 struct Pipeline{
 	
 	char * frag_path;
@@ -216,6 +232,11 @@ struct Pipeline{
 	VkPipeline graphicsPipeline ;
 
 	uint32_t colorAttachmentCount;
+
+
+	//* renderinfo
+
+	VkRenderingInfo renderingInfo;
 
 };
 
@@ -234,22 +255,32 @@ VkCommandBuffer transferCommandBuffers;
 
 VkCommandPool transferCommnadPool = NULL;
 
+struct Allocation{
+    VkDeviceMemory memory;
+    VkDeviceSize size;
+    VkDeviceSize offset;
+    void* mapped;
+} ;
+struct ImageRes{
+    VkImage handle;
+    VkImageView view;
+	struct  Allocation alloc;
+    VkFormat format;
+    uint32_t width;
+    uint32_t height;
+	uint32_t mipLevels;
+} ;
+
 
 VkFence transferFence;
 
 struct BufferRes{
-
-
 	VkBuffer handle ;
 
-	VkDeviceMemory memory ;
-
-	void * mapped;
-
-	VkDeviceSize size;
+	struct Allocation alloc;
 
 	VkBufferUsageFlags usage;
-	
+
 };
 
 enum  ResoruceType{
@@ -316,35 +347,39 @@ struct Frame{
 
 
 
-	VkImage depthImage ;
+	// VkImage depthImage ;
 
-	VkDeviceMemory depthImageMemory ;
+	// VkDeviceMemory depthImageMemory ;
 
-	VkImageView depthImageView ;
+	// VkImageView depthImageView ;
 
 
-
+	struct ImageRes depth_image;
 
 
 	VkDescriptorSet* descriptorSets;
 
 	//-- TODO
 
-	VkImage pickImage;
 
-    VkImageView pickView;
+
+	// VkImage pickImage;
+
+    // VkImageView pickView;
     
-	VkDeviceMemory pickMemory;
+	// VkDeviceMemory pickMemory;
 
-    VkBuffer pickStagingBuffer;
-    
-	VkDeviceMemory pickStagingMemory;
+	struct{
+		struct ImageRes image;
+		
+		struct BufferRes buffer;
 
-	void * pickMappedMem;
+		// void * pickMappedMem;
 
 
 
-    uint32_t pickedID;
+		uint32_t pickedID;
+	} pick;
 
 	//---
 };
@@ -391,19 +426,33 @@ VkDescriptorSet descriptorSets [MAX_FRAMES_IN_FLIGHT];
 
 
 
+
+
 struct TextureRes{
 
 	char * path;
 
-	VkImage textureImage ;
+	// VkImage textureImage ;
 
-	VkDeviceMemory textureImageMemory ;
+	// VkImageView	textureImageView;
 
-	VkImageView textureImageView ;
+	// struct Allocation alloc;
+
+	struct ImageRes image;
 
 	VkSampler textureSampler;
 
-	uint32_t mipLevels;
+
+	// VkFormat format;
+
+	VkImageAspectFlagBits aspectFlags;
+
+	// uint32_t width;
+
+	// uint32_t height;
+
+	
+
 
 	uint32_t textureIdx;
 };
@@ -518,6 +567,7 @@ uint32_t instanceNum = INSTANCE_NUM;
 // };
 
 
+
 struct SSB_ObjectId{
 	uint32_t objectId;
 };
@@ -607,6 +657,12 @@ struct GmArray arraySBO_ObjectIds_1;
 struct GmArray arrayColors_2;
 
 
+
+void cleanAllocation(struct Allocation * all);
+void cleanImageRes(struct ImageRes * img);
+void cleanBuffer(struct BufferRes * buff);
+void cleanTextureRes(struct TextureRes * tex);
+
 void initVariables();
 
 void freeVariables();
@@ -636,7 +692,25 @@ struct BufferRes * iterateBuffer(
 
 //---
 
+struct BufferRes* buffer_set(
+	struct BufferRes * buffer_res,
+	VkBuffer handle,
+	uint32_t size,
+	uint32_t offset,
+	
+	VkBufferUsageFlags usage,
+	VkDeviceMemory memory,
+	void * mapped
+);
 
+
+void createDepthResources4(struct ImageRes * image) ;
+void createImageView4(struct ImageRes * tex,  VkFormat format, VkImageAspectFlagBits aspectFlags);
+
+void createTextureImage4(
+	struct TextureRes * tex
+	
+);
 void loadModels();
 void createDepthResources3(VkImage *depthImage,VkImageView *depthImageView,VkDeviceMemory *depthImageMemory);
 
@@ -705,12 +779,12 @@ void createShaderDescriptorSetLayout();
 
 // void createDescriptorSets();
 
-void createTextureImage(
-	char * path, 
-	VkImage *textureImage,
-	VkDeviceMemory *textureImageMemory,
-	uint32_t *mipmap
-);
+// void createTextureImage(
+// 	char * path, 
+// 	VkImage *textureImage,
+// 	VkDeviceMemory *textureImageMemory,
+// 	uint32_t *mipmap
+// );
 
 void createPickImage(
 	// VkImage *pickImage,
@@ -787,6 +861,35 @@ void processInput(GLFWwindow *window);
 void createGraphicsPipeline(struct  Pipeline * pipeline );
 
 
+
+struct BufferRes* buffer_set(
+	struct BufferRes * buffer,
+	VkBuffer handle,
+	uint32_t size,
+	uint32_t offset,
+	
+	VkBufferUsageFlags usage,
+	VkDeviceMemory memory,
+	void * mapped
+
+){
+	buffer->handle = handle;
+	buffer->alloc.mapped = mapped;
+	buffer->alloc.memory = memory;
+	buffer->alloc.offset = offset;
+	buffer->alloc.size = size;
+	buffer->usage = usage;
+	//     VkDeviceMemory memory;
+    // VkDeviceSize size;
+    // VkDeviceSize offset;
+    // void* mapped;
+
+	// 	buffer->handle = buffer->mapped = buffer->memory =NULL;
+	// 	buffer->size = sizeof(struct SBO_Model) * arraySBO_Models_1.len;
+	// 	buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
+	return buffer;
+}
+ 
 
 float rand_float()
 {
@@ -944,11 +1047,12 @@ void createDepthImages(){
 	{
 		struct  Frame * frame = &frames[i];
 
-		createDepthResources3(
-			&(frame->depthImage),
-			&(frame->depthImageView),
-			&(frame->depthImageMemory)
-		);
+		createDepthResources4(&frame->depth_image);
+		// createDepthResources3(
+		// 	&(frame->depthImage),
+		// 	&(frame->depthImageView),
+		// 	&(frame->depthImageMemory)
+		// );
 	}
 	
 }
@@ -958,20 +1062,17 @@ void createTextures(){
 	for( int i=0;i < TEXTURE_COUNT_PIPE_1 ;i++)
 	{
 		struct TextureRes * t = &textures[i];
-		createTextureImage(
-			t->path,
-			&t->textureImage,
-			&t->textureImageMemory,
-			&t->mipLevels
-		);
+		createTextureImage4(t);
+		
+		// createTextureImage(
+		// 	t->path,
+		// 	&t->textureImage,
+		// 	&t->textureImageMemory,
+		// 	&t->mipLevels
+		// );
 		t->textureIdx = i;
 
-		 createImageView(
-			&t->textureImageView,
-			&t->textureImage,
-			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-			t->mipLevels
-		);
+		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
 		createTextureSampler(&t->textureSampler);
 	}
@@ -979,20 +1080,17 @@ void createTextures(){
 	for( int i=0;i < arrayTextures_2.len ;i++)
 	{
 		struct TextureRes * t = gmArrayGet(&arrayTextures_2, i);
-		createTextureImage(
-			t->path,
-			&t->textureImage,
-			&t->textureImageMemory,
-			&t->mipLevels
+		createTextureImage4(
+			t
 		);
 		t->textureIdx = i;
-
-		 createImageView(
-			&t->textureImageView,
-			&t->textureImage,
-			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-			t->mipLevels
-		);
+		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		//  createImageView(
+		// 	&t->textureImageView,
+		// 	&t->textureImage,
+		// 	VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+		// 	t->mipLevels
+		// );
 
 		createTextureSampler(&t->textureSampler);
 	}
@@ -1204,11 +1302,17 @@ void initVariables(){
 		struct  BufferRes * buffer = gmArrayPush(&arrayBufferRes);
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct SBO_Model) * arraySBO_Models_1.len,
+			0,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			NULL,
+			NULL
+		);
 
-		buffer->handle = buffer->mapped = buffer->memory =NULL;
-		buffer->size = sizeof(struct SBO_Model) * arraySBO_Models_1.len;
-		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
-		
+
 		frame->model_1 = buffer;
 	
 		if(i == 0)
@@ -1232,10 +1336,21 @@ void initVariables(){
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
 
-		buffer->handle =buffer->mapped = buffer->memory =NULL;
-		buffer->size = sizeof(struct SBO_Model) * arraySBO_Models_2.len;
-		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
+		// buffer->handle =buffer->mapped = buffer->memory =NULL;
+		// buffer->size = sizeof(struct SBO_Model) * arraySBO_Models_2.len;
+		// buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
 	
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct SBO_Model) * arraySBO_Models_2.len,
+			0,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			NULL,
+			NULL
+		);
+
+
 
 		frame->model_2 =buffer;
 
@@ -1259,11 +1374,21 @@ void initVariables(){
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
 
-		buffer->handle =buffer->mapped =buffer->memory =NULL;
-		buffer->size = sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len;
-		//width = sizeof(struct SSB_ObjectId);
-		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
+		// buffer->handle =buffer->mapped =buffer->memory =NULL;
+		// buffer->size = sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len;
+		// //width = sizeof(struct SSB_ObjectId);
+		// buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
 		 
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len,
+			0,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			NULL,
+			NULL
+		);
+
 		frame->objectIds_1=buffer;
 
 		if(i == 0)
@@ -1283,10 +1408,20 @@ void initVariables(){
 		res->res_type = GM_RESOURCE_BUFFER;
 
 
-		buffer->handle =buffer->mapped =buffer->memory =NULL;
-		buffer->size = sizeof(vec4) * arrayColors_2.len;
-		//width = sizeof(vec4);
-		buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len,
+			0,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			NULL,
+			NULL
+		);
+
+		// buffer->handle =buffer->mapped =buffer->memory =NULL;
+		// buffer->size = sizeof(vec4) * arrayColors_2.len;
+		// //width = sizeof(vec4);
+		// buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
 	 
 		frame->colors_2 =buffer;
 
@@ -1309,10 +1444,20 @@ void initVariables(){
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
 
-		buffer->handle =buffer->mapped =buffer->memory =NULL;
-		buffer->size = sizeof(struct UBODirectionalLight) * 1;
-		//width = sizeof(struct UBODirectionalLight);
-		buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
+		// buffer->handle =buffer->mapped =buffer->memory =NULL;
+		// buffer->size = sizeof(struct UBODirectionalLight) * 1;
+		// //width = sizeof(struct UBODirectionalLight);
+		// buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
+
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct UBODirectionalLight) * 1,
+			0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			NULL,
+			NULL
+		);
 		 
 		frame->directionLight_1 =buffer;
 
@@ -1334,11 +1479,20 @@ void initVariables(){
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
 
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct UBOCommon) * 1,
+			0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			NULL,
+			NULL
+		);
 
-		buffer->handle =buffer->mapped =buffer->memory =NULL;
-		buffer->size = sizeof(struct UBOCommon) * 1;
-			//buffer->width = sizeof(struct UBOCommon);
-		buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
+		// buffer->handle =buffer->mapped =buffer->memory =NULL;
+		// buffer->size = sizeof(struct UBOCommon) * 1;
+		// 	//buffer->width = sizeof(struct UBOCommon);
+		// buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
 	 
 		frame->viewProjection_1 =buffer;
 
@@ -1360,10 +1514,21 @@ void initVariables(){
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
 
-		buffer->handle =buffer->mapped =buffer->memory =NULL;
-		buffer->size = sizeof(struct UBOCommon) * 1;
-		//res->width = sizeof(struct UBOCommon);
-		buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
+		
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct UBOCommon) * 1,
+			0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			NULL,
+			NULL
+		);
+
+		// buffer->handle =buffer->mapped =buffer->memory =NULL;
+		// buffer->size = sizeof(struct UBOCommon) * 1;
+		// //res->width = sizeof(struct UBOCommon);
+		// buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
 	 
 		frame->viewProjection_2 =buffer;
 
@@ -1920,6 +2085,51 @@ VkFormat findSupportedFormat(VkFormat *formats,uint32_t len, VkImageTiling tilin
 	
 }
 
+void createDepthResources4(struct ImageRes * image) {
+	PRINT_FNAME;
+	
+
+	VkFormat depthFormat = findDepthFormat();
+	 image->alloc.mapped = NULL;  
+    image->alloc.memory = VK_NULL_HANDLE; 
+
+	createImage(
+		swapChainExtent.width, 
+		swapChainExtent.height, 
+		1,
+		depthFormat, 
+		VK_IMAGE_TILING_OPTIMAL, 
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		&image->handle, 
+		&image->alloc.memory
+	);
+	// depthImageView = 
+	
+	createImageView(&image->view,&image->handle, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT,1);
+
+
+	beginSingleTimeCommands(transferCommandBuffers);
+
+
+	transitionImageLayout(
+		transferCommandBuffers,
+    	&image->handle,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        // VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, FIX
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        0,
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+        VK_IMAGE_ASPECT_DEPTH_BIT,
+		1
+    );
+
+	endSingleTimeCommands(transferCommandBuffers);
+	
+
+}
 void createDepthResources3(VkImage *depthImage,VkImageView *depthImageView,VkDeviceMemory *depthImageMemory) {
 	PRINT_FNAME;
 	VkFormat depthFormat = findDepthFormat();
@@ -1996,6 +2206,32 @@ void createTextureSampler(VkSampler * sampler){
 
 }
 
+void createImageView4(struct ImageRes * image, VkFormat format, VkImageAspectFlagBits aspectFlags){
+
+		
+		/*
+		
+		*/
+		image->format = format;
+		
+		VkImageViewCreateInfo viewInfo = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image = image->handle,
+			.viewType = VK_IMAGE_VIEW_TYPE_2D,
+			.format = image->format,
+			.subresourceRange  = {
+					
+					.aspectMask = aspectFlags,
+					.baseMipLevel = 0,
+					.levelCount = image->mipLevels,
+					.baseArrayLayer= 0,
+					.layerCount =1,
+			},
+			
+		};
+		
+		vkCreateImageView(device, &viewInfo,  NULL, &image->view);
+}
 void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, VkImageAspectFlagBits aspectFlags,uint32_t mipLevels){
 
 		
@@ -2027,25 +2263,26 @@ void createTextureImageView(){
 	for(int i=0;i<TEXTURE_COUNT_PIPE_1;i++)
 	{
 	
-		 createImageView(
-			&textures[i].textureImageView,
-			&textures[i].textureImage,
-			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-			textures[i].mipLevels
-		);
+		createImageView4(&textures[i].image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		//  createImageView4(
+		// 	&textures[i].textureImageView,
+		// 	&textures[i].textureImage,
+		// 	VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+		// 	textures[i].mipLevels
+		// );
 	}
 
 	for(int i=0;i<arrayTextures_2.len;i++)
 	{
 		struct TextureRes * res = gmArrayGet(&arrayTextures_2, i);
 	
-		
-		 createImageView(
-			&res->textureImageView,
-			&res->textureImage,
-			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-			res->mipLevels
-		);
+		createImageView4(&res->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		//  createImageView(
+		// 	&res->textureImageView,
+		// 	&res->textureImage,
+		// 	VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
+		// 	res->mipLevels
+		// );
 	}
 }
 
@@ -2271,16 +2508,16 @@ void createPickImage(
 			sizeof(uint32_t), 
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			&frame->pickStagingBuffer,
-			&frame->pickStagingMemory
+			&frame->pick.buffer.handle,
+			&frame->pick.buffer.alloc.memory
 		);
 
 
 		
-		vkMapMemory(device, frame->pickStagingMemory, 0, VK_WHOLE_SIZE, 0, &frame->pickMappedMem);
+		vkMapMemory(device, frame->pick.buffer.alloc.memory, 0, VK_WHOLE_SIZE, 0, &frame->pick.buffer.alloc.mapped);
 		
-		memset(frame->pickMappedMem, 0, sizeof(uint32_t));
-		frame->pickedID = 0;
+		memset(frame->pick.buffer.alloc.mapped, 0, sizeof(uint32_t));
+		frame->pick.pickedID = 0;
 
 		createImage(
 			swapChainExtent.width, 
@@ -2290,13 +2527,13 @@ void createPickImage(
 			VK_IMAGE_TILING_OPTIMAL, 
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-			&frame->pickImage, 
-			&frame->pickMemory
+			&frame->pick.image.handle, 
+			&frame->pick.image.alloc.memory
 		);
 
 		createImageView(
-			&frame->pickView, 
-			&frame->pickImage,
+			&frame->pick.image.view, 
+			&frame->pick.image.handle,
 			VK_FORMAT_R32_UINT, 
 			VK_IMAGE_ASPECT_COLOR_BIT, 
 			1
@@ -2407,6 +2644,112 @@ void createTextureImage(
 		texWidth, 
 		texHeight, 
 		*mipmap
+	);
+}
+void createTextureImage4(
+	struct TextureRes * tex
+	
+){
+
+	PRINT_FNAME;
+
+	int texWidth, texHeight, texChannels;
+
+	// stbi_set_flip_vertically_on_load(true);
+	stbi_uc* pixels  = stbi_load(tex->path,  &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+	
+	tex->image.mipLevels = getMipmapLevels(texWidth,texHeight);
+
+	tex->image.alloc.mapped = NULL;
+	tex->image.alloc.memory = VK_NULL_HANDLE;
+	
+	VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+	if( ! pixels){
+		EXIT_CLEAN("failed to load texture image!");
+	}
+
+
+	VkBuffer stagingBuffer;
+
+	VkDeviceMemory stagingBufferMemory;
+
+	createBuffer(
+		imageSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&stagingBuffer,
+		&stagingBufferMemory
+	);
+	
+	void* data = NULL;
+
+	vkMapMemory(device, 
+		stagingBufferMemory,
+		0, 
+		imageSize, 
+		0, 
+		&data
+	);
+	memcpy(data, pixels, imageSize);
+
+	vkUnmapMemory(device, stagingBufferMemory);
+	
+	stbi_image_free(pixels);
+
+	
+	
+	createImage(
+		texWidth, 
+		texHeight, 
+		tex->image.mipLevels,
+		VK_FORMAT_R8G8B8A8_SRGB, 
+		VK_IMAGE_TILING_OPTIMAL, 
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		&tex->image.handle, 
+		&tex->image.alloc.memory
+	);
+
+
+
+	beginSingleTimeCommands(transferCommandBuffers);
+
+	transitionImageLayout(
+		transferCommandBuffers,
+		&tex->image.handle, 
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		0,  // srcAccessMask: no prior access
+		VK_ACCESS_2_TRANSFER_WRITE_BIT,  // dst: we will write via transfer
+		VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_2_TRANSFER_BIT,  // dst stage: transfer op
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		tex->image.mipLevels
+	);
+
+	endSingleTimeCommands(transferCommandBuffers);
+
+	copyBufferToImage(
+		&stagingBuffer, 
+		&tex->image.handle, 
+		texWidth, 
+		texHeight
+	);
+
+
+	vkDestroyBuffer(device, stagingBuffer,  NULL);
+	
+	vkFreeMemory(device, stagingBufferMemory,  NULL);
+
+
+	generateMipmaps(
+		&tex->image.handle, 
+		VK_FORMAT_R8G8B8A8_SRGB, 
+		texWidth, 
+		texHeight, 
+		tex->image.mipLevels
 	);
 }
 
@@ -2579,7 +2922,7 @@ void createDescriptorSets3(){
 				VkDescriptorBufferInfo info = {
 					.buffer = res->handle,
 					.offset = 0,
-					.range = res->size
+					.range = res->alloc.size
 				};
 
 				VkWriteDescriptorSet write = {
@@ -2599,7 +2942,7 @@ void createDescriptorSets3(){
 
 				for (uint32_t k = 0; k < drb->count; k++) {
 					VkDescriptorImageInfo info = {
-						.imageView = res[k].textureImageView,
+						.imageView = res[k].image.view,
 						.sampler = res[k].textureSampler,
 						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 					};
@@ -2639,21 +2982,23 @@ void clearUniformBuffers3(){
 			
 			if(resource->res_type == GM_RESOURCE_BUFFER){
 
-				if(resource->buffer->mapped != NULL)
-				{ 
-					vkUnmapMemory(device,resource->buffer->memory);
-					resource->buffer->mapped = NULL;
-				}
-				if(resource->buffer->handle != NULL){
+
+				cleanBuffer(resource->buffer);
+				// if(resource->buffer->allocation.mapped != NULL)
+				// { 
+				// 	vkUnmapMemory(device,resource->buffer->allocation.memory);
+				// 	resource->buffer->allocation.mapped = NULL;
+				// }
+				// if(resource->buffer->handle != NULL){
 	
-					vkDestroyBuffer(device,resource->buffer->handle, NULL);
-					resource->buffer->handle = NULL;
-				}
-				if(resource->buffer->memory != NULL){
+				// 	vkDestroyBuffer(device,resource->buffer->handle, NULL);
+				// 	resource->buffer->handle = NULL;
+				// }
+				// if(resource->buffer->allocation.memory != NULL){
 	
-					vkFreeMemory(device,resource->buffer->memory, NULL);
-					resource->buffer->memory= NULL;
-				}
+				// 	vkFreeMemory(device,resource->buffer->allocation.memory, NULL);
+				// 	resource->buffer->allocation.memory= NULL;
+				// }
 			}
 			
 		}
@@ -2788,7 +3133,7 @@ void createUniformBuffers3(){
 			if(resource->res_type == GM_RESOURCE_BUFFER)
 			{
 				struct BufferRes * b = resource->buffer;
-				VkDeviceSize bufferSize = b->size;
+				VkDeviceSize bufferSize = b->alloc.size;
 				VkBuffer buffer;
 				VkDeviceMemory bufferMemory;
 	
@@ -2800,14 +3145,14 @@ void createUniformBuffers3(){
 					&bufferMemory
 				);
 				b->handle= buffer;
-				b->memory = bufferMemory;
+				b->alloc.memory = bufferMemory;
 	
 				void * mapped_mem = NULL;
 				
 	
 				vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mapped_mem);
 	
-				b->mapped = mapped_mem;
+				b->alloc.mapped = mapped_mem;
 			}
 
 		}
@@ -3173,7 +3518,9 @@ void createCommandPool(){
 
 	
 }
+void buildMainPassRenderInfo(VkCommandBuffer commandBuffer){
 
+}
 
 void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
@@ -3182,7 +3529,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 	VkCommandBuffer commandBuffer = *frame->graphicsCommandBuffers;
 	VkDescriptorSet * descriptorSet = frame->descriptorSets;
 
-	VkImageView * pickImageView = &frame->pickView;
+	VkImageView * pickImageView = &frame->pick.image.view;
 
 	VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -3225,7 +3572,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = frame->pickImage,
+			.image = frame->pick.image.handle,
 			.subresourceRange = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0,
@@ -3284,7 +3631,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
     VkRenderingAttachmentInfo depthAttachmentInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = frame->depthImageView,
+        .imageView = frame->depth_image.view,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -3364,7 +3711,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			struct PushConst constants0 = {
 				.hasColor = false,
 				.texIdx = textures[gameObject->textureIdx].textureIdx,
-				.objectId = frame->pickedID
+				.objectId = frame->pick.pickedID
 			};
 			// int textureIndex = 0; // choose texture
 			vkCmdPushConstants(
@@ -3405,7 +3752,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = frame->pickImage,
+		.image = frame->pick.image.handle,
 		.subresourceRange = {
 			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 			.baseMipLevel = 0, .levelCount = 1,
@@ -3434,9 +3781,9 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 	};
 	vkCmdCopyImageToBuffer(
 		commandBuffer,
-		frame->pickImage,
+		frame->pick.image.handle,
 		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-		frame->pickStagingBuffer,
+		frame->pick.buffer.handle,
 		1, 
 		&region
 	);
@@ -3451,7 +3798,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.newLayout = VK_IMAGE_LAYOUT_GENERAL,
 		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = frame->pickImage,
+		.image = frame->pick.image.handle,
 		.subresourceRange = {
 			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 			.baseMipLevel = 0,
@@ -3471,7 +3818,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
 	//bind bipeline 2 START
 
-	struct Pipeline *pipe2 = gmArrayGet(&arrayPipelines, 1);
+	struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
 	{
 		colorAttachmentsInfos[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 		depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -3484,16 +3831,17 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			.pColorAttachments = colorAttachmentsInfos,
 			// .pDepthAttachment = &depthAttachmentInfo
 		};
+
 		vkCmdBeginRendering(commandBuffer, &renderingInfoHUD);
 		{
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe2->graphicsPipeline);
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
 			VkDeviceSize offset = 0;
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &modelVertexData_HUD.vertextBuffer, &offset);
 			vkCmdBindIndexBuffer(commandBuffer, modelVertexData_HUD.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 			vkCmdBindDescriptorSets(
 				commandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipe2->pipelineLayout
+				pipe_HUD->pipelineLayout
 				,0,1,
 				frame->descriptorSets,
 				0, NULL
@@ -3505,7 +3853,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			};
 			vkCmdPushConstants(
             commandBuffer,
-				pipe2->pipelineLayout,
+				pipe_HUD->pipelineLayout,
 				VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
 				sizeof(struct PushConst2D),
@@ -3561,13 +3909,13 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	struct Frame * frame = &frames[currentFrame];
 
 
-	memcpy(frame->model_1->mapped, arraySBO_Models_1.data, sizeof(struct SBO_Model)* arraySBO_Models_1.len);
+	memcpy(frame->model_1->alloc.mapped, arraySBO_Models_1.data, sizeof(struct SBO_Model)* arraySBO_Models_1.len);
 
-	memcpy(frame->model_2->mapped, arraySBO_Models_2.data, sizeof(struct SBO_Model)* arraySBO_Models_2.len);
+	memcpy(frame->model_2->alloc.mapped, arraySBO_Models_2.data, sizeof(struct SBO_Model)* arraySBO_Models_2.len);
 
-	memcpy(frame->objectIds_1->mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSB_ObjectId)* arraySBO_ObjectIds_1.len);
+	memcpy(frame->objectIds_1->alloc.mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSB_ObjectId)* arraySBO_ObjectIds_1.len);
 
-	memcpy(frame->colors_2->mapped, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
+	memcpy(frame->colors_2->alloc.mapped, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
 
 	// gmArrayCopyBySize(frame->bufferModelMapped, &arrayUboModels);
 
@@ -3588,7 +3936,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
 
 	ubo.proj[1][1] *= -1;
 
-	memcpy(frame->viewProjection_1->mapped, &ubo, sizeof(struct UBOCommon));
+	memcpy(frame->viewProjection_1->alloc.mapped, &ubo, sizeof(struct UBOCommon));
 
 
 	struct UBOCommon ubo2 = {};
@@ -3600,7 +3948,7 @@ void updateUniformBuffer3(uint32_t currentFrame){
           -1.0f, 1.0f, ubo2.proj);
 
 
-	memcpy(frame->viewProjection_2->mapped, &ubo2, sizeof(struct UBOCommon));
+	memcpy(frame->viewProjection_2->alloc.mapped, &ubo2, sizeof(struct UBOCommon));
 
 	// gmArrayCopyBySize(frame->buffersViewProjectionMapped, ubo);
 
@@ -3611,15 +3959,35 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
 	
 
-	memcpy(frame->directionLight_1->mapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+	memcpy(frame->directionLight_1->alloc.mapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
 	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
 
 
 
 
-		
-
 };
+VkResult acquireNextImage(
+	struct Frame * frame,
+	uint32_t *out_image_index){
+
+
+	VkResult	result = vkAcquireNextImageKHR(
+		device, 
+		swapchain, 
+		UINT64_MAX, 
+		frame->presentCompleteSemaphore, 
+		NULL, 
+		out_image_index
+	);
+
+	if(result != VK_SUCCESS && result!= VK_SUBOPTIMAL_KHR)
+	{
+		assert(result == VK_TIMEOUT || result == VK_NOT_READY);
+		EXIT_CLEAN("failed to acquire swapchain image!");
+	}
+
+	return result;
+}
 void drawFrame3() {
 
 	struct Frame * frame = &frames[frameIndex];
@@ -3639,9 +4007,9 @@ void drawFrame3() {
 	}
 
 
-	uint32_t pickedObjectId = *(uint32_t*)frame->pickMappedMem;
-	frame->pickedID = pickedObjectId;
-	if(frame->pickedID != 0)
+	uint32_t pickedObjectId = *(uint32_t*)frame->pick.buffer.alloc.mapped;
+	frame->pick.pickedID = pickedObjectId;
+	if(frame->pick.pickedID != 0)
 	{
 		// printf("pickedObjectId %d\n",frame->pickedID);
 	}
@@ -3664,10 +4032,6 @@ void drawFrame3() {
 
 		return;
 
-	}else if(result != VK_SUCCESS && result!= VK_SUBOPTIMAL_KHR)
-	{
-		assert(result == VK_TIMEOUT || result == VK_NOT_READY);
-		EXIT_CLEAN("failed to acquire swapchain image!");
 	}
 	
 	
@@ -4409,22 +4773,63 @@ void createImageViews(){
 
  
 }
-void cleanupPickImages(){
+void cleanAllocation(struct Allocation * alloc){
+	PRINT_FNAME;
+	if(alloc->mapped != NULL){
 
+		vkUnmapMemory(device,alloc->memory);
+		
+	}
+	alloc->mapped = NULL;
+	if( alloc->memory != NULL)
+	{
+		vkFreeMemory(device, alloc->memory, NULL);
+	}
+			
+}
+void cleanImageRes(struct ImageRes * img){
+	PRINT_FNAME;
+	vkDestroyImage(device,img->handle, NULL);
+	vkDestroyImageView(device, img->view, NULL);
+	cleanAllocation(&img->alloc);
+	
+}
+void cleanBuffer(struct BufferRes * buff){
+	PRINT_FNAME;
+	vkDestroyBuffer(device,buff->handle, NULL);
+	
+	cleanAllocation(&buff->alloc);
+	
+}
+void cleanTextureRes(struct TextureRes * tex){
+		PRINT_FNAME;
+		cleanImageRes(&tex->image);
+		vkDestroySampler(device, tex->textureSampler, NULL);
+		
+		// vkDestroyImageView(device, t->textureImageView,  NULL);
+		// vkDestroyImage(device, t->textureImage, NULL);
+		// vkFreeMemory(device, t->textureImageMemory, NULL);
+}
+void cleanupPickImages(){
+	PRINT_FNAME;
 	for(int i=0;i< MAX_FRAMES_IN_FLIGHT;i++)
 	{
 		struct Frame * frame = &frames[i];
 
-		vkDestroyImage(device,frame->pickImage, NULL);
-		vkDestroyImageView(device, frame->pickView, NULL);
-		if(frame->pickMappedMem!= NULL){
+		cleanImageRes(&frame->pick.image);
+		cleanBuffer(&frame->pick.buffer);
+		// cleanAllocation(&frame->pick.image.alloc);
+		// cl
+		// vkDestroyImage(device,frame->pickImage, NULL);
+		// vkDestroyImageView(device, frame->pickView, NULL);
+		// if(frame->pickMappedMem!= NULL){
 
-			vkUnmapMemory(device, frame->pickStagingMemory);
-			frame->pickMappedMem = NULL;
-		}
-		vkFreeMemory(device, frame->pickMemory, NULL);
-		vkDestroyBuffer(device,frame->pickStagingBuffer, NULL);
-		vkFreeMemory(device, frame->pickStagingMemory, NULL);
+		// 	vkUnmapMemory(device, frame->pickStagingMemory);
+		// 	frame->pickMappedMem = NULL;
+		// }
+		// vkFreeMemory(device, frame->pickMemory, NULL);
+		// vkDestroyBuffer(device,frame->pickStagingBuffer, NULL);
+		// vkFreeMemory(device, frame->pickStagingMemory, NULL);
 	}
 }
 void cleanupSwapChain() {
@@ -4654,6 +5059,18 @@ void createInstance(){
 	}
 
 
+}
+void createShadowPipeline(struct Pipeline * pipeline){
+	/*
+	
+	Feature	Shadow Pass	Main Pass
+	Color output	None (disabled)	Full color
+	Depth testing	Yes (write depth)	Yes
+	Fragment shader	Minimal (no lighting)	Complex (lighting, texturing, shadows)
+	Blending	Disabled	Enabled (maybe)
+	Render targets	Depth texture only	Color + depth
+	View/projection	Light's matrices	Camera's matrices
+	*/
 }
 void createHUDPipeline(struct  Pipeline * pipeline){
 
@@ -5503,9 +5920,10 @@ void cleanup(){
 	{
 		struct Frame *frame = &frames[i];
 
-		vkDestroyImage(device, frame->depthImage, NULL);
-		vkDestroyImageView(device,frame->depthImageView, NULL);
-		vkFreeMemory(device, frame->depthImageMemory, NULL);
+		cleanImageRes(&frame->depth_image);
+		// vkDestroyImage(device, frame->depthImage, NULL);
+		// vkDestroyImageView(device,frame->depthImageView, NULL);
+		// vkFreeMemory(device, frame->depthImageMemory, NULL);
 
 
 	}
@@ -5514,20 +5932,25 @@ void cleanup(){
 	{
 		struct TextureRes * t = &textures[i];
 
-		vkDestroyImageView(device, t->textureImageView,  NULL);
-		vkDestroySampler(device, t->textureSampler, NULL);
-		vkDestroyImage(device, t->textureImage, NULL);
-		vkFreeMemory(device, t->textureImageMemory, NULL);
+		cleanTextureRes(t);
+		// cleanImageRes(&t->image);
+		// vkDestroySampler(device, t->textureSampler, NULL);
+		
+		// vkDestroyImageView(device, t->textureImageView,  NULL);
+		// vkDestroyImage(device, t->textureImage, NULL);
+		// vkFreeMemory(device, t->textureImageMemory, NULL);
 	}
 
 	for( int i=0;i<arrayTextures_2.len ;i++)
 	{
 		struct TextureRes * t = gmArrayGet(&arrayTextures_2, i);
 
-		vkDestroyImageView(device, t->textureImageView,  NULL);
-		vkDestroySampler(device, t->textureSampler, NULL);
-		vkDestroyImage(device, t->textureImage, NULL);
-		vkFreeMemory(device, t->textureImageMemory, NULL);
+		cleanTextureRes(t);
+
+		// vkDestroyImageView(device, t->textureImageView,  NULL);
+		// vkDestroySampler(device, t->textureSampler, NULL);
+		// vkDestroyImage(device, t->textureImage, NULL);
+		// vkFreeMemory(device, t->textureImageMemory, NULL);
 	}
 
 	for(int i=0;i<arrayPipelines.len;i++)

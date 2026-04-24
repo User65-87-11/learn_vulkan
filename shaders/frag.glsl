@@ -81,7 +81,7 @@ void main() {
 
     vec4 fog_color =  vec4(0.0, 0.0, 0.0, 1.0);
 
-	float fogFactor = clamp(in_fog_depth / 10.0, 0.0, 1.0);
+	float fogFactor = clamp(in_fog_depth / 20.0, 0.0, 1.0);
 
 	outColor = mix(vec4(result), fog_color, fogFactor);
 
