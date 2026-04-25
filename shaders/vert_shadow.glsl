@@ -4,16 +4,15 @@
 #include "shader_inc.glsl"
 
 layout(location = 0) in vec3 in_position;
-layout(location = 1) in vec3 in_norm;
 
 
-layout(binding = BINDING_FRAG_3_UBO_Lights) uniform LightVP
+layout(binding = BINDING_VERT_3_UBO_ViewProjection) uniform LightVP
 {
 	mat4 lightView;
 	mat4 projection;
 };
 
-layout(std430, binding = BINDING_VERT_3_SSBO_Models) readonly buffer  Models
+layout(std430, binding = BINDING_VERT_1_SSBO_Models) readonly buffer  Models
 {
 	mat4 model[];
 };

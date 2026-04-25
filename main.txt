@@ -193,6 +193,11 @@ VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 VkDescriptorSetLayout descriptorSetLayout;
 
  
+VkDescriptorSetLayout descriptorLayout_Frame;
+VkDescriptorSetLayout descriptorLayout_Object;
+VkDescriptorSetLayout descriptorLayout_Material;
+
+
 
 
 struct GameObject * gameObjectsA;
@@ -277,7 +282,7 @@ VkFence transferFence;
 struct BufferRes{
 	VkBuffer handle ;
 
-	struct Allocation allocation;
+	struct Allocation alloc;
 
 	VkBufferUsageFlags usage;
 
@@ -343,6 +348,9 @@ struct Frame{
 	struct BufferRes* model_2;
 	struct BufferRes* colors_2;
 
+
+	struct BufferRes* shadow_LightView_Projection;
+
 	struct TextureRes* texture;
 
 
@@ -355,6 +363,9 @@ struct Frame{
 
 
 	struct ImageRes depth_image;
+
+
+	struct ImageRes shadow;
 
 
 	VkDescriptorSet* descriptorSets;
@@ -375,8 +386,6 @@ struct Frame{
 		struct BufferRes buffer;
 
 		// void * pickMappedMem;
-
-
 
 		uint32_t pickedID;
 	} pick;
@@ -445,14 +454,14 @@ struct TextureRes{
 
 	// VkFormat format;
 
-	VkImageAspectFlagBits aspectFlags;
+	// VkImageAspectFlagBits aspectFlags;
 
 	// uint32_t width;
 
 	// uint32_t height;
 
 	
-	uint32_t mipLevels;
+
 
 	uint32_t textureIdx;
 };
@@ -586,7 +595,7 @@ struct UBODirectionalLight {
   vec4 lightPos; 
   vec4 viewPos; 
   vec4 lightColor;
-} uniformBufferObjectDirectionalLight;
+} UBO_DirLight;
 
 float startTime = 0.0f;
 float deltaTime = 0.0f;
@@ -775,6 +784,10 @@ void createIndexBuffer(
 
 void clearUniformBuffers();
 
+void createDescriptorLayout_Frame();
+void createDescriptorLayout_Object();
+void createDescriptorLayout_Material();
+
 void createShaderDescriptorSetLayout();
 
 // void createDescriptorSets();
@@ -874,10 +887,10 @@ struct BufferRes* buffer_set(
 
 ){
 	buffer->handle = handle;
-	buffer->allocation.mapped = mapped;
-	buffer->allocation.memory = memory;
-	buffer->allocation.offset = offset;
-	buffer->allocation.size = size;
+	buffer->alloc.mapped = mapped;
+	buffer->alloc.memory = memory;
+	buffer->alloc.offset = offset;
+	buffer->alloc.size = size;
 	buffer->usage = usage;
 	//     VkDeviceMemory memory;
     // VkDeviceSize size;
@@ -1040,6 +1053,23 @@ void processInput(GLFWwindow *window){
 	
 }
 
+void createShadowImages(){
+
+	
+	for(int i=0; i< MAX_FRAMES_IN_FLIGHT; i++)
+	{
+		struct  Frame * frame = &frames[i];
+
+		createDepthResources4(&frame->shadow);
+		// createDepthResources3(
+		// 	&(frame->depthImage),
+		// 	&(frame->depthImageView),
+		// 	&(frame->depthImageMemory)
+		// );
+	}
+	
+}
+
 void createDepthImages(){
 
 	
@@ -1179,9 +1209,9 @@ void initVariables(){
 
 	
 	vec4 v = {1.0,1.0,1.0,1.0};
-	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
-	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+	GLM_VEC4_COPY(UBO_DirLight.lightColor, v);
+	GLM_VEC4_SET(UBO_DirLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+	GLM_VEC4_SET(UBO_DirLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
 
 
 	for(int i=0;i<1;i++)
@@ -1327,7 +1357,10 @@ void initVariables(){
 			descr->count = 1;
 		}
 		
-			//VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+
+		
+
+	//VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
 		
 		
 
@@ -1351,6 +1384,8 @@ void initVariables(){
 		);
 
 
+		
+
 
 		frame->model_2 =buffer;
 
@@ -1368,17 +1403,17 @@ void initVariables(){
 
 
 
+
+		
+
+
 		//---
 		res = gmArrayPush(arrayResources);
 		buffer = gmArrayPush(&arrayBufferRes);
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
 
-		// buffer->handle =buffer->mapped =buffer->memory =NULL;
-		// buffer->size = sizeof(struct SSB_ObjectId) * arraySBO_ObjectIds_1.len;
-		// //width = sizeof(struct SSB_ObjectId);
-		// buffer->usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT ;
-		 
+
 		buffer_set(
 			buffer,
 			NULL,
@@ -1444,11 +1479,6 @@ void initVariables(){
 		res->buffer = buffer;
 		res->res_type = GM_RESOURCE_BUFFER;
 
-		// buffer->handle =buffer->mapped =buffer->memory =NULL;
-		// buffer->size = sizeof(struct UBODirectionalLight) * 1;
-		// //width = sizeof(struct UBODirectionalLight);
-		// buffer->usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ;
-
 		buffer_set(
 			buffer,
 			NULL,
@@ -1473,6 +1503,36 @@ void initVariables(){
 			descr->count = 1;
 		}
 
+		//-
+		res = gmArrayPush(arrayResources);
+		buffer = gmArrayPush(&arrayBufferRes);
+		res->buffer = buffer;
+		res->res_type = GM_RESOURCE_BUFFER;
+
+		buffer_set(
+			buffer,
+			NULL,
+			sizeof(struct UBOCommon) ,
+			0,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			NULL,
+			NULL
+		);
+		 
+		frame->shadow_LightView_Projection=buffer;
+
+		if(i == 0)
+		{
+
+			struct DescriptorResourceBinding * descr = gmArrayPush(arrayDRB);
+			descr->binding = BINDING_VERT_3_UBO_ViewProjection;
+			descr->res_type = GM_RESOURCE_BUFFER;
+			descr->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	 
+			descr->shaderStages = VK_SHADER_STAGE_VERTEX_BIT;
+			descr->count = 1;
+		}
+		//--
 
 		res = gmArrayPush(arrayResources);
 		buffer = gmArrayPush(&arrayBufferRes);
@@ -2087,7 +2147,11 @@ VkFormat findSupportedFormat(VkFormat *formats,uint32_t len, VkImageTiling tilin
 
 void createDepthResources4(struct ImageRes * image) {
 	PRINT_FNAME;
+	
+
 	VkFormat depthFormat = findDepthFormat();
+	 image->alloc.mapped = NULL;  
+    image->alloc.memory = VK_NULL_HANDLE; 
 
 	createImage(
 		swapChainExtent.width, 
@@ -2505,14 +2569,14 @@ void createPickImage(
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			&frame->pick.buffer.handle,
-			&frame->pick.buffer.allocation.memory
+			&frame->pick.buffer.alloc.memory
 		);
 
 
 		
-		vkMapMemory(device, frame->pick.buffer.allocation.memory, 0, VK_WHOLE_SIZE, 0, &frame->pick.image.alloc.mapped);
+		vkMapMemory(device, frame->pick.buffer.alloc.memory, 0, VK_WHOLE_SIZE, 0, &frame->pick.buffer.alloc.mapped);
 		
-		memset(frame->pick.image.alloc.mapped, 0, sizeof(uint32_t));
+		memset(frame->pick.buffer.alloc.mapped, 0, sizeof(uint32_t));
 		frame->pick.pickedID = 0;
 
 		createImage(
@@ -2654,8 +2718,11 @@ void createTextureImage4(
 	// stbi_set_flip_vertically_on_load(true);
 	stbi_uc* pixels  = stbi_load(tex->path,  &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
-	tex->mipLevels  = getMipmapLevels(texWidth,texHeight);
+	
+	tex->image.mipLevels = getMipmapLevels(texWidth,texHeight);
 
+	tex->image.alloc.mapped = NULL;
+	tex->image.alloc.memory = VK_NULL_HANDLE;
 	
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
@@ -2696,7 +2763,7 @@ void createTextureImage4(
 	createImage(
 		texWidth, 
 		texHeight, 
-		tex->mipLevels,
+		tex->image.mipLevels,
 		VK_FORMAT_R8G8B8A8_SRGB, 
 		VK_IMAGE_TILING_OPTIMAL, 
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
@@ -2719,7 +2786,7 @@ void createTextureImage4(
 		VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_2_TRANSFER_BIT,  // dst stage: transfer op
 		VK_IMAGE_ASPECT_COLOR_BIT,
-		tex->mipLevels
+		tex->image.mipLevels
 	);
 
 	endSingleTimeCommands(transferCommandBuffers);
@@ -2742,7 +2809,7 @@ void createTextureImage4(
 		VK_FORMAT_R8G8B8A8_SRGB, 
 		texWidth, 
 		texHeight, 
-		tex->mipLevels
+		tex->image.mipLevels
 	);
 }
 
@@ -2871,7 +2938,93 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
     endSingleTimeCommands(transferCommandBuffers);
 }
 
+void createDescriptorSets4(){
+	PRINT_FNAME;
 
+
+	VkDescriptorSetLayout layouts [3]={
+		//C99 designated initializer
+		//  [0 ... MAX_FRAMES_IN_FLIGHT-1] = descriptorSetLayout
+	};
+
+	
+	layouts[0] = descriptorLayout_Frame;
+	layouts[1] = descriptorLayout_Object;
+	layouts[2] = descriptorLayout_Material;
+
+
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = descriptorPool,
+		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+		.pSetLayouts = layouts,
+	};
+	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets);
+
+	// assert(UNIFORM_BUFFER_COUNT == 2);
+
+	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+		struct Frame * frame = &frames[i];
+
+		frame->descriptorSets = &descriptorSets[i];
+
+		
+		for(int j=0;j < frame->arrayResources.len;j++){
+
+			struct Resource * resource =  gmArrayGet(&frame->arrayResources, j);
+			struct DescriptorResourceBinding * drb =  gmArrayGet(&arrayDescriptorResourceBindings,j);
+
+			if(resource->res_type == GM_RESOURCE_BUFFER){
+				//TODO
+				struct BufferRes * res = resource->buffer;
+				VkDescriptorBufferInfo info = {
+					.buffer = res->handle,
+					.offset = 0,
+					.range = res->alloc.size
+				};
+
+				VkWriteDescriptorSet write = {
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.dstSet = *frame->descriptorSets,
+					.dstBinding = drb->binding,
+					.dstArrayElement = 0,   // update one slot at a time
+					.descriptorType = drb->descriptorType,
+					.descriptorCount = 1,
+					.pBufferInfo = &info
+				};
+
+				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+			}
+			else if(resource->res_type == GM_RESOURCE_TEXTURE){
+				struct TextureRes * res = resource->texture;
+
+				for (uint32_t k = 0; k < drb->count; k++) {
+					VkDescriptorImageInfo info = {
+						.imageView = res[k].image.view,
+						.sampler = res[k].textureSampler,
+						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+					};
+
+					VkWriteDescriptorSet write = {
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.dstSet = *frame->descriptorSets,
+						.dstBinding = drb->binding,
+						.dstArrayElement = k,   // update one slot at a time
+						.descriptorType = drb->descriptorType,
+						.descriptorCount = 1,
+						.pImageInfo = &info
+					};
+
+					vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+				}
+			}
+		}
+
+		
+	}
+
+}
 void createDescriptorSets3(){
 	PRINT_FNAME;
 
@@ -2915,7 +3068,7 @@ void createDescriptorSets3(){
 				VkDescriptorBufferInfo info = {
 					.buffer = res->handle,
 					.offset = 0,
-					.range = res->allocation.size
+					.range = res->alloc.size
 				};
 
 				VkWriteDescriptorSet write = {
@@ -3013,9 +3166,9 @@ void clearUniformBuffers3(){
 
 	
 // 	vec4 v = {1.0,1.0,1.0,1.0};
-// 	GLM_VEC4_COPY(uniformBufferObjectDirectionalLight.lightColor, v);
-// 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
-// 	GLM_VEC4_SET(uniformBufferObjectDirectionalLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+// 	GLM_VEC4_COPY(UBO_DirLight.lightColor, v);
+// 	GLM_VEC4_SET(UBO_DirLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+// 	GLM_VEC4_SET(UBO_DirLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
 
 
 // 	for(int i=0;i<1;i++)
@@ -3126,7 +3279,7 @@ void createUniformBuffers3(){
 			if(resource->res_type == GM_RESOURCE_BUFFER)
 			{
 				struct BufferRes * b = resource->buffer;
-				VkDeviceSize bufferSize = b->allocation.size;
+				VkDeviceSize bufferSize = b->alloc.size;
 				VkBuffer buffer;
 				VkDeviceMemory bufferMemory;
 	
@@ -3138,21 +3291,112 @@ void createUniformBuffers3(){
 					&bufferMemory
 				);
 				b->handle= buffer;
-				b->allocation.memory = bufferMemory;
+				b->alloc.memory = bufferMemory;
 	
 				void * mapped_mem = NULL;
 				
 	
 				vkMapMemory(device, bufferMemory, 0, bufferSize, 0, &mapped_mem);
 	
-				b->allocation.mapped = mapped_mem;
+				b->alloc.mapped = mapped_mem;
 			}
 
 		}
 	
 	}
 }
+void createDescriptorLayout_Frame(){
+	PRINT_FNAME;
 
+	VkDescriptorSetLayoutBinding bindings[3] = {};
+	// light position vec4
+    bindings[0].binding = BINDING_SET_0_BIND_0;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings[0].pImmutableSamplers = NULL;
+
+	//view projections
+	bindings[1].binding = BINDING_SET_0_BIND_1;
+    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[1].descriptorCount = 1;
+    bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    bindings[1].pImmutableSamplers = NULL;
+
+	// light position VP
+	bindings[2].binding = BINDING_SET_0_BIND_2;
+    bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].descriptorCount = 1;
+    bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    bindings[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = sizeof(bindings)/ sizeof(VkDescriptorSetLayoutBinding);
+    layoutInfo.pBindings = bindings;
+
+    // VkDescriptorSetLayout layout;
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorLayout_Frame) != VK_SUCCESS) {
+        assert(false);
+        // return VK_NULL_HANDLE;
+    }
+
+}
+void createDescriptorLayout_Object(){
+	
+	VkDescriptorSetLayoutBinding bindings[3] = {};
+	// Models
+	bindings[0].binding = BINDING_SET_1_BIND_0;
+	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[0].descriptorCount = 1;
+	bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[0].pImmutableSamplers = NULL;
+
+	// Object IDs
+	bindings[1].binding = BINDING_SET_1_BIND_1;
+	bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[1].descriptorCount = 1;
+	bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[1].pImmutableSamplers = NULL;
+
+	// Colors
+	bindings[2].binding = BINDING_SET_1_BIND_2;
+	bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	bindings[2].descriptorCount = 1;
+	bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	bindings[2].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {0};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = sizeof(bindings)/ sizeof(VkDescriptorSetLayoutBinding);
+    layoutInfo.pBindings = bindings;
+
+    // VkDescriptorSetLayout layout;
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorLayout_Object) != VK_SUCCESS) {
+        assert(false);
+        // return VK_NULL_HANDLE;
+    }
+}
+void createDescriptorLayout_Material(){
+	VkDescriptorSetLayoutBinding bindings[1] = {};
+	// Textures
+	bindings[0].binding = BINDING_SET_2_BIND_0;
+	bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	bindings[0].descriptorCount = 1;
+	bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	bindings[0].pImmutableSamplers = NULL;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = sizeof(bindings)/ sizeof(VkDescriptorSetLayoutBinding);
+    layoutInfo.pBindings = bindings;
+
+    // VkDescriptorSetLayout layout;
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, NULL, &descriptorLayout_Material) != VK_SUCCESS) {
+        assert(false);
+        // return VK_NULL_HANDLE;
+    }
+}
 
 void createDescriptorPool() {
 
@@ -3170,8 +3414,8 @@ void createShaderDescriptorSetLayout(){
 	VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[arrayDescriptorResourceBindings.len];
 
 	for(int i=0;i<arrayDescriptorResourceBindings.len;i++){
-		struct DescriptorResourceBinding * drb = gmArrayGet(&arrayDescriptorResourceBindings, i);
 		VkDescriptorSetLayoutBinding * lb  = &descriptorSetLayoutBindings[i];
+		struct DescriptorResourceBinding * drb = gmArrayGet(&arrayDescriptorResourceBindings, i);
 		
 		lb->binding = drb->binding;
 		lb->descriptorType = drb->descriptorType;
@@ -3511,81 +3755,133 @@ void createCommandPool(){
 
 	
 }
-void buildMainPassRenderInfo(VkCommandBuffer commandBuffer){
+void renderHUD(
+	VkCommandBuffer cmd, 
+	struct Frame * frame,
+	uint32_t imageIndex
 
+){
+		struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
+	{
+		VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+		VkRenderingAttachmentInfo colorAttachmentsInfos[1];
+		{
+
+			colorAttachmentsInfos[0] = (VkRenderingAttachmentInfo){
+				
+				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+				.imageView = swapchainImageViews[imageIndex],
+				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.clearValue = clearColor
+				
+			};
+
+			// colorAttachmentsInfos[1] = (VkRenderingAttachmentInfo){
+				
+			// 	.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+			// 	.imageView = frame->pick.image.view,
+			// 	.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			// 	.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			// 	.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			// 	.clearValue  = { 
+			// 		.color = {{0, 0, 0, 0}} 
+			// 	}
+			// };
+
+		}
+		// colorAttachmentsInfos[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		// depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		
+		VkRenderingInfo renderingInfoHUD = {
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+			.renderArea = { {0, 0}, swapChainExtent },
+			.layerCount = 1,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = colorAttachmentsInfos,
+			// .pDepthAttachment = &depthAttachmentInfo
+		};
+
+		vkCmdBeginRendering(cmd, &renderingInfoHUD);
+		{
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
+			VkDeviceSize offset = 0;
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_HUD.vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData_HUD.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindDescriptorSets(
+				cmd, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipe_HUD->pipelineLayout
+				,0,1,
+				frame->descriptorSets,
+				0, NULL
+			);
+	
+			struct PushConst2D hudConstants = {
+				.texIdx = 2, 
+				.hasColor = 0
+			};
+			vkCmdPushConstants(
+            cmd,
+				pipe_HUD->pipelineLayout,
+				VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(struct PushConst2D),
+				&hudConstants
+			);
+			// Draw HUD elements
+			vkCmdDrawIndexed(cmd, modelVertexData_HUD.indices_num, 1, 0, 0, 0);
+		}
+		vkCmdEndRendering(cmd);
+
+	}
 }
+void renderMainPass(
+	VkCommandBuffer cmd, 
+	struct Frame * frame,
+	uint32_t imageIndex
+){
+//transition pick
+	{
+			VkImageMemoryBarrier2 beginBarrier[]={
 
-void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
+		
+				(VkImageMemoryBarrier2){
 
-	struct Frame * frame = &frames[frameIndex];
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+					.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+					.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.srcAccessMask = 0,
+					.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
+					.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = frame->pick.image.handle,
+					.subresourceRange = {
+						.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+						.baseMipLevel = 0,
+						.levelCount = 1,
+						.baseArrayLayer = 0,
+						.layerCount = 1,
+					},
+				},
 
-	VkCommandBuffer commandBuffer = *frame->graphicsCommandBuffers;
-	VkDescriptorSet * descriptorSet = frame->descriptorSets;
+		};
 
-	VkImageView * pickImageView = &frame->pick.image.view;
+	
+		VkDependencyInfo beginDepInfo = {
 
-	VkCommandBufferBeginInfo beginInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = 0, 
-        .pInheritanceInfo = NULL,
-    };
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
+			.pImageMemoryBarriers = beginBarrier,
+		};
 
+		vkCmdPipelineBarrier2(cmd, &beginDepInfo);
+	}
 
-	VkImageMemoryBarrier2 beginBarrier[]={
-
-		 (VkImageMemoryBarrier2){
-
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
-			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = 0,
-			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED ,  //UNDEFINES
-			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = swapchainImages[imageIndex],
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-		},
-		(VkImageMemoryBarrier2){
-
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = 0,
-			.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
-			.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = frame->pick.image.handle,
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-		},
-
-	};
-
-   
-    VkDependencyInfo beginDepInfo = {
-
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
-        .pImageMemoryBarriers = beginBarrier,
-    };
-
-    vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
+	//transition pick
 
 
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
@@ -3611,7 +3907,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		colorAttachmentsInfos[1] = (VkRenderingAttachmentInfo){
 			
 			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-			.imageView = *pickImageView,
+			.imageView = frame->pick.image.view,
 			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -3645,7 +3941,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
         .pDepthAttachment = &depthAttachmentInfo,
     };
 
-    vkCmdBeginRendering(commandBuffer, &renderingInfo);
+    vkCmdBeginRendering(cmd, &renderingInfo);
 
 	// for(int i=0;i<arrayPipelines.len;i++)
 	
@@ -3662,7 +3958,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		EXIT_CLEAN("ERROR in PIPELINE");
 	}
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
     
     VkViewport viewPort = {
         .x = 0, 
@@ -3673,10 +3969,10 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.maxDepth = 1.0f
     };
 
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
+    vkCmdSetViewport(cmd, 0, 1, &viewPort);
     
     VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
 
 
 
@@ -3687,14 +3983,14 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
 		//draw Room0
 		{
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(commandBuffer, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 	
 			vkCmdBindDescriptorSets(
-				commandBuffer, 
+				cmd, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
 				pipeline->pipelineLayout, 0, 1, 
-				descriptorSet, 
+				frame->descriptorSets, 
 				0, 
 				NULL
 				//  dynamicOffset = cameraIndex * sizeof(Camera)
@@ -3708,8 +4004,8 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			};
 			// int textureIndex = 0; // choose texture
 			vkCmdPushConstants(
-				commandBuffer,
-				 pipeline->pipelineLayout,
+				cmd,
+				pipeline->pipelineLayout,
 				VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
 				sizeof(struct PushConst),
@@ -3717,7 +4013,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 			);
 	
 			vkCmdDrawIndexed(
-				commandBuffer, 
+				cmd, 
 				// gameObject->mesh->indices_num, 
 				modelVertexData[gameObject->vertexIdx].indices_num,
 				gameObject->arrayViewUboModel.len , 
@@ -3731,7 +4027,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
 
 
-    vkCmdEndRendering(commandBuffer);
+    vkCmdEndRendering(cmd);
 
 
 	
@@ -3758,7 +4054,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.imageMemoryBarrierCount = 1,
 		.pImageMemoryBarriers = &toTransferBarrier
 	};
-	vkCmdPipelineBarrier2(commandBuffer, &toTransferDep);
+	vkCmdPipelineBarrier2(cmd, &toTransferDep);
 	
 
 	VkBufferImageCopy region = {
@@ -3773,7 +4069,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.imageExtent = {1, 1, 1}
 	};
 	vkCmdCopyImageToBuffer(
-		commandBuffer,
+		cmd,
 		frame->pick.image.handle,
 		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 		frame->pick.buffer.handle,
@@ -3805,59 +4101,185 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		.imageMemoryBarrierCount = 1,
 		.pImageMemoryBarriers = &toGeneralBarrier
 	};
-	vkCmdPipelineBarrier2(commandBuffer, &toGeneralDep);
+	vkCmdPipelineBarrier2(cmd, &toGeneralDep);
+}
+void renderShadowMap(
+	VkCommandBuffer cmd, 
+	struct Frame * frame,
+	uint32_t imageIndex
+){
+//transition pick
+	
+
+	
+
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    VkClearValue clearDepth = {{{1.0f, 0}}};
+    
+	
+	
+
+
+    VkRenderingAttachmentInfo depthAttachmentInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = frame->shadow.view,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .clearValue = clearDepth
+    };
+
+    VkRenderingInfo renderingInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .renderArea = { 
+			.offset = {0, 0}, 
+			.extent = swapChainExtent 
+		},
+		
+        .layerCount = 1,
+        .colorAttachmentCount = 0,
+        .pColorAttachments = NULL,
+
+        .pDepthAttachment = &depthAttachmentInfo,
+    };
+
+    vkCmdBeginRendering(cmd, &renderingInfo);
+
+	// for(int i=0;i<arrayPipelines.len;i++)
+	
+	struct Pipeline *  pipeline = gmArrayGet(&arrayPipelines, 2);
+
+	if (!pipeline || pipeline->graphicsPipeline == VK_NULL_HANDLE) {
+		printf("ERROR: pipeline or graphicsPipeline is invalid!\n");
+		printf("  pipeline ptr: %p\n", pipeline);
+		if (pipeline) {
+			printf("  frag_path: %s\n", pipeline->frag_path);
+			printf("  vert_path: %s\n", pipeline->vert_path);
+			printf("  graphicsPipeline: %llu\n", (unsigned long long)pipeline->graphicsPipeline);
+		}
+		EXIT_CLEAN("ERROR in PIPELINE");
+	}
+
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
+    
+    VkViewport viewPort = {
+        .x = 0, 
+		.y = 0, 
+		.width = swapChainExtent.width, 
+		.height = swapChainExtent.height, 
+        .minDepth = 0.0f, 
+		.maxDepth = 1.0f
+    };
+
+    vkCmdSetViewport(cmd, 0, 1, &viewPort);
+    
+    VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+
+
+	
+	for(int i=0; i< arrayGameObjects.len;i++)
+	{
+		VkDeviceSize offset = 0;
+		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
+		//draw Room0
+		{
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	
+			vkCmdBindDescriptorSets(
+				cmd, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS, 
+				pipeline->pipelineLayout, 0, 1, 
+				frame->descriptorSets, 
+				0, 
+				NULL
+				//  dynamicOffset = cameraIndex * sizeof(Camera)
+
+			);
+
+			vkCmdDrawIndexed(
+				cmd, 
+				// gameObject->mesh->indices_num, 
+				modelVertexData[gameObject->vertexIdx].indices_num,
+				gameObject->arrayViewUboModel.len , 
+				0, 
+				0,
+				gameObject->arrayViewUboModel.offset
+			);
+		}
+	}
+
+    vkCmdEndRendering(cmd);
+
+
+}
+void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
+
+	struct Frame * frame = &frames[frameIndex];
+
+	VkCommandBuffer commandBuffer = *frame->graphicsCommandBuffers;
+	VkDescriptorSet * descriptorSet = frame->descriptorSets;
+
+	VkImageView * pickImageView = &frame->pick.image.view;
+
+	VkCommandBufferBeginInfo beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = 0, 
+        .pInheritanceInfo = NULL,
+    };
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	{
+		
+		VkImageMemoryBarrier2 beginBarrier[]={
+
+			(VkImageMemoryBarrier2){
+
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+				.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+				.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+				.srcAccessMask = 0,
+				.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+				.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED ,  //UNDEFINES
+				.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = swapchainImages[imageIndex],
+				.subresourceRange = {
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+			},
+
+		};
+
+	
+		VkDependencyInfo beginDepInfo = {
+
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
+			.pImageMemoryBarriers = beginBarrier,
+		};
+
+		vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
+	}
+
+	renderShadowMap(commandBuffer,frame, imageIndex);
+
+	renderMainPass(commandBuffer,frame, imageIndex);
 
 	
 
 	//bind bipeline 2 START
 
-	struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
-	{
-		colorAttachmentsInfos[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		
-		VkRenderingInfo renderingInfoHUD = {
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-			.renderArea = { {0, 0}, swapChainExtent },
-			.layerCount = 1,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = colorAttachmentsInfos,
-			// .pDepthAttachment = &depthAttachmentInfo
-		};
+	renderHUD(commandBuffer,frame, imageIndex);
 
-		vkCmdBeginRendering(commandBuffer, &renderingInfoHUD);
-		{
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
-			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &modelVertexData_HUD.vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(commandBuffer, modelVertexData_HUD.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdBindDescriptorSets(
-				commandBuffer, 
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipe_HUD->pipelineLayout
-				,0,1,
-				frame->descriptorSets,
-				0, NULL
-			);
-	
-			struct PushConst2D hudConstants = {
-				.texIdx = 2, 
-				.hasColor = 0
-			};
-			vkCmdPushConstants(
-            commandBuffer,
-				pipe_HUD->pipelineLayout,
-				VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,
-				sizeof(struct PushConst2D),
-				&hudConstants
-			);
-			// Draw HUD elements
-			vkCmdDrawIndexed(commandBuffer, modelVertexData_HUD.indices_num, 1, 0, 0, 0);
-		}
-		vkCmdEndRendering(commandBuffer);
-
-	}
 
 	//bind bipeline 2 END
 
@@ -3902,13 +4324,13 @@ void updateUniformBuffer3(uint32_t currentFrame){
 	struct Frame * frame = &frames[currentFrame];
 
 
-	memcpy(frame->model_1->allocation.mapped, arraySBO_Models_1.data, sizeof(struct SBO_Model)* arraySBO_Models_1.len);
+	memcpy(frame->model_1->alloc.mapped, arraySBO_Models_1.data, sizeof(struct SBO_Model)* arraySBO_Models_1.len);
 
-	memcpy(frame->model_2->allocation.mapped, arraySBO_Models_2.data, sizeof(struct SBO_Model)* arraySBO_Models_2.len);
+	memcpy(frame->model_2->alloc.mapped, arraySBO_Models_2.data, sizeof(struct SBO_Model)* arraySBO_Models_2.len);
 
-	memcpy(frame->objectIds_1->allocation.mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSB_ObjectId)* arraySBO_ObjectIds_1.len);
+	memcpy(frame->objectIds_1->alloc.mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSB_ObjectId)* arraySBO_ObjectIds_1.len);
 
-	memcpy(frame->colors_2->allocation.mapped, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
+	memcpy(frame->colors_2->alloc.mapped, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
 
 	// gmArrayCopyBySize(frame->bufferModelMapped, &arrayUboModels);
 
@@ -3929,33 +4351,53 @@ void updateUniformBuffer3(uint32_t currentFrame){
 
 	ubo.proj[1][1] *= -1;
 
-	memcpy(frame->viewProjection_1->allocation.mapped, &ubo, sizeof(struct UBOCommon));
+	memcpy(frame->viewProjection_1->alloc.mapped, &ubo, sizeof(struct UBOCommon));
 
 
 	struct UBOCommon ubo2 = {};
 	glm_mat4_identity(ubo2.view);
 
 	
-	glm_ortho(0.0f, (float)swapChainExtent.width, 
-          (float)swapChainExtent.height, 0.0f, 
-          -1.0f, 1.0f, ubo2.proj);
+	glm_ortho(
+		0.0f, 
+		(float)swapChainExtent.width, 
+        (float)swapChainExtent.height, 
+		0.0f, -1.0f, 1.0f,
+		ubo2.proj);
 
 
-	memcpy(frame->viewProjection_2->allocation.mapped, &ubo2, sizeof(struct UBOCommon));
+	memcpy(frame->viewProjection_2->alloc.mapped, &ubo2, sizeof(struct UBOCommon));
 
 	// gmArrayCopyBySize(frame->buffersViewProjectionMapped, ubo);
 
-	GLM_VEC3_COPY(uniformBufferObjectDirectionalLight.viewPos,cameraPos);
+	GLM_VEC3_COPY(UBO_DirLight.viewPos,cameraPos);
 
 
 	// vec4 lightPos ;
-	uniformBufferObjectDirectionalLight.lightPos[0] = 5.0f*sin(lastTime);
+	UBO_DirLight.lightPos[0] = 5.0f*sin(lastTime);
 	
 
-	memcpy(frame->directionLight_1->allocation.mapped, &uniformBufferObjectDirectionalLight, sizeof(struct UBODirectionalLight));
+	memcpy(frame->directionLight_1->alloc.mapped, &UBO_DirLight, sizeof(struct UBODirectionalLight));
 	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
 
 
+
+	//-----LIGHT
+	struct UBOCommon light = {};
+	glm_mat4_identity(light.view);
+
+
+	vec3 LightCenter;
+	
+	glm_vec3_add(UBO_DirLight.lightPos, UBO_DirLight.viewPos, LightCenter);
+
+	glm_lookat(UBO_DirLight.lightPos, LightCenter, cameraUp, light.view);
+
+	glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , light.proj);
+
+	light.proj[1][1] *= -1;
+
+	memcpy(frame->shadow.alloc.mapped, &light, sizeof(struct UBOCommon));
 
 
 };
@@ -4000,7 +4442,7 @@ void drawFrame3() {
 	}
 
 
-	uint32_t pickedObjectId = *(uint32_t*)frame->pick.image.alloc.mapped;
+	uint32_t pickedObjectId = *(uint32_t*)frame->pick.buffer.alloc.mapped;
 	frame->pick.pickedID = pickedObjectId;
 	if(frame->pick.pickedID != 0)
 	{
@@ -4766,17 +5208,17 @@ void createImageViews(){
 
  
 }
-void cleanAllocation(struct Allocation * all){
+void cleanAllocation(struct Allocation * alloc){
 	PRINT_FNAME;
-	if(all->mapped != NULL){
+	if(alloc->mapped != NULL){
 
-		vkUnmapMemory(device,all->memory);
+		vkUnmapMemory(device,alloc->memory);
 		
 	}
-	all->mapped = NULL;
-	if( all->memory != NULL)
+	alloc->mapped = NULL;
+	if( alloc->memory != NULL)
 	{
-		vkFreeMemory(device, all->memory, NULL);
+		vkFreeMemory(device, alloc->memory, NULL);
 	}
 			
 }
@@ -4791,7 +5233,7 @@ void cleanBuffer(struct BufferRes * buff){
 	PRINT_FNAME;
 	vkDestroyBuffer(device,buff->handle, NULL);
 	
-	cleanAllocation(&buff->allocation);
+	cleanAllocation(&buff->alloc);
 	
 }
 void cleanTextureRes(struct TextureRes * tex){
@@ -4804,13 +5246,14 @@ void cleanTextureRes(struct TextureRes * tex){
 		// vkFreeMemory(device, t->textureImageMemory, NULL);
 }
 void cleanupPickImages(){
-PRINT_FNAME;
+	PRINT_FNAME;
 	for(int i=0;i< MAX_FRAMES_IN_FLIGHT;i++)
 	{
 		struct Frame * frame = &frames[i];
 
 		cleanImageRes(&frame->pick.image);
-		cleanAllocation(&frame->pick.image.alloc);
+		cleanBuffer(&frame->pick.buffer);
+		// cleanAllocation(&frame->pick.image.alloc);
 		// cl
 		// vkDestroyImage(device,frame->pickImage, NULL);
 		// vkDestroyImageView(device, frame->pickView, NULL);
@@ -5053,58 +5496,297 @@ void createInstance(){
 
 }
 void createShadowPipeline(struct Pipeline * pipeline){
-	/*
 	
-	Feature	Shadow Pass	Main Pass
-	Color output	None (disabled)	Full color
-	Depth testing	Yes (write depth)	Yes
-	Fragment shader	Minimal (no lighting)	Complex (lighting, texturing, shadows)
-	Blending	Disabled	Enabled (maybe)
-	Render targets	Depth texture only	Color + depth
-	View/projection	Light's matrices	Camera's matrices
+	PRINT_FNAME;
+
+	// char * path ="shaders/frag.spv";
+	char * path = pipeline->frag_path;
+	uint8_t* data = NULL;
+	uint32_t dataSize = createShaderFromFile(path, &data);
+	
+	//--- FRAGMENT
+
+ 
+		
+
+	if(dataSize == 0)
+	{
+
+		printf("Shader path: %s\n",path);
+		EXIT_CLEAN("failed to read fragment shader file\n");
+	
+	}
+	VkShaderModuleCreateInfo createInfo={
+		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		.pCode = (uint32_t*)data,
+		.codeSize = dataSize,
+	 
+		
+	};
+ 
+	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleFrag);
+
+	free(data);
+
+
+
+
+	//--- VERTEX
+	
+	path = pipeline->vert_path;
+
+	dataSize = createShaderFromFile(path, &data);
+	
+	 
+	if(dataSize == 0)
+	{
+		printf("Shader path: %s\n",path);
+		EXIT_CLEAN("failed to read vertext shader file\n");
+		
+	}
+
+	createInfo = (VkShaderModuleCreateInfo) {
+		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		.pCode = (uint32_t*)data,
+		.codeSize = dataSize,
+		
+	};
+	
+	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleVert);
+	free(data);
+	//---------
+
+	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+		.stage = VK_SHADER_STAGE_VERTEX_BIT,
+		.module = pipeline->shaderModuleVert,
+		.pName = "main",
+		
+
+	};
+
+	VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+		.module = pipeline->shaderModuleFrag,
+		.pName = "main",
+
+	};
+
+	uint32_t dynamicStateCount = 2;
+
+	/*
+	INFO
+		set during command buffer recording part
+		vkCmdSetViewport
 	*/
+	VkDynamicState dynamicState[]={VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_SCISSOR};
+
+	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.dynamicStateCount = dynamicStateCount,
+		.pDynamicStates = dynamicState,
+		
+	};
+
+	
+	VkPipelineShaderStageCreateInfo shaderStageCreateInf[] = {
+		shaderStageCreateInfoVert,
+		shaderStageCreateInfoFrag
+	};
+
+	uint32_t shaderStageCreateInfCnt = sizeof(shaderStageCreateInf) /  sizeof(VkPipelineShaderStageCreateInfo);
+
+
+	VkVertexInputBindingDescription vertexInputBindingDescription={
+		.binding = 0,
+		.stride = sizeof(struct Vertex),
+		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+	};
+
+  
+
+	VkVertexInputAttributeDescription vertexInputAttributeDescriptions[1];
+
+ 
+
+	vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){0, 0, VK_FORMAT_R32G32B32_SFLOAT,  offsetof(struct Vertex, pos)};
+
+ 
+
+	uint32_t vertexInputAttributeDescriptionsCount = sizeof(vertexInputAttributeDescriptions) / (sizeof(VkVertexInputAttributeDescription));
+
+
+
+	VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		.vertexBindingDescriptionCount = 1,
+		.pVertexBindingDescriptions = &vertexInputBindingDescription,
+		.vertexAttributeDescriptionCount = vertexInputAttributeDescriptionsCount,
+		.pVertexAttributeDescriptions = vertexInputAttributeDescriptions,
+	
+	};
+
+	VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+	};
+
+ 
+	//viewport is dynamic
+
+	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+		.pViewports = 0,
+		.viewportCount = 1,
+		.pScissors = 0,
+		.scissorCount  =1,
+	};
+
+ 
+
+	VkPipelineRasterizationStateCreateInfo rasterizer = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		.depthClampEnable = VK_FALSE,
+		.rasterizerDiscardEnable = VK_FALSE,
+		.polygonMode = VK_POLYGON_MODE_FILL,
+		.cullMode = VK_CULL_MODE_BACK_BIT,
+		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		.depthBiasEnable = VK_FALSE,
+		.depthBiasSlopeFactor = 1.0f,
+		.lineWidth = 1.0f,
+		
+	};
+
+ 
+	VkPipelineMultisampleStateCreateInfo multisampling = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+		.sampleShadingEnable = VK_FALSE,
+	};
+
+ 
+	VkPipelineDepthStencilStateCreateInfo depthStencil={
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		.depthTestEnable =  VK_TRUE,
+		.depthWriteEnable = VK_TRUE,
+		.depthCompareOp = VK_COMPARE_OP_LESS,
+		.depthBoundsTestEnable = VK_FALSE,
+		.stencilTestEnable = VK_FALSE,
+	};
+
+
+	//Color blending
+	//needed for picking
+	// // const uint32_t colorAttachmentCount = 2;
+	// VkPipelineColorBlendAttachmentState colorBlendAttachmentState[]=
+	// {
+
+	// 	(VkPipelineColorBlendAttachmentState){
+	// 		.blendEnable = VK_FALSE, // true of false?
+	// 		.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+	// 		.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+	// 		.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	// 		.colorBlendOp = VK_BLEND_OP_ADD,
+	// 		.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+	// 		.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+	// 		.alphaBlendOp = VK_BLEND_OP_ADD,
+	// 	},
+
+	// 	// (VkPipelineColorBlendAttachmentState){
+	// 	// 	.blendEnable = VK_FALSE,
+	// 	// 	.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+	// 	// 	.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+	// 	// 	.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	// 	// 	.colorBlendOp = VK_BLEND_OP_ADD,
+	// 	// 	.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+	// 	// 	.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+	// 	// 	.alphaBlendOp = VK_BLEND_OP_ADD,
+	// 	// },
+	// };
+
+
+	
+
+	VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo={
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+		.logicOpEnable = VK_FALSE,
+		.logicOp = VK_LOGIC_OP_COPY,
+		.attachmentCount = 0,
+		.pAttachments = NULL,
+	};
+
+
+	// VkPushConstantRange pushRange = {
+	// 	.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+	// 	.offset = 0,
+	// 	.size = sizeof(struct PushConst),
+	// };
+
+
+
+	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		.setLayoutCount = 1,
+		.pSetLayouts = &descriptorSetLayout,
+		.pushConstantRangeCount  = 0,
+		// .pPushConstantRanges = &pushRange
+	};
+
+	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipeline->pipelineLayout );
+
+
+	VkFormat depthFormat = findDepthFormat();
+
+
+
+	// // const uint32_t colorAttachmentFormatsCount = 2;
+	// VkFormat formats[] = {
+	// 	// swapchainSurfaceFormat,   // color
+	// 	// VK_FORMAT_R32_UINT          // picking (or UNORM if encoded)
+	// };
+
+	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+		.colorAttachmentCount = 0,
+		.pColorAttachmentFormats = NULL,
+		.depthAttachmentFormat = depthFormat,
+	};
+	
+
+
+	VkGraphicsPipelineCreateInfo  graphicsPipelineCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO , 
+		.pNext = &pipelineRenderingCreateInfo,
+		.stageCount = shaderStageCreateInfCnt,
+		.pStages = shaderStageCreateInf,
+		.pVertexInputState = &pipelineVertexInputStateCreateInfo,
+		.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo,
+		.pViewportState = &viewportStateCreateInfo,
+		.pRasterizationState = &rasterizer,
+		.pMultisampleState = &multisampling,
+		.pColorBlendState = &colorBlendStateCreateInfo,
+		.pDynamicState = &dynamicStateCreateInfo,
+		.layout = pipeline->pipelineLayout,
+		.renderPass = VK_NULL_HANDLE,
+		.basePipelineHandle = VK_NULL_HANDLE,
+		.basePipelineIndex = - 1,
+		.pDepthStencilState = &depthStencil,
+			
+	};
+
+	vkCreateGraphicsPipelines(
+		device,
+		NULL, 
+		1, 
+		&graphicsPipelineCreateInfo,
+		NULL, 
+		&pipeline->graphicsPipeline
+	);
 }
 void createHUDPipeline(struct  Pipeline * pipeline){
 
 	PRINT_FNAME;
-
-	/*
-	vkCmdDrawIndexed(
-		VkCommandBuffer commandBuffer,
-		uint32_t indexCount, 
-		uint32_t instanceCount, 
-		uint32_t firstIndex, 
-		int32_t vertexOffset, 
-		uint32_t firstInstance
-	);
-
-	{
-		shaders
-		layout(location = 0) in vec2 in_position;
-		layout(location = 1) in vec2 in_texCoord;
-	
-	}
-
-	"shaders/frag_hud.spv"
-	"shaders/vert_hud.spv"
-
-
-	mat4 ortho = ortho_matrix(
-    	0.0f, (float)width,
-		(float)height, 0.0f,   // flip Y if needed
-		-1.0f, 1.0f
-	);
-
-
-	1. everything is a square
-	2. instance count 
-	3. what is instance data?
-		3.1 texture idx
-		3.2 model transform
-		3.3 selected/highlighted
-		3.4 grayed out
-
-	*/
 
 
 
@@ -5400,9 +6082,6 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 		&pipeline->graphicsPipeline
 	);
 
-
-	
-
 }
 void createPipelines(){
 
@@ -5410,8 +6089,8 @@ void createPipelines(){
 
 	struct Pipeline * worldPipeline  = 	gmArrayPush(&arrayPipelines);
 
-	worldPipeline->frag_path = "shaders/frag.spv";
-	worldPipeline->vert_path = "shaders/vert.spv";
+	worldPipeline->frag_path = "shaders/out/frag.spv";
+	worldPipeline->vert_path = "shaders/out/vert.spv";
 	
 	
 
@@ -5427,11 +6106,19 @@ void createPipelines(){
 	 
 	struct Pipeline * hudPipeline = gmArrayPush(&arrayPipelines);
 
-	hudPipeline->frag_path = "shaders/frag_hud.spv";
-	hudPipeline->vert_path = "shaders/vert_hud.spv";
+	hudPipeline->frag_path = "shaders/out/frag_hud.spv";
+	hudPipeline->vert_path = "shaders/out/vert_hud.spv";
 
 
 	createHUDPipeline(hudPipeline);
+
+
+	struct Pipeline * shadowPipeline = gmArrayPush(&arrayPipelines);
+
+	shadowPipeline->frag_path = "shaders/out/frag_shadow.spv";
+	shadowPipeline->vert_path = "shaders/out/vert_shadow.spv";
+
+	createShadowPipeline(shadowPipeline);
 
 	/*
 	
@@ -5783,6 +6470,8 @@ void initVulkan(){
 
 	createDepthImages();
 
+	createShadowImages();
+
 	createTextures();
 
 	loadModels();
@@ -5913,6 +6602,7 @@ void cleanup(){
 		struct Frame *frame = &frames[i];
 
 		cleanImageRes(&frame->depth_image);
+		cleanImageRes(&frame->shadow);
 		// vkDestroyImage(device, frame->depthImage, NULL);
 		// vkDestroyImageView(device,frame->depthImageView, NULL);
 		// vkFreeMemory(device, frame->depthImageMemory, NULL);
