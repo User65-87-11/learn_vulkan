@@ -1,10 +1,12 @@
 #include <stdint.h>
-#include <stdlib.h>
+
 #include <string.h>
 #include <assert.h>
-#include <stdio.h>
 
- 
+
+
+#include "gm_array2.h"
+
 #ifdef _WIN32
     #include <malloc.h>
     #define gm_alloc_aligned(size, align) _aligned_malloc(size, align)
@@ -14,10 +16,6 @@
     #define gm_alloc_aligned(size, align) aligned_alloc(align, size)
     #define gm_free_aligned(ptr) free(ptr)
 #endif
-
-#include "gm_array2.h"
-
-#define DEFAULT_ALIGN 32
 
 
 
@@ -38,6 +36,7 @@ void gmArrayInit(struct GmArray * array, uint32_t width, uint32_t initial_size, 
 	if(initial_size !=0 && array->width != 0)
 	{
 		array->data = gm_alloc_aligned(array->width * initial_size, alignment);
+		memset(array->data, 0, array->width * initial_size);
 		// array->data = malloc(array->width * initial_size);
 
 	}
@@ -58,6 +57,7 @@ void* gmArrayPush(
 		uint32_t new_size = array->capacity *  array->width;
 
 		void *new_data = gm_alloc_aligned(new_size,array->alignment);
+		memset(new_data, 0, new_size);
 		memcpy(new_data, array->data, old_size );
 		gm_free_aligned(array->data);
 		array->data = new_data;

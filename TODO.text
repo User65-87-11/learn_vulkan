@@ -1,22 +1,46 @@
-VkRenderingAttachmentInfo colorAttachmentInfo{};
-colorAttachmentInfo.imageView = offscreenImageView; // 👈 THIS replaces framebuffer
-colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+ok createUniformBuffers33 
+ok createDescriptorSetLayout2
 
-
-vkCmdBeginRendering(cmd, &renderingInfo);
-
-
-
-VkImageCreateInfo imageInfo{};
-imageInfo.format = VK_FORMAT_R32_UINT; // 👈 HERE
+ok createDescriptorSets33
 
 
 
----
-If you're rendering object IDs:
 
-Use a non-normalized format, e.g.:
-VK_FORMAT_R32_UINT (best)
-or R32_SFLOAT
 
-layout(location = 0) out uint outId;
+
+
+--manager
+
+typedef struct {
+    VkImage image;
+    VkImageView view;
+    VkSampler sampler;
+
+    uint32_t descriptorIndex; // index in descriptor array
+    int alive;
+} TextureEntry;
+
+typedef struct {
+
+	GmArray textures; // TextureEntry
+   
+
+    // descriptor stuff
+    VkDescriptorSet descriptorSet;
+    uint32_t binding; // e.g. BINDING_3D_SAMPLERS
+} TextureManager;
+
+
+typedef struct {
+    VkDescriptorSetLayoutBinding bindings[MAX_BINDINGS];
+    uint32_t bindingCount;
+
+    VkDescriptorSetLayout layout;
+    VkPipelineLayout pipelineLayout;
+} ShaderInterface;
+
+typedef struct {
+    ShaderInterface* shader;
+
+    VkDescriptorSet descriptorSet;
+} Material;

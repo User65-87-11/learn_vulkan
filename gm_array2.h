@@ -1,12 +1,12 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct GmArray{
 	void * data;
 	uint32_t len;
 	uint32_t width;
-	uint32_t stride;
 	uint32_t capacity;
 	uint32_t alignment;
 
@@ -17,7 +17,6 @@ struct GmArrayView{
 	void * data;
 	uint32_t len;
 	uint32_t width;
-	// uint32_t stride;
 	uint32_t offset;
 	
 };

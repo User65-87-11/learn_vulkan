@@ -19,6 +19,9 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addCSourceFile(.{
         .file = b.path("gm_array2.c"),
     });
+    exe.root_module.addCSourceFile(.{
+        .file = b.path("gm_list.c"),
+    });
 
     // Include paths
     exe.root_module.addIncludePath(.{
