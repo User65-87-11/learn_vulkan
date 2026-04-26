@@ -304,33 +304,6 @@ struct BufferRes{
 
 };
 
-enum  ResoruceType{
-    GM_RESOURCE_BUFFER = 1,
-    GM_RESOURCE_TEXTURE
-};
-
-
-struct Resource{
-	enum ResoruceType res_type;
-	  union {
-		struct BufferRes* buffer;
-		struct TextureRes* texture;
-    };
-};
-struct DescriptorResourceBinding {
-
-	enum ResoruceType res_type;
-
-    uint32_t binding;
-    VkDescriptorType descriptorType;
-    VkShaderStageFlags shaderStages;
-
-	uint32_t count;
-
-  
-};
-
-
 
 
 
@@ -350,10 +323,7 @@ struct Frame{
 	VkFence inFlightFence ;
 
 
-	
 
-
-	 
 	
 	struct {
 		struct BufferRes ubo_ViewProjection;
@@ -366,7 +336,7 @@ struct Frame{
 
 
 
-	struct ImageRes depth_image;
+	struct ImageRes deapth;
 
 
 	struct ImageRes shadow;
@@ -383,9 +353,6 @@ struct Frame{
 		
 		struct BufferRes buffer;
 
-		
-
-
 		uint32_t pickedID;
 	} pick;
 
@@ -397,33 +364,28 @@ struct Frame frames[MAX_FRAMES_IN_FLIGHT] ={};
 
 struct GmList list_BufferRes;
 
-struct ModelVertexData
+struct ModelVertexData2
 {
 	char * gltfPath;
 
-	VkBuffer vertextBuffer ;
+	struct BufferRes vertexBuffer;
+	struct BufferRes indexBuffer;
 
-	VkDeviceMemory vertexBufferMemory;
-
-	VkBuffer indexBuffer;
-
-	VkDeviceMemory indexBufferMemory;
 
 	uint32_t indices_num;
 
 };
 
+
 #define MODEL_NUM 2
 
-
-struct ModelVertexData modelVertexData[MODEL_NUM]={
+struct ModelVertexData2 modelVertexData_3D[MODEL_NUM]={
 	{.gltfPath = "models_gltf/viking_room.gltf"},
 	{.gltfPath =  "models_gltf/box.gltf"},
 };
 
 
-struct ModelVertexData modelVertexData_HUD = {};
-
+struct ModelVertexData2 modelVertexData_HUD2 = {};
 
 
 
@@ -431,8 +393,6 @@ struct ModelVertexData modelVertexData_HUD = {};
 /* END UNIFORM BUFFERS */
 
 VkDescriptorPool descriptorPool = NULL;
-
-
 
 VkDescriptorSet descriptorSets2 [MAX_FRAMES_IN_FLIGHT];
 
@@ -453,7 +413,7 @@ struct TextureRes{
 	uint32_t textureIdx;
 };
 
-struct GmArray arrayTextures_2;
+struct GmArray arrayTextures_2D;
 
 struct GmArray arrayTextures_3D;
 
@@ -668,7 +628,21 @@ void createTextures();
 
 void createPipelines();
 
+void createVertexBuffer2(
 
+	uint32_t verticesNum,
+	void * vertices,
+	uint32_t data_size,
+	struct BufferRes *out
+
+);
+
+void createIndexBuffer2(
+	uint32_t indicesNum,
+	uint32_t * indices,
+	struct BufferRes *out
+
+);
 
 void procMouseInput(GLFWwindow* window);
 
@@ -989,7 +963,7 @@ void createDepthImages(){
 	{
 		struct  Frame * frame = &frames[i];
 
-		createDepthResources4(&frame->depth_image);
+		createDepthResources4(&frame->deapth);
 		
 	}
 	
@@ -1009,10 +983,10 @@ void createTextures(){
 
 		createTextureSampler(&t->textureSampler);
 	}
-	printf("arrayTextures_2.len %d\n",arrayTextures_2.len);
-	for( int i=0;i < arrayTextures_2.len ;i++)
+	printf("arrayTextures_2D.len %d\n",arrayTextures_2D.len);
+	for( int i=0;i < arrayTextures_2D.len ;i++)
 	{
-		struct TextureRes * t = gmArrayGet(&arrayTextures_2, i);
+		struct TextureRes * t = gmArrayGet(&arrayTextures_2D, i);
 		createTextureImage4(t);
 		t->textureIdx = i;
 		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1029,13 +1003,13 @@ void initVariables(){
 
 
 
-	uint32_t total_objects = TOTAL_3D_OBJECT + TOTAL_2D_OBJECT;
+	// uint32_t total_objects = TOTAL_3D_OBJECT + TOTAL_2D_OBJECT;
 
 
 	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3,_Alignof(struct Pipeline));
 
 
-	gmArrayInit(&arrayTextures_2, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
+	gmArrayInit(&arrayTextures_2D, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
 
 
 	gmArrayInit(&arrayTextures_3D, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
@@ -1046,12 +1020,12 @@ void initVariables(){
 
 
 	
-	gmArrayInit(&arraySBO_Models_1, sizeof(struct SSBO_Model), total_objects, _Alignof(struct SSBO_Model));
+	gmArrayInit(&arraySBO_Models_1, sizeof(struct SSBO_Model), TOTAL_3D_OBJECT + TOTAL_2D_OBJECT, _Alignof(struct SSBO_Model));
 
 	
-	gmArrayInit(&arraySBO_ObjectIds_1, sizeof(struct SSBO_ObjectID), total_objects, _Alignof(struct SSBO_ObjectID));
+	gmArrayInit(&arraySBO_ObjectIds_1, sizeof(struct SSBO_ObjectID), TOTAL_3D_OBJECT, _Alignof(struct SSBO_ObjectID));
 
-	gmArrayInit(&arrayGameObjectInstances, sizeof(struct Object3DTransforms), total_objects, _Alignof(struct Object3DTransforms));
+	gmArrayInit(&arrayGameObjectInstances, sizeof(struct Object3DTransforms), TOTAL_3D_OBJECT, _Alignof(struct Object3DTransforms));
 
 	
 	gmArrayInit(&arrayColors_2, sizeof(vec4), 1, _Alignof(vec4));
@@ -1073,14 +1047,14 @@ void initVariables(){
 	
 	{
 
-		struct TextureRes * texRes = gmArrayPush(&arrayTextures_2);
+		struct TextureRes * texRes = gmArrayPush(&arrayTextures_2D);
 		texRes->path = "models_gltf/wooden_small.jpg";
 
-		texRes = gmArrayPush(&arrayTextures_2);
+		texRes = gmArrayPush(&arrayTextures_2D);
 		texRes->path = "textures/cross32x32.png";
 
 
-		texRes = gmArrayPush(&arrayTextures_2);
+		texRes = gmArrayPush(&arrayTextures_2D);
 		texRes->path = "textures/cross32x32a.png";
 	}
 
@@ -1199,7 +1173,7 @@ void freeVariables(){
 
 	gmListFree(&list_BufferRes);
 
-	gmArrayFree(&arrayTextures_2);
+	gmArrayFree(&arrayTextures_2D);
 
 	gmArrayFree(&arrayTextures_3D);
 
@@ -1222,7 +1196,7 @@ void loadModels(){
 	for(int i=0;i<MODEL_NUM;i++)
 	{
 
-		struct ModelVertexData * ref = &modelVertexData[i];
+		struct ModelVertexData2 * ref = &modelVertexData_3D[i];
 
 		if(ref->gltfPath == NULL) continue;
 
@@ -1244,20 +1218,31 @@ void loadModels(){
 
 		ref->indices_num = indicesCnt;
 
-		createVertexBuffer(
-			verticesCnt,
-			vertices,
-			sizeof(struct Vertex)*verticesCnt,
-			&ref->vertextBuffer,
-			&ref->vertexBufferMemory
+		createVertexBuffer2(
+			verticesCnt, 
+			vertices, 
+			sizeof(struct Vertex)*verticesCnt, 
+			&ref->vertexBuffer
 		);
+		createIndexBuffer2(
+			indicesCnt, 
+			indices, 
+			&ref->indexBuffer
+		);
+		// createVertexBuffer(
+		// 	verticesCnt,
+		// 	vertices,
+		// 	sizeof(struct Vertex)*verticesCnt,
+		// 	&ref->vertextBuffer,
+		// 	&ref->vertexBufferMemory
+		// );
 
-		createIndexBuffer(
-			indicesCnt,
-			indices,
-			&ref->indexBuffer,
-			&ref->indexBufferMemory
-		);
+		// createIndexBuffer(
+		// 	indicesCnt,
+		// 	indices,
+		// 	&ref->indexBuffer,
+		// 	&ref->indexBufferMemory
+		// );
 
 		free(vertices);
 		free(indices);
@@ -1280,23 +1265,35 @@ void loadModels(){
 		0, 1, 2,
 		2, 3, 0
 	};
-	modelVertexData_HUD.indices_num = sizeof(indices)/sizeof(uint32_t);
+	modelVertexData_HUD2.indices_num = sizeof(indices)/sizeof(uint32_t);
 
-	
-	createVertexBuffer(
+	createVertexBuffer2(
 		sizeof(vertices)/sizeof(struct Vertex2D),
 		vertices,
 		sizeof(vertices),
-		&modelVertexData_HUD.vertextBuffer,
-		&modelVertexData_HUD.vertexBufferMemory
+		&modelVertexData_HUD2.vertexBuffer
+	);
+	createIndexBuffer2(
+		modelVertexData_HUD2.indices_num,
+		indices,
+		&modelVertexData_HUD2.indexBuffer
 	);
 
-	createIndexBuffer(
-		modelVertexData_HUD.indices_num,
-		indices,
-		&modelVertexData_HUD.indexBuffer,
-		&modelVertexData_HUD.indexBufferMemory
-	);
+	
+	// createVertexBuffer(
+	// 	sizeof(vertices)/sizeof(struct Vertex2D),
+	// 	vertices,
+	// 	sizeof(vertices),
+	// 	&modelVertexData_HUD.vertextBuffer,
+	// 	&modelVertexData_HUD.vertexBufferMemory
+	// );
+
+	// createIndexBuffer(
+	// 	modelVertexData_HUD.indices_num,
+	// 	indices,
+	// 	&modelVertexData_HUD.indexBuffer,
+	// 	&modelVertexData_HUD.indexBufferMemory
+	// );
 
 
 }
@@ -2644,9 +2641,9 @@ void createDescriptorSets33(){
 
 				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
 			}
-			for(int i=0;i<arrayTextures_2.len;i++)
+			for(int i=0;i<arrayTextures_2D.len;i++)
 			{
-				struct TextureRes * text =  gmArrayGet(&arrayTextures_2, i);
+				struct TextureRes * text =  gmArrayGet(&arrayTextures_2D, i);
 				VkDescriptorImageInfo info = {
 					.imageView = text->image.view,
 					.sampler = text->textureSampler,
@@ -2688,7 +2685,15 @@ void cleanShaderBuffers(){
 
 void mapBufferMemory(struct BufferRes * buffer){
 	vkMapMemory(device, buffer->alloc.memory, 0, buffer->alloc.size, 0, &buffer->alloc.mapped);
+	
 }
+void unmapBufferMemory(struct BufferRes * buffer){
+	vkUnmapMemory(device, buffer->alloc.memory);
+	buffer->alloc.mapped = NULL;
+	// buffer->alloc.memory = NULL;
+}
+
+
 void createUniformBuffers33(){
 
 
@@ -2752,7 +2757,7 @@ void createDescriptorPool() {
 	VkDescriptorPoolSize poolSizes[] = {
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount =  MAX_FRAMES_IN_FLIGHT * (arrayTextures_3D.len + arrayTextures_2.len)
+			.descriptorCount =  MAX_FRAMES_IN_FLIGHT * (arrayTextures_3D.len + arrayTextures_2D.len)
 		},
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -2806,7 +2811,7 @@ void createDescriptorSetLayout2(){
 		(VkDescriptorSetLayoutBinding){
 			.binding = BINDING_2D_SAMPLERS,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = arrayTextures_2.len,
+			.descriptorCount = arrayTextures_2D.len,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		},
 		
@@ -3044,6 +3049,146 @@ void createIndexBuffer(
 	vkFreeMemory(device, bufferMemory, NULL);
 
 }
+void createIndexBuffer2(
+	uint32_t indicesNum,
+	uint32_t * indices,
+	struct BufferRes *out
+	){
+
+	VkDeviceSize bufferSize = sizeof(uint32_t) * indicesNum;
+
+	struct BufferRes staging = {};
+	
+
+	createBufferRes(
+		bufferSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT ,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+		&staging
+	);
+
+	mapBufferMemory(&staging);
+	// void * data = NULL;
+
+	// vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
+
+	memcpy(staging.alloc.mapped, indices, staging.alloc.size);
+
+	// VkMappedMemoryRange mappedMemoryRange = {
+	// 	.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+	// 	.memory = staging.alloc.memory,
+	// 	.offset = 0,
+	// 	.size = staging.alloc.size,
+		
+	// };
+
+	// vkFlushMappedMemoryRanges(device, 1, &mappedMemoryRange);
+
+	unmapBufferMemory(&staging);
+	// vkUnmapMemory(device,staging.alloc.memory);
+
+
+	createBufferRes(
+		bufferSize, 
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT|VK_BUFFER_USAGE_INDEX_BUFFER_BIT ,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		out
+	);
+
+	
+	// createBuffer(
+	// 	staging.alloc.size,
+	// 	VK_BUFFER_USAGE_TRANSFER_DST_BIT|VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	// 	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	// 	&out->handle,
+	// 	out-
+	// );
+
+    copyBuffer(staging.handle, out->handle,  bufferSize);
+
+	cleanBuffer(&staging);
+	// vkDestroyBuffer(device, stagingBuffer, NULL);
+
+	// vkFreeMemory(device, bufferMemory, NULL);
+}
+void createVertexBuffer2(
+
+	uint32_t verticesNum,
+	void * vertices,
+	uint32_t data_size,
+	struct BufferRes *out
+
+) {
+
+	
+    // VkDeviceSize bufferSize = data_size;
+
+	// VkBuffer stagingBuffer;
+	
+    // VkDeviceMemory bufferMemory;
+
+
+	// createBuffer(
+	// 	bufferSize,
+	// 	VK_BUFFER_USAGE_TRANSFER_SRC_BIT ,
+	// 	VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	// 	&stagingBuffer,
+	// 	&bufferMemory
+	// );
+
+	struct BufferRes staging = {};
+
+	createBufferRes(
+		data_size, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT ,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+		&staging
+	);
+
+	mapBufferMemory(&staging);
+	// void * data = NULL;
+
+	// vkMapMemory( device, bufferMemory, 0, bufferSize, 0, &data);
+
+	memcpy(staging.alloc.mapped, vertices,staging.alloc.size);
+
+	// VkMappedMemoryRange mappedMemoryRange = {
+	// 	.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+	// 	.memory = staging.alloc.memory,
+	// 	.offset = 0,
+	// 	.size = staging.alloc.size,
+		
+	// };
+
+	// vkFlushMappedMemoryRanges(device, 1, &mappedMemoryRange);
+
+	unmapBufferMemory(&staging);
+	// vkUnmapMemory(device,staging.alloc.memory);
+
+
+	createBufferRes(
+		data_size, 
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT|VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		out
+	);
+
+	
+	// createBuffer(
+	// 	staging.alloc.size,
+	// 	VK_BUFFER_USAGE_TRANSFER_DST_BIT|VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	// 	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	// 	&out->handle,
+	// 	out-
+	// );
+
+    copyBuffer(staging.handle, out->handle,  data_size);
+
+	cleanBuffer(&staging);
+	// vkDestroyBuffer(device, stagingBuffer, NULL);
+
+	// vkFreeMemory(device, bufferMemory, NULL);
+}
 void createVertexBuffer(
 
 	uint32_t verticesNum,
@@ -3258,13 +3403,10 @@ void renderHUD(
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
 			VkDeviceSize offset = 0;
 
-			VkViewport vp = {0, 0, (float)swapChainExtent.width, (float)swapChainExtent.height, 0.0f, 1.0f};
-			VkRect2D   sc = {{0, 0}, swapChainExtent};
-			vkCmdSetViewport(cmd, 0, 1, &vp);
-			vkCmdSetScissor(cmd, 0, 1, &sc);
+		
 
-			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_HUD.vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(cmd, modelVertexData_HUD.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_HUD2.vertexBuffer.handle, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData_HUD2.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 			vkCmdBindDescriptorSets(
 				cmd, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -3290,7 +3432,7 @@ void renderHUD(
 
 			
 	
-			vkCmdDrawIndexed(cmd, modelVertexData_HUD.indices_num, 1, 0, 0, 0  );
+			vkCmdDrawIndexed(cmd, modelVertexData_HUD2.indices_num, 1, 0, 0, 0  );
 		}
 		vkCmdEndRendering(cmd);
 
@@ -3381,7 +3523,7 @@ void renderMainPass(
 
     VkRenderingAttachmentInfo depthAttachmentInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = frame->depth_image.view,
+        .imageView = frame->deapth.view,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -3410,13 +3552,6 @@ void renderMainPass(
 	struct Pipeline *  pipeline = gmArrayGet(&arrayPipelines, 0);
 
 	if (!pipeline || pipeline->graphicsPipeline == VK_NULL_HANDLE) {
-		printf("ERROR: pipeline or graphicsPipeline is invalid!\n");
-		printf("  pipeline ptr: %p\n", pipeline);
-		if (pipeline) {
-			printf("  frag_path: %s\n", pipeline->frag_path);
-			printf("  vert_path: %s\n", pipeline->vert_path);
-			printf("  graphicsPipeline: %llu\n", (unsigned long long)pipeline->graphicsPipeline);
-		}
 		EXIT_CLEAN("ERROR in PIPELINE");
 	}
 
@@ -3446,8 +3581,8 @@ void renderMainPass(
 		
 
 		{
-			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(cmd, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_3D[gameObject->vertexIdx].vertexBuffer.handle, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData_3D[gameObject->vertexIdx].indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 	
 			vkCmdBindDescriptorSets(
 				cmd, 
@@ -3480,9 +3615,7 @@ void renderMainPass(
 	
 			vkCmdDrawIndexed(
 				cmd, 
-				
-
-				modelVertexData[gameObject->vertexIdx].indices_num,
+				modelVertexData_3D[gameObject->vertexIdx].indices_num,
 				gameObject->arrayViewUboModel.len , 
 				0, 
 				0,
@@ -3620,14 +3753,8 @@ void renderShadowMap(
 	struct Pipeline *  pipeline = gmArrayGet(&arrayPipelines, 2);
 
 	if (!pipeline || pipeline->graphicsPipeline == VK_NULL_HANDLE) {
-		printf("ERROR: pipeline or graphicsPipeline is invalid!\n");
-		printf("  pipeline ptr: %p\n", pipeline);
-		if (pipeline) {
-			printf("  frag_path: %s\n", pipeline->frag_path);
-			printf("  vert_path: %s\n", pipeline->vert_path);
-			printf("  graphicsPipeline: %llu\n", (unsigned long long)pipeline->graphicsPipeline);
-		}
-		EXIT_CLEAN("ERROR in PIPELINE");
+	
+		EXIT_CLEAN("ERROR in PIPELINE Shadow");
 	}
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
@@ -3656,8 +3783,8 @@ void renderShadowMap(
 		
 
 		{
-			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData[gameObject->vertexIdx].vertextBuffer, &offset);
-			vkCmdBindIndexBuffer(cmd, modelVertexData[gameObject->vertexIdx].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_3D[gameObject->vertexIdx].vertexBuffer.handle, &offset);
+			vkCmdBindIndexBuffer(cmd, modelVertexData_3D[gameObject->vertexIdx].indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 	
 			vkCmdBindDescriptorSets(
 				cmd, 
@@ -3675,7 +3802,7 @@ void renderShadowMap(
 				cmd, 
 				
 
-				modelVertexData[gameObject->vertexIdx].indices_num,
+				modelVertexData_3D[gameObject->vertexIdx].indices_num,
 				gameObject->arrayViewUboModel.len , 
 				0, 
 				0,
@@ -5980,31 +6107,7 @@ void mainLoop(){
 	vkDeviceWaitIdle(device);
 	
 }
-void freeModelVertexData(struct ModelVertexData * ref){
-	if(ref->vertextBuffer != NULL){
 
-			vkDestroyBuffer(device,ref->vertextBuffer,NULL);
-			ref->vertextBuffer = NULL;
-		}
- 
-		if(ref->vertexBufferMemory != NULL){
-
-			vkFreeMemory(device, ref->vertexBufferMemory, NULL);
-			ref->vertexBufferMemory = NULL;
-		}
-
-		if(ref->indexBuffer != NULL){
-
-			vkDestroyBuffer(device,ref->indexBuffer,NULL);
-			ref->indexBuffer = NULL;
-		}
-
-		if(ref->indexBufferMemory != NULL){
-			
-			vkFreeMemory(device, ref->indexBufferMemory, NULL);
-			ref->indexBufferMemory = NULL;
-		}
-}
 void cleanup(){
 	PRINT_FNAME;
 
@@ -6049,7 +6152,7 @@ void cleanup(){
 	{
 		struct Frame *frame = &frames[i];
 
-		cleanImageRes(&frame->depth_image);
+		cleanImageRes(&frame->deapth);
 		cleanImageRes(&frame->shadow);
 
 
@@ -6063,9 +6166,9 @@ void cleanup(){
 		
 	}
 
-	for( int i=0;i<arrayTextures_2.len ;i++)
+	for( int i=0;i<arrayTextures_2D.len ;i++)
 	{
-		struct TextureRes * t = gmArrayGet(&arrayTextures_2, i);
+		struct TextureRes * t = gmArrayGet(&arrayTextures_2D, i);
 
 		cleanTextureRes(t);
 
@@ -6109,12 +6212,16 @@ void cleanup(){
 
 	for(int i=0; i < MODEL_NUM; i++)
 	{
-		struct ModelVertexData * ref = &modelVertexData[i];
-		freeModelVertexData(ref);
+		struct ModelVertexData2 * ref = &modelVertexData_3D[i];
+		// freeModelVertexData(ref);
+		cleanBuffer(&ref->vertexBuffer);
+		cleanBuffer(&ref->indexBuffer);
 		
 	}
 
-	freeModelVertexData(&modelVertexData_HUD);
+	cleanBuffer(&modelVertexData_HUD2.vertexBuffer);
+	cleanBuffer(&modelVertexData_HUD2.indexBuffer);
+	// freeModelVertexData(&modelVertexData_HUD);
 
 	cleanShaderBuffers();
 
