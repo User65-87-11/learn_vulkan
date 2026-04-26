@@ -1,11 +1,11 @@
-ok createUniformBuffers33 
-ok createDescriptorSetLayout2
+ok 	createUniformBuffers33 
+ok 	createDescriptorSetLayout2
 
-ok createDescriptorSets33
+ok 	createDescriptorSets33
 
+ok	updateUniformBuffer33
 
-
-
+	shader fix
 
 
 

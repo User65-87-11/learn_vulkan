@@ -243,6 +243,8 @@ struct Pipeline{
 
 	VkRenderingInfo renderingInfo;
 
+	
+
 };
 
 
@@ -2200,7 +2202,7 @@ void createDepthResources4(struct ImageRes * image) {
 	
 
 	VkFormat depthFormat = findDepthFormat();
-	 image->alloc.mapped = NULL;  
+	image->alloc.mapped = NULL;  
     image->alloc.memory = VK_NULL_HANDLE; 
 
 	createImage(
@@ -3093,17 +3095,57 @@ void createDescriptorSets33(){
 			};
 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
 		}
+		//view poj
 		{
+			//3D
 			VkDescriptorBufferInfo info = {
 				.buffer = frame->ubo_ViewProjection.handle,
 				.offset = 0,
-				.range = frame->ubo_ViewProjection.alloc.size
+				.range = sizeof(struct UBO_ViewProjection)
 			};
 
 			VkWriteDescriptorSet write = {
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_VIEW_PROJECTIONS,
+				.dstBinding = BINDING_VIEW_PROJECTIONS_3D,
+				.dstArrayElement = 0,   // update one slot at a time
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.descriptorCount = 1,
+				.pBufferInfo = &info
+			};
+			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+		}
+		{
+			//HUD
+			VkDescriptorBufferInfo info = {
+				.buffer = frame->ubo_ViewProjection.handle,
+				.offset = sizeof(struct UBO_ViewProjection) * 1,
+				.range = sizeof(struct UBO_ViewProjection)
+			};
+
+			VkWriteDescriptorSet write = {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frame->descriptorSets,
+				.dstBinding = BINDING_VIEW_PROJECTIONS_2D,
+				.dstArrayElement = 0,   // update one slot at a time
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.descriptorCount = 1,
+				.pBufferInfo = &info
+			};
+			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+		}
+		{
+			// LIGHT
+			VkDescriptorBufferInfo info = {
+				.buffer = frame->ubo_ViewProjection.handle,
+				.offset = sizeof(struct UBO_ViewProjection) * 2,
+				.range = sizeof(struct UBO_ViewProjection)
+			};
+
+			VkWriteDescriptorSet write = {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = *frame->descriptorSets,
+				.dstBinding = BINDING_VIEW_PROJECTIONS_LIGHT,
 				.dstArrayElement = 0,   // update one slot at a time
 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.descriptorCount = 1,
@@ -3497,6 +3539,9 @@ void createUniformBuffers3(){
 	
 	}
 }
+void mapBufferMemory(struct BufferRes * buffer){
+	vkMapMemory(device, buffer->alloc.memory, 0, buffer->alloc.size, 0, &buffer->alloc.mapped);
+}
 void createUniformBuffers33(){
 
 
@@ -3517,6 +3562,7 @@ void createUniformBuffers33(){
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
 			&frame->ssbo_models
 		);
+		mapBufferMemory(&frame->ssbo_models);
 		gmListPushBack(&list_BufferRes,&frame->ssbo_models);
 
 		createBufferRes(
@@ -3525,6 +3571,7 @@ void createUniformBuffers33(){
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
 			&frame->ssbo_colors
 		);
+		mapBufferMemory(&frame->ssbo_colors);
 		gmListPushBack(&list_BufferRes,&frame->ssbo_colors);
 
 		createBufferRes(
@@ -3533,6 +3580,7 @@ void createUniformBuffers33(){
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
 			&frame->ssbo_objectIds
 		);
+		mapBufferMemory(&frame->ssbo_objectIds);
 		gmListPushBack(&list_BufferRes,&frame->ssbo_objectIds);
 
 		createBufferRes(
@@ -3541,6 +3589,7 @@ void createUniformBuffers33(){
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
 			&frame->ubo_ViewProjection
 		);
+		mapBufferMemory(&frame->ubo_ViewProjection);
 		gmListPushBack(&list_BufferRes,&frame->ubo_ViewProjection);
 
 		createBufferRes(
@@ -3549,6 +3598,7 @@ void createUniformBuffers33(){
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
 			&frame->ubo_Lights
 		);
+		mapBufferMemory(&frame->ubo_Lights);
 		gmListPushBack(&list_BufferRes,&frame->ubo_Lights);
 
 		// for(int j=0;j<frame->arrayResources.len;j++){
@@ -3623,7 +3673,19 @@ void createDescriptorSetLayout2(){
 		},
 		//--uniform
 		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_VIEW_PROJECTIONS,
+			.binding = BINDING_VIEW_PROJECTIONS_3D,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = 1,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+		},
+		(VkDescriptorSetLayoutBinding){
+			.binding = BINDING_VIEW_PROJECTIONS_2D,
+			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = 1,
+			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+		},
+		(VkDescriptorSetLayoutBinding){
+			.binding = BINDING_VIEW_PROJECTIONS_LIGHT,
 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = 1,
 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
@@ -3741,7 +3803,7 @@ void createBufferRes(
 	struct BufferRes * buffer
 ){
 	memset(buffer, 0, sizeof(struct BufferRes));
-
+	buffer->alloc.size = size;
 	createBuffer(size,usage,properties,&buffer->handle, &buffer->alloc.memory);
 	
 }
@@ -4041,13 +4103,14 @@ void createCommandPool(){
 
 	
 }
+
 void renderHUD(
 	VkCommandBuffer cmd, 
 	struct Frame * frame,
 	uint32_t imageIndex
 
 ){
-		struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
+	struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
 	{
 		VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 		VkRenderingAttachmentInfo colorAttachmentsInfos[1];
@@ -4605,6 +4668,111 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
     vkEndCommandBuffer(commandBuffer);
 }
+
+void updateUniformBuffer33(uint32_t currentFrame){
+
+	struct Frame * frame = &frames[currentFrame];
+
+	
+	memcpy(frame->ssbo_colors.alloc.mapped,arrayColors_2.data,sizeof(struct SSBO_Colors)* arrayColors_2.len);
+
+	memcpy(frame->ssbo_models.alloc.mapped, arraySBO_Models_1.data, sizeof(struct SSBO_Model)* arraySBO_Models_1.len);
+
+	memcpy(frame->ssbo_objectIds.alloc.mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSBO_ObjectID)* arraySBO_ObjectIds_1.len);
+
+
+	// //--------
+	// memcpy(frame->model_1->alloc.mapped, arraySBO_Models_1.data, sizeof(struct SSBO_Model)* arraySBO_Models_1.len);
+
+	// memcpy(frame->model_2->alloc.mapped, arraySBO_Models_2.data, sizeof(struct SSBO_Model)* arraySBO_Models_2.len);
+
+	// memcpy(frame->objectIds_1->alloc.mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSBO_ObjectID)* arraySBO_ObjectIds_1.len);
+
+	// memcpy(frame->colors_2->alloc.mapped, arrayColors_2.data, sizeof(vec4)* arrayColors_2.len);
+
+	// gmArrayCopyBySize(frame->bufferModelMapped, &arrayUboModels);
+
+
+
+	struct UBO_ViewProjection ubo_vp[3];
+	{
+		struct UBO_ViewProjection* ubo = &ubo_vp[0];
+		uint32_t stride = sizeof(struct UBO_ViewProjection);
+		uint32_t offset = 0;
+	
+		vec3 cameraCenter;
+	
+		glm_vec3_add(cameraPos, cameraFront, cameraCenter);
+	
+		glm_lookat(cameraPos, cameraCenter, cameraUp, ubo->view);
+	
+	
+		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
+	
+		ubo->proj[1][1] *= -1;
+
+	}
+	// memcpy(frame->ubo_ViewProjection.alloc.mapped  , &ubo, sizeof(struct UBO_ViewProjection));
+
+
+
+	{
+
+		struct UBO_ViewProjection* ubo = &ubo_vp[1];
+		glm_mat4_identity(ubo->view);
+	
+		
+		glm_ortho(
+			0.0f, 
+			(float)swapChainExtent.width, 
+			(float)swapChainExtent.height, 
+			0.0f, -1.0f, 1.0f,
+			ubo->proj);
+	
+	
+		// memcpy(frame->viewProjection_2->alloc.mapped, &ubo2, sizeof(struct UBO_ViewProjection));
+	}
+
+
+	// gmArrayCopyBySize(frame->buffersViewProjectionMapped, ubo);
+	{
+
+	}
+	GLM_VEC3_COPY(UBO_DirLight.viewPos,cameraPos);
+
+
+	// vec4 lightPos ;
+	UBO_DirLight.lightPos[0] = 5.0f*sin(lastTime);
+	
+
+	memcpy(frame->directionLight_1->alloc.mapped, &UBO_DirLight, sizeof(struct UBO_DirectionLight));
+	// ubo.model = glm_rotate(model, time*glm_rad(90.0f), rotation);
+
+
+
+	//-----LIGHT
+	{
+
+		struct UBO_ViewProjection* ubo = &ubo_vp[2];
+		glm_mat4_identity(ubo->view);
+	
+	
+		vec3 LightCenter;
+		
+		glm_vec3_add(UBO_DirLight.lightPos, UBO_DirLight.viewPos, LightCenter);
+	
+		glm_lookat(UBO_DirLight.lightPos, LightCenter, cameraUp, ubo->view);
+	
+		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
+	
+		ubo->proj[1][1] *= -1;
+	
+		// memcpy(frame->shadow_LightView_Projection->alloc.mapped, &ubo->, sizeof(struct UBO_ViewProjection));
+	}
+
+	memcpy(frame->ubo_ViewProjection.alloc.mapped, ubo_vp, sizeof(ubo_vp));
+
+};
 
 void updateUniformBuffer3(uint32_t currentFrame){
 
@@ -6090,6 +6258,7 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 	
 	//--- FRAGMENT
 
+	
  
 		
 
