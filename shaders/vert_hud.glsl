@@ -13,32 +13,36 @@ layout(location = 1) out vec4 out_color;
 
 
 
-
 /*
-/*
-
-#define BINDING_VERT_2_UBO_ViewProjection  1
-#define BINDING_VERT_2_SSBO_Models   11
-#define BINDING_VERT_2_SSBO_Colors   21
-#define BINDING_FRAG_2_SAMPLER  51
+#define BINDING_3D_SAMPLERS 0
+#define BINDING_2D_SAMPLERS 1
+#define BINDING_VIEW_PROJECTIONS_3D 2
+#define BINDING_VIEW_PROJECTIONS_2D 3
+#define BINDING_VIEW_PROJECTIONS_LIGHT 4
+#define BINDING_MODELS_3D 5
+#define BINDING_MODELS_2D 6
+#define BINDING_DIRECTIONAL_LIGHTS 7
+#define BINDING_OBJECT_IDS 8
+#define BINDING_2D_COLORS 9
 */
 
 
 
-layout(binding = BINDING_VERT_2_UBO_ViewProjection) uniform Matrices
+
+layout(binding = BINDING_VIEW_PROJECTIONS_2D) uniform Matrices
 {
   mat4 view;
   mat4 projection;
 };
 
 
-layout(std430, binding = BINDING_VERT_2_SSBO_Models) readonly buffer  Models
+layout(std430, binding = BINDING_MODELS_2D) readonly buffer  Models
 {
 	mat4 models[];
 };
 
 
-layout(std430, binding = BINDING_VERT_2_SSBO_Colors) readonly buffer  Colors
+layout(std430, binding = BINDING_2D_COLORS) readonly buffer  Colors
 {
 	vec4 colors[];
  
@@ -62,9 +66,15 @@ void main() {
 
 	out_color = colors[gl_InstanceIndex] ;
 	
-	// out_norm = in_norm;
-	
-	// out_fragPos = tpos.xy;
 
+
+    // vec2 positions[4] = vec2[](
+    //     vec2(-0.5, -0.5), // 0
+    //     vec2( 0.5, -0.5), // 1
+    //     vec2( 0.5,  0.5), // 2
+    //     vec2(-0.5,  0.5)  // 3
+    // );
+
+    // gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
 
 }

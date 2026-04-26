@@ -1,21 +1,21 @@
-#define BINDING_VERT_1_UBO_ViewProjection  10
-#define BINDING_VERT_1_SSBO_Models   11
-#define BINDING_VERT_1_SSBO_ObjectIDS   12
-#define BINDING_VERT_1_SSBO_Colors   13
-#define BINDING_FRAG_1_UBO_Lights   14
-#define BINDING_FRAG_1_SAMPLER  15
+// #define BINDING_VERT_1_UBO_ViewProjection  10
+// #define BINDING_VERT_1_SSBO_Models   11
+// #define BINDING_VERT_1_SSBO_ObjectIDS   12
+// #define BINDING_VERT_1_SSBO_Colors   13
+// #define BINDING_FRAG_1_UBO_Lights   14
+// #define BINDING_FRAG_1_SAMPLER  15
 
 
-#define BINDING_VERT_2_UBO_ViewProjection  20
-#define BINDING_VERT_2_SSBO_Models   21
-#define BINDING_VERT_2_SSBO_Colors   22
-#define BINDING_FRAG_2_SAMPLER  23
+// #define BINDING_VERT_2_UBO_ViewProjection  20
+// #define BINDING_VERT_2_SSBO_Models   21
+// #define BINDING_VERT_2_SSBO_Colors   22
+// #define BINDING_FRAG_2_SAMPLER  23
 
 
 
-#define BINDING_VERT_3_UBO_ViewProjection  30
-#define BINDING_FRAG_3_UBO_Lights 31
-#define BINDING_VERT_3_SSBO_Models 32
+// #define BINDING_VERT_3_UBO_ViewProjection  30
+// #define BINDING_FRAG_3_UBO_Lights 31
+// #define BINDING_VERT_3_SSBO_Models 32
 
 
 
@@ -27,11 +27,12 @@
 #define BINDING_VIEW_PROJECTIONS_3D 2
 #define BINDING_VIEW_PROJECTIONS_2D 3
 #define BINDING_VIEW_PROJECTIONS_LIGHT 4
-#define BINDING_MODELS 5
-#define BINDING_DIRECTIONAL_LIGHTS 6
-#define BINDING_OBJECT_IDS 7
-#define BINDING_2D_COLORS 8
+#define BINDING_MODELS_3D 5
+#define BINDING_MODELS_2D 6
+#define BINDING_DIRECTIONAL_LIGHTS 7
+#define BINDING_OBJECT_IDS 8
+#define BINDING_2D_COLORS 9
 
-#define BINDING_MAX 9
+#define BINDING_MAX 10
 
 

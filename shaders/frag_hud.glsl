@@ -26,17 +26,21 @@ layout(location = 0) out vec4 outColor;
 // };
 
 /*
-
-#define BINDING_VERT_2_UBO_ViewProjection  1
-#define BINDING_VERT_2_SSBO_Models   11
-#define BINDING_VERT_2_SSBO_Colors   21
-#define BINDING_FRAG_2_SAMPLER  51
+#define BINDING_3D_SAMPLERS 0
+#define BINDING_2D_SAMPLERS 1
+#define BINDING_VIEW_PROJECTIONS_3D 2
+#define BINDING_VIEW_PROJECTIONS_2D 3
+#define BINDING_VIEW_PROJECTIONS_LIGHT 4
+#define BINDING_MODELS 5
+#define BINDING_DIRECTIONAL_LIGHTS 6
+#define BINDING_OBJECT_IDS 7
+#define BINDING_2D_COLORS 8
 */
 
 
 
 
-layout(binding = BINDING_FRAG_2_SAMPLER) uniform sampler2D  tex[];
+layout(binding = BINDING_2D_SAMPLERS) uniform sampler2D  tex[];
 
 layout(push_constant) uniform Push {
     uint textureIndex;
@@ -58,13 +62,7 @@ void main() {
 
     outColor = texColor;
 
-
 	// outColor = vec4(1.0,1.0,1.0,1.0);
-
-   
-	
-	
-	
 
 }
 

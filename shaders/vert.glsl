@@ -8,24 +8,34 @@ layout(location = 1) in vec3 in_norm;
 layout(location = 2) in vec2 in_texCoord;
 
 
+/*
+#define BINDING_3D_SAMPLERS 0
+#define BINDING_2D_SAMPLERS 1
+#define BINDING_VIEW_PROJECTIONS_3D 2
+#define BINDING_VIEW_PROJECTIONS_2D 3
+#define BINDING_VIEW_PROJECTIONS_LIGHT 4
+#define BINDING_MODELS_3D 5
+#define BINDING_MODELS_2D 6
+#define BINDING_DIRECTIONAL_LIGHTS 7
+#define BINDING_OBJECT_IDS 8
+#define BINDING_2D_COLORS 9
+*/
 
-layout(binding = BINDING_VERT_1_UBO_ViewProjection) uniform Matrices
+
+
+layout(binding = BINDING_VIEW_PROJECTIONS_3D) uniform Matrices
 {
   mat4 view;
   mat4 projection;
 };
 
 
-
-
-
-
-layout(std430, binding = BINDING_VERT_1_SSBO_Models) readonly buffer  Models
+layout(std430, binding = BINDING_MODELS_3D) readonly buffer  Models
 {
 	mat4 model[];
 };
 
-layout(std430, binding = BINDING_VERT_1_SSBO_ObjectIDS) readonly buffer  ObjectIds
+layout(std430, binding = BINDING_OBJECT_IDS) readonly buffer  ObjectIds
 {
 	uint objectId[];
 };

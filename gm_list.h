@@ -19,7 +19,8 @@ bool gmListPushBack(struct GmList* list, void* data);
 
 bool gmListPushFront(struct GmList* list, void* data);
 void * gmListPopFront(struct GmList* list);
-void gmListForeach(struct GmList* list, void (*fn)(void*));
+void gmListForeachFn(struct GmList* list, void (*fn)(void*));
+
 void gmListFree(struct GmList* list);
 
 bool gmListToGmArray(struct GmList* list, struct GmArray * out,uint32_t width,uint32_t alignment);

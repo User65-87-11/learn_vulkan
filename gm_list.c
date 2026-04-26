@@ -60,7 +60,9 @@ void * gmListPopFront(struct GmList* list) {
 
     return data;
 }
-void gmListForeach(struct GmList* list, void (*fn)(void*)){
+
+
+void gmListForeachFn(struct GmList* list, void (*fn)(void*)){
     for (struct GmNode* cur = list->head; cur; cur = cur->next) {
         fn(cur->data);
     }
