@@ -757,7 +757,9 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 
 void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, VkImageAspectFlagBits aspectFlags,uint32_t mipLevels);
 
-void createTextureSampler(VkSampler * sampler, VkBool32 compare);
+void createTextureSamplerShadow(VkSampler * sampler);
+
+void createTextureSampler(VkSampler * sampler);
 
 void createDepthResources();
 
@@ -951,7 +953,7 @@ void createShadowImages(){
 		struct  Frame * frame = &frames[i];
 
 		createDepthResources4(&frame->shadow.image,true);
-		createTextureSampler(&frame->shadow.textureSampler,true);
+		createTextureSamplerShadow(&frame->shadow.textureSampler);
 		frame->shadow.path="";
 		frame->shadow.textureIdx= -1;
 	
@@ -998,7 +1000,7 @@ void createTextures(){
 
 		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
-		createTextureSampler(&t->textureSampler,false);
+		createTextureSampler(&t->textureSampler);
 	}
 	printf("arrayTextures_2D.len %d\n",arrayTextures_2D.len);
 	for( int i=0;i < arrayTextures_2D.len ;i++)
@@ -1008,7 +1010,7 @@ void createTextures(){
 		t->textureIdx = i;
 		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 		
-		createTextureSampler(&t->textureSampler,false);
+		createTextureSampler(&t->textureSampler);
 	}
 
 }
@@ -1780,7 +1782,7 @@ void createDepthResources3(VkImage *depthImage,VkImageView *depthImageView,VkDev
 	
 
 }
-void createTextureSampler(VkSampler * sampler, VkBool32 compare){
+void createTextureSamplerShadow(VkSampler * sampler){
 
 
 	VkPhysicalDeviceProperties physicalDeviceProperties ;
@@ -1803,9 +1805,45 @@ void createTextureSampler(VkSampler * sampler, VkBool32 compare){
 
 		// .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
 		// .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		
 		.maxAnisotropy = physicalDeviceProperties.limits.maxSamplerAnisotropy,
-		.compareOp = compare ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_ALWAYS,
+		.compareOp = VK_COMPARE_OP_LESS,
 		// .compareOp = VK_COMPARE_OP_ALWAYS,
+
+		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+		.unnormalizedCoordinates = VK_FALSE,
+	};
+
+	vkCreateSampler(device, &samplerInfo, NULL, sampler);
+
+}
+void createTextureSampler(VkSampler * sampler){
+
+
+	VkPhysicalDeviceProperties physicalDeviceProperties ;
+
+	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+
+	VkSamplerCreateInfo samplerInfo = {
+		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+		.magFilter = VK_FILTER_LINEAR,
+		.minFilter = VK_FILTER_LINEAR,
+
+		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+		.mipLodBias = 0.0f,
+		.minLod = 0.0f,
+		.maxLod = VK_LOD_CLAMP_NONE,
+ 
+ 		// .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // ✅ Changed from REPEAT for shadow maps
+        // .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        // .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // ✅ Important for depth clamping
+
+		.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		
+		.maxAnisotropy = physicalDeviceProperties.limits.maxSamplerAnisotropy,
+		// .compareOp = compare ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_ALWAYS,
+		.compareOp = VK_COMPARE_OP_ALWAYS,
 
 		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
 		.unnormalizedCoordinates = VK_FALSE,

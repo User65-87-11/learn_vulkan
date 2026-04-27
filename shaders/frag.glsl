@@ -60,15 +60,12 @@ layout(push_constant) uniform Push {
 
 float shadowFactor(vec4 lightSpacePos)
 {
-       vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+    vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
     
-    // ✅ REMOVED: projCoords = projCoords * 0.5 + 0.5;
-    // Vulkan + GLM_FORCE_DEPTH_ZERO_TO_ONE already outputs [0, 1] depth.
 
-    // Clamp to avoid sampling outside the shadow map (prevents hard edges/artifacts)
     projCoords.xy = clamp(projCoords.xy, 0.0, 1.0);
     
-    // If fragment is outside the light's view volume, it's fully lit
+ 
     if (projCoords.z < 0.0 || projCoords.z > 1.0) return 1.0;
 
 	float bias = 0.005;
