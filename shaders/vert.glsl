@@ -8,6 +8,7 @@ layout(location = 1) in vec3 in_norm;
 layout(location = 2) in vec2 in_texCoord;
 
 
+
 /*
 #define BINDING_3D_SAMPLERS 0
 #define BINDING_2D_SAMPLERS 1
@@ -27,6 +28,12 @@ layout(binding = BINDING_VIEW_PROJECTIONS_3D) uniform Matrices
 {
   mat4 view;
   mat4 projection;
+};
+
+layout(binding = BINDING_VIEW_PROJECTIONS_LIGHT) uniform LightMatrix
+{
+  mat4 light_view;
+  mat4 light_proj;
 };
 
 
@@ -51,25 +58,28 @@ layout(location = 2) out vec3 out_fragPos;
 layout(location = 3) flat out uint out_objectId;
 
 
+layout(location = 5) out vec4 fragPosLightSpace;
+
 layout(location = 4) out float out_fog_depth;
 
 void main() {
 	
-	vec4 tpos = model[gl_InstanceIndex] * vec4(in_position, 1.0);
+	vec4 world_pos = model[gl_InstanceIndex] * vec4(in_position, 1.0);
 
-	vec4 viewPos = view * tpos;
+	vec4 viewPos = view * world_pos;
 
 	out_fog_depth = -viewPos.z;
 
-	gl_Position = projection * view * tpos;
+	gl_Position = projection * view * world_pos;
 	
 	out_texCoord = in_texCoord;
 	
 	out_norm = in_norm;
 	
-	out_fragPos = tpos.xyz;
+	out_fragPos = world_pos.xyz;
 
 
+	fragPosLightSpace = light_proj * light_view * world_pos;
 
 	out_objectId = objectId[gl_InstanceIndex];
 	// float colId = modelData[gl_InstanceIndex].objectId;

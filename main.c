@@ -303,6 +303,19 @@ struct BufferRes{
 	
 
 };
+struct TextureRes{
+
+	char * path;
+
+
+	struct ImageRes image;
+
+	VkSampler textureSampler;
+	
+
+
+	uint32_t textureIdx;
+};
 
 
 
@@ -339,7 +352,7 @@ struct Frame{
 	struct ImageRes deapth;
 
 
-	struct ImageRes shadow;
+	struct TextureRes shadow;
 
 
 	VkDescriptorSet* descriptorSets;
@@ -399,19 +412,6 @@ VkDescriptorSet descriptorSets2 [MAX_FRAMES_IN_FLIGHT];
 
 
 
-struct TextureRes{
-
-	char * path;
-
-
-	struct ImageRes image;
-
-	VkSampler textureSampler;
-	
-
-
-	uint32_t textureIdx;
-};
 
 struct GmArray arrayTextures_2D;
 
@@ -612,7 +612,7 @@ void createBufferRes(
 	VkMemoryPropertyFlags properties,
 	struct BufferRes * buffer
 );
-void createDepthResources4(struct ImageRes * image) ;
+void createDepthResources4(struct ImageRes * image, bool sampled_bit) ;
 void createImageView4(struct ImageRes * tex,  VkFormat format, VkImageAspectFlagBits aspectFlags);
 
 void createTextureImage4(
@@ -757,7 +757,7 @@ void copyBufferToImage(VkBuffer *buffer, VkImage *image, uint32_t width, uint32_
 
 void createImageView(VkImageView *imageView, VkImage* image, VkFormat format, VkImageAspectFlagBits aspectFlags,uint32_t mipLevels);
 
-void createTextureSampler(VkSampler * sampler);
+void createTextureSampler(VkSampler * sampler, VkBool32 compare);
 
 void createDepthResources();
 
@@ -950,8 +950,25 @@ void createShadowImages(){
 	{
 		struct  Frame * frame = &frames[i];
 
-		createDepthResources4(&frame->shadow);
+		createDepthResources4(&frame->shadow.image,true);
+		createTextureSampler(&frame->shadow.textureSampler,true);
+		frame->shadow.path="";
+		frame->shadow.textureIdx= -1;
 	
+		beginSingleTimeCommands(transferCommandBuffers);
+		transitionImageLayout(
+			transferCommandBuffers,
+			&frame->shadow.image.handle,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,  // ← Start in shader-read layout
+			0,
+			0,
+			VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			1
+		);
+		endSingleTimeCommands(transferCommandBuffers);
 	}
 	
 }
@@ -963,7 +980,7 @@ void createDepthImages(){
 	{
 		struct  Frame * frame = &frames[i];
 
-		createDepthResources4(&frame->deapth);
+		createDepthResources4(&frame->deapth,false);
 		
 	}
 	
@@ -981,7 +998,7 @@ void createTextures(){
 
 		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
-		createTextureSampler(&t->textureSampler);
+		createTextureSampler(&t->textureSampler,false);
 	}
 	printf("arrayTextures_2D.len %d\n",arrayTextures_2D.len);
 	for( int i=0;i < arrayTextures_2D.len ;i++)
@@ -991,7 +1008,7 @@ void createTextures(){
 		t->textureIdx = i;
 		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 		
-		createTextureSampler(&t->textureSampler);
+		createTextureSampler(&t->textureSampler,false);
 	}
 
 }
@@ -1668,8 +1685,15 @@ VkFormat findSupportedFormat(VkFormat *formats,uint32_t len, VkImageTiling tilin
 	
 }
 
-void createDepthResources4(struct ImageRes * image) {
+void createDepthResources4(struct ImageRes * image,bool sampled_bit) {
 	PRINT_FNAME;
+	
+	VkImageUsageFlags usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+	if(sampled_bit)
+	{
+		usage |=VK_IMAGE_USAGE_SAMPLED_BIT;
+	}
 	
 
 	VkFormat depthFormat = findDepthFormat();
@@ -1682,7 +1706,7 @@ void createDepthResources4(struct ImageRes * image) {
 		1,
 		depthFormat, 
 		VK_IMAGE_TILING_OPTIMAL, 
-		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		usage,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		&image->handle, 
 		&image->alloc.memory
@@ -1756,7 +1780,7 @@ void createDepthResources3(VkImage *depthImage,VkImageView *depthImageView,VkDev
 	
 
 }
-void createTextureSampler(VkSampler * sampler){
+void createTextureSampler(VkSampler * sampler, VkBool32 compare){
 
 
 	VkPhysicalDeviceProperties physicalDeviceProperties ;
@@ -1773,13 +1797,15 @@ void createTextureSampler(VkSampler * sampler){
 		.minLod = 0.0f,
 		.maxLod = VK_LOD_CLAMP_NONE,
  
+ 		.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // ✅ Changed from REPEAT for shadow maps
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // ✅ Important for depth clamping
 
-
-		.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-		.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		// .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		// .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
 		.maxAnisotropy = physicalDeviceProperties.limits.maxSamplerAnisotropy,
-		.compareEnable = VK_FALSE,
-		.compareOp = VK_COMPARE_OP_ALWAYS,
+		.compareOp = compare ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_ALWAYS,
+		// .compareOp = VK_COMPARE_OP_ALWAYS,
 
 		.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
 		.unnormalizedCoordinates = VK_FALSE,
@@ -2618,10 +2644,29 @@ void createDescriptorSets33(){
 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
 		}
 		{
-			
-			for(int i=0;i<arrayTextures_3D.len;i++)
 			{
-				struct TextureRes * text =  gmArrayGet(&arrayTextures_3D, i);
+				VkDescriptorImageInfo info = {
+					.imageView = frame->shadow.image.view,
+					.sampler = frame->shadow.textureSampler,
+					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+				};
+
+				VkWriteDescriptorSet write = {
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.dstSet = *frame->descriptorSets,
+					.dstBinding = BINDING_3D_SAMPLERS_SHADOW,
+					.dstArrayElement = 0,   
+
+					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.descriptorCount = 1,
+					.pImageInfo = &info
+				};
+
+				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+			}
+			for(int k=0;k<arrayTextures_3D.len;k++)
+			{
+				struct TextureRes * text =  gmArrayGet(&arrayTextures_3D, k);
 				VkDescriptorImageInfo info = {
 					.imageView = text->image.view,
 					.sampler = text->textureSampler,
@@ -2632,7 +2677,7 @@ void createDescriptorSets33(){
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.dstSet = *frame->descriptorSets,
 					.dstBinding = BINDING_3D_SAMPLERS,
-					.dstArrayElement = i,   
+					.dstArrayElement = k,   
 
 					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					.descriptorCount = 1,
@@ -2641,9 +2686,9 @@ void createDescriptorSets33(){
 
 				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
 			}
-			for(int i=0;i<arrayTextures_2D.len;i++)
+			for(int k=0;k<arrayTextures_2D.len;k++)
 			{
-				struct TextureRes * text =  gmArrayGet(&arrayTextures_2D, i);
+				struct TextureRes * text =  gmArrayGet(&arrayTextures_2D, k);
 				VkDescriptorImageInfo info = {
 					.imageView = text->image.view,
 					.sampler = text->textureSampler,
@@ -2654,7 +2699,7 @@ void createDescriptorSets33(){
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.dstSet = *frame->descriptorSets,
 					.dstBinding = BINDING_2D_SAMPLERS,
-					.dstArrayElement = i,   
+					.dstArrayElement = k,   
 
 					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					.descriptorCount = 1,
@@ -2753,11 +2798,13 @@ void createUniformBuffers33(){
 
 void createDescriptorPool() {
 
- 
+
+	uint32_t alltextures = arrayTextures_3D.len + arrayTextures_2D.len + 1;
+
 	VkDescriptorPoolSize poolSizes[] = {
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount =  MAX_FRAMES_IN_FLIGHT * (arrayTextures_3D.len + arrayTextures_2D.len)
+			.descriptorCount =  MAX_FRAMES_IN_FLIGHT * (alltextures)
 		},
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -2806,6 +2853,12 @@ void createDescriptorSetLayout2(){
 			.binding = BINDING_3D_SAMPLERS,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.descriptorCount = arrayTextures_3D.len,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+		},
+		(VkDescriptorSetLayoutBinding){
+			.binding = BINDING_3D_SAMPLERS_SHADOW,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = 1,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 		},
 		(VkDescriptorSetLayoutBinding){
@@ -3469,6 +3522,7 @@ void renderMainPass(
 						.layerCount = 1,
 					},
 				},
+				
 
 		};
 
@@ -3478,6 +3532,7 @@ void renderMainPass(
 			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
 			.imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
 			.pImageMemoryBarriers = beginBarrier,
+			
 		};
 
 		vkCmdPipelineBarrier2(cmd, &beginDepInfo);
@@ -3710,8 +3765,41 @@ void renderShadowMap(
 ){
 
 
-	
 
+	VkImageMemoryBarrier2 barrier = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+
+		
+		.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+        .srcAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+        .dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,  // ✅ FROM
+        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,  // ✅ TO
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+		.image = frame->shadow.image.handle,
+
+		// .image = frame->shadow.image.handle,
+		.subresourceRange = {
+			.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+			.levelCount = 1,
+			.layerCount = 1
+		}
+	};
+		
+
+	
+	VkDependencyInfo beginDepInfo = {
+
+		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+		.imageMemoryBarrierCount = 1,
+		.pImageMemoryBarriers = &barrier,
+		
+	};
+
+	vkCmdPipelineBarrier2(cmd, &beginDepInfo);
 	
 
 
@@ -3724,7 +3812,7 @@ void renderShadowMap(
 
     VkRenderingAttachmentInfo depthAttachmentInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = frame->shadow.view,
+        .imageView = frame->shadow.image.view,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -3812,6 +3900,33 @@ void renderShadowMap(
 	}
 
     vkCmdEndRendering(cmd);
+
+	VkImageMemoryBarrier2 endBarrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+			.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = frame->shadow.image.handle,
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			},
+		};
+		VkDependencyInfo endDepInfo = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = 1,
+			.pImageMemoryBarriers = &endBarrier,
+		};
+		vkCmdPipelineBarrier2(cmd, &endDepInfo);  // ← MUST be after vkCmdEndRendering
+
 
 
 }
@@ -4831,7 +4946,7 @@ void createImageViews(){
  
 }
 void cleanAllocation(struct Allocation * alloc){
-	PRINT_FNAME;
+	//PRINT_FNAME;
 	if(alloc->mapped != NULL){
 
 		vkUnmapMemory(device,alloc->memory);
@@ -4848,14 +4963,14 @@ void cleanAllocation(struct Allocation * alloc){
 			
 }
 void cleanImageRes(struct ImageRes * img){
-	PRINT_FNAME;
+	//PRINT_FNAME;
 	vkDestroyImage(device,img->handle, NULL);
 	vkDestroyImageView(device, img->view, NULL);
 	cleanAllocation(&img->alloc);
 	
 }
 void cleanBuffer(struct BufferRes * buff){
-	PRINT_FNAME;
+	//PRINT_FNAME;
 	if(buff->handle!= NULL){
 		vkDestroyBuffer(device,buff->handle, NULL);
 		buff->handle = NULL;
@@ -4865,7 +4980,7 @@ void cleanBuffer(struct BufferRes * buff){
 	
 }
 void cleanTextureRes(struct TextureRes * tex){
-		PRINT_FNAME;
+		// PRINT_FNAME;
 		cleanImageRes(&tex->image);
 		vkDestroySampler(device, tex->textureSampler, NULL);
 		
@@ -4877,7 +4992,7 @@ void cleanTextureRes(struct TextureRes * tex){
 
 }
 void cleanupPickImages(){
-	PRINT_FNAME;
+	//PRINT_FNAME;
 	for(int i=0;i< MAX_FRAMES_IN_FLIGHT;i++)
 	{
 		struct Frame * frame = &frames[i];
@@ -6109,7 +6224,7 @@ void mainLoop(){
 }
 
 void cleanup(){
-	PRINT_FNAME;
+	//PRINT_FNAME;
 
 	if(enableValidationLayers)
 	{
@@ -6153,7 +6268,8 @@ void cleanup(){
 		struct Frame *frame = &frames[i];
 
 		cleanImageRes(&frame->deapth);
-		cleanImageRes(&frame->shadow);
+		cleanImageRes(&frame->shadow.image);
+		vkDestroySampler(device, frame->shadow.textureSampler,0);
 
 
 	}

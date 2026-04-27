@@ -18,6 +18,9 @@ layout(location = 3) flat in uint in_objectId;
 
 layout(location = 4) in float in_fog_depth;
 
+
+layout(location = 5) in vec4 fragPosLightSpace;
+
 layout(location = 0) out vec4 outColor;
 
 layout(location = 1) out uint outID;
@@ -47,15 +50,38 @@ layout(binding = BINDING_DIRECTIONAL_LIGHTS) uniform Light
 
 layout(binding = BINDING_3D_SAMPLERS) uniform sampler2D  tex[];
 
+layout(binding = BINDING_3D_SAMPLERS_SHADOW) uniform sampler2DShadow   shadowMap;
+
 layout(push_constant) uniform Push {
     int textureIndex;
 	int hasColor;
 	int selectedId;
 } pc;
 
+float shadowFactor(vec4 lightSpacePos)
+{
+       vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
+    
+    // ✅ REMOVED: projCoords = projCoords * 0.5 + 0.5;
+    // Vulkan + GLM_FORCE_DEPTH_ZERO_TO_ONE already outputs [0, 1] depth.
+
+    // Clamp to avoid sampling outside the shadow map (prevents hard edges/artifacts)
+    projCoords.xy = clamp(projCoords.xy, 0.0, 1.0);
+    
+    // If fragment is outside the light's view volume, it's fully lit
+    if (projCoords.z < 0.0 || projCoords.z > 1.0) return 1.0;
+
+	float bias = 0.005;
+
+    return texture(shadowMap, vec3(projCoords.xy, projCoords.z - bias));
+}
+
 
 void main() {
 	// // vec4 texColor = mix(texture(tex, texCoord), fragColor, 0.1);
+
+	 float shadow = shadowFactor(fragPosLightSpace);
+
 
 	outID = in_objectId;
 	vec4 texColor = texture(tex[pc.textureIndex], texCoord);
@@ -74,28 +100,33 @@ void main() {
 
 	
 	float ambientStrength = 0.1;
-    vec4 ambient = ambientStrength * lightColor;
+	vec3 ambient = ambientStrength * lightColor.rgb;
   	
-    // diffuse 
-    vec4 norm = vec4(normalize(normal),0.0);
-    vec4 lightDir = normalize(lightPos - vec4(fragPos,0.0));
-    float diff = max(dot(norm, lightDir),0.0);
-    vec4 diffuse = diff * lightColor;
+	// diffuse
+	vec3 norm = normalize(normal);
+	vec3 lightDir = normalize(lightPos.xyz - fragPos);
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuse = diff * lightColor.rgb;
     
-    // specular
-    float specularStrength = 0.5;
-    vec4 viewDir = normalize(viewPos - - vec4(fragPos,0.0));
-    vec4 reflectDir = reflect(-lightDir, norm);  
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
-    vec4 specular = specularStrength * spec * lightColor;  
-        
-    vec4 result = (ambient + diffuse + specular) * texColor;
+	// specular
+	float specularStrength = 0.5;
 
-    vec4 fog_color =  vec4(0.0, 0.0, 0.0, 1.0);
+	vec3 viewDir = normalize(viewPos.xyz - fragPos);
+	vec3 reflectDir = reflect(-lightDir, norm);
+
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+	vec3 specular = specularStrength * spec * lightColor.rgb;
+        
+	//	
+	vec3 lighting = (ambient + (diffuse + specular) * shadow) * texColor.rgb;
+
+	vec3 fog_color = vec3(0.0, 0.0, 0.0);
 
 	float fogFactor = clamp(in_fog_depth / 20.0, 0.0, 1.0);
 
-	outColor = mix(vec4(result), fog_color, fogFactor);
+	vec3 finalColor = mix(lighting, fog_color, fogFactor);
+
+	outColor = vec4(finalColor, texColor.a);
 
 	
 	
