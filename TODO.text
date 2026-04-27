@@ -1,46 +1,35 @@
-ok 	createUniformBuffers33 
-ok 	createDescriptorSetLayout2
-
-ok 	createDescriptorSets33
-
-ok	updateUniformBuffer33
-
-	shader fix
+TODO:
+	create_GameObject
 
 
 
---manager
 
-typedef struct {
-    VkImage image;
-    VkImageView view;
-    VkSampler sampler;
+buffer_ubo_models [] static
+	0-10 GOT_1's ubo_models
+	1-12 GOT_2's ubo_models
+	13-17 GOT_3's ubo_models
+	18-20 GOT_4's ubo_models
 
-    uint32_t descriptorIndex; // index in descriptor array
-    int alive;
-} TextureEntry;
+game object type GOT
+	texture data id = tdi
+	vertex data id = vdi
 
-typedef struct {
+	instance
+		start
+		cap
+		len
+		
 
-	GmArray textures; // TextureEntry
-   
+	ubo start
+		ref buffer_ubo_models
+	alive y|n
 
-    // descriptor stuff
-    VkDescriptorSet descriptorSet;
-    uint32_t binding; // e.g. BINDING_3D_SAMPLERS
-} TextureManager;
+create Game object (type,tdi,vdi,num)
+	allocate index range in isntnaces[]
+	
+disable Game Object ( type, position)	
+	[position] = alive | n
+	swap [position] to end of ubo_model
+	instance len --
 
 
-typedef struct {
-    VkDescriptorSetLayoutBinding bindings[MAX_BINDINGS];
-    uint32_t bindingCount;
-
-    VkDescriptorSetLayout layout;
-    VkPipelineLayout pipelineLayout;
-} ShaderInterface;
-
-typedef struct {
-    ShaderInterface* shader;
-
-    VkDescriptorSet descriptorSet;
-} Material;

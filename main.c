@@ -548,10 +548,42 @@ struct GameObject {
 	
 	struct GmArrayView arrayViewUboObjectIds;
 
-	struct UBOPointLight * uboLight;
+	// struct UBOPointLight * uboLight;
 
 	
 	struct GmArrayView arrayViewGameObjectInstances;
+
+
+};
+struct Range{
+	uint32_t start;
+	uint32_t cap;
+	uint32_t len;
+};
+struct GameObject2_Inst{
+	bool alive;
+	uint32_t health;
+	uint32_t id;
+};
+struct GameObject2 {
+
+
+	uint32_t geometryIdx;
+
+	uint32_t materialIdx;
+
+
+	struct Range models;
+	struct Range instances;
+	
+	// struct GmArrayView arrayViewUboModel;
+	
+	// struct GmArrayView arrayViewUboObjectIds;
+
+	// struct UBOPointLight * uboLight;
+
+	
+	// struct GmArrayView arrayViewGameObjectInstances;
 
 
 };
@@ -583,6 +615,12 @@ void cleanTextureRes(struct TextureRes * tex);
 void initVariables();
 
 void freeVariables();
+
+void create_GameObject(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct GameObject2 * out);
+
+void swapToLast_Models(struct SSBO_Model * array, struct Range slice, uint32_t pos);
+
+void swapToLast_GameObjectInst(struct GameObject2_Inst * instances, struct Range slice, uint32_t pos);
 
 struct BufferRes * iterateBuffer(
 	uint32_t binding,
@@ -774,6 +812,36 @@ void processInput(GLFWwindow *window);
 void createGraphicsPipeline(struct  Pipeline * pipeline );
 
 
+void create_GameObject(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct GameObject2 * out){
+
+	/*
+		1.add to ssbo_models
+		2.add to ssbo_object_ids
+		3.add to GameObject2_Inst
+		4.get slice
+		5.alloc game_obejct_type
+	*/
+	
+}
+
+void swapToLast_Models(struct SSBO_Model * array, struct Range slice, uint32_t pos){
+	assert(slice.cap > pos);
+	
+	struct SSBO_Model*  target =  (array + slice.start + pos);
+	struct SSBO_Model*  last = (array + slice.start + slice.len - 1);
+
+	memcpy(target, last, sizeof(struct SSBO_Model));
+
+
+}
+void swapToLast_GameObjectInst(struct GameObject2_Inst * array, struct Range slice, uint32_t pos){
+	assert(slice.cap > pos);
+	
+	struct GameObject2_Inst*  target =  (array + slice.start + pos);
+	struct GameObject2_Inst*  last = (array + slice.start + slice.len - 1);
+
+	memcpy(target, last, sizeof(struct GameObject2_Inst));
+}
 
 struct BufferRes* buffer_set(
 	struct BufferRes * buffer,
