@@ -43,7 +43,7 @@ void gmArrayInit(struct GmArray * array, uint32_t width, uint32_t initial_size, 
 	
 }
 
-void* gmArrayPush(
+void* gmArrayNew(
 	struct GmArray * array
 ){
 
@@ -67,11 +67,39 @@ void* gmArrayPush(
 	}
 
 	void *slot = (char*)array->data + array->len * array->width;
-
+	
 	array->len++;
 
 	return slot; 
 }
+
+void* gmArrayNewN(struct GmArray * array, uint32_t num){
+	assert(array->data != NULL);
+
+	if (array->len + num >= array->capacity) {
+		uint32_t old_size = array->capacity *  array->width;
+
+		array->capacity *= 2;
+		array->capacity += num;
+
+		uint32_t new_size = array->capacity *  array->width;
+
+		void *new_data = gm_alloc_aligned(new_size,array->alignment);
+		memset(new_data, 0, new_size);
+		memcpy(new_data, array->data, old_size );
+		gm_free_aligned(array->data);
+		array->data = new_data;
+		
+		// array->capacity*=2;
+		// realloc(array->data,array->capacity * array->width);
+	}
+
+	void *slot = (char*)array->data + array->len * array->width;
+	// memset(slot, 0, num * array->width);
+	array->len+=num;
+
+	return slot;
+};
 // void gmArrayCopyBySize(void * dst, struct GmArray * array){
 
 // 	uint8_t *src_base = (uint8_t *)array->data;

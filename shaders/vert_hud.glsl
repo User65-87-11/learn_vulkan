@@ -42,7 +42,7 @@ layout(std430, binding = BINDING_MODELS_2D) readonly buffer  Models
 };
 
 
-layout(std430, binding = BINDING_2D_COLORS) readonly buffer  Colors
+layout(std430, binding = BINDING_COLORS) readonly buffer  Colors
 {
 	vec4 colors[];
  

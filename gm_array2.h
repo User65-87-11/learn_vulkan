@@ -31,11 +31,11 @@ void gmArrayInit(struct GmArray * array, uint32_t width, uint32_t initial_size, 
 
 // void gmArrayCopyTo(void * dst, struct GmArray * array);
 
-void* gmArrayPush( struct GmArray * array);
+void* gmArrayNew( struct GmArray * array);
 
 void gmArrayPushValue(struct GmArray * array, void * elem);
 
-
+void* gmArrayNewN(struct GmArray * array, uint32_t num);
 
 void* gmArrayGet(struct GmArray * array, uint32_t position);
 

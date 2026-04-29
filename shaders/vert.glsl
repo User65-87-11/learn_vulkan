@@ -58,9 +58,20 @@ layout(location = 2) out vec3 out_fragPos;
 layout(location = 3) flat out uint out_objectId;
 
 
-layout(location = 5) out vec4 fragPosLightSpace;
 
 layout(location = 4) out float out_fog_depth;
+
+layout(location = 5) out vec4 fragPosLightSpace;
+
+layout(location = 6) out vec4 out_color;
+
+layout(std430, binding = BINDING_COLORS) readonly buffer  Colors
+{
+	vec4 colors[];
+ 
+};
+
+
 
 void main() {
 	
@@ -82,6 +93,8 @@ void main() {
 	fragPosLightSpace = light_proj * light_view * world_pos;
 
 	out_objectId = objectId[gl_InstanceIndex];
+
+	out_color = colors[gl_InstanceIndex];
 	// float colId = modelData[gl_InstanceIndex].objectId;
 	// out_objectId = modelData[gl_InstanceIndex].objectId;
 	// out_fragPos = in_position;

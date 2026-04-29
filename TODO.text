@@ -1,35 +1,143 @@
-TODO:
-	create_GameObject
+struct InstanceData {
+    mat4 model;
+
+    vec4 color;
+
+    vec4 uvOffsetScale; or  int textureIndex;
+
+    float roughness;
+    float metallic;
+
+    float timeOffset;
+    float animSpeed;
+
+    uint flags;
+};
+
+
+  vec4 uvOffsetScale;
+	xy = offset (shift UVs)
+	zw = scale (stretch UVs)
 
 
 
 
-buffer_ubo_models [] static
-	0-10 GOT_1's ubo_models
-	1-12 GOT_2's ubo_models
-	13-17 GOT_3's ubo_models
-	18-20 GOT_4's ubo_models
-
-game object type GOT
-	texture data id = tdi
-	vertex data id = vdi
-
-	instance
-		start
-		cap
-		len
-		
-
-	ubo start
-		ref buffer_ubo_models
-	alive y|n
-
-create Game object (type,tdi,vdi,num)
-	allocate index range in isntnaces[]
-	
-disable Game Object ( type, position)	
-	[position] = alive | n
-	swap [position] to end of ubo_model
-	instance len --
+So yes—you are only binding one because you told Vulkan to bind only one.
 
 
+vkCmdBindDescriptorSets(cmd,
+    VK_PIPELINE_BIND_POINT_GRAPHICS,
+    pipe_HUD->pipelineLayout,
+    0, 
+	1,
+    frame->descriptorSets,
+    0, NULL);
+
+
+Set 0 → camera / frame data
+Set 1 → material
+Set 2 → lights
+
+
+What typically gets its own descriptor set
+
+	1 Camera / Frame data (almost always its own set)
+
+		view matrix
+		projection matrix
+		camera position
+		time
+		screen size
+
+	2. Material set (VERY common)
+
+		baseColor texture
+		metallicRoughness texture
+		normal map
+		material factors (roughness, metallic, color)
+
+	3. Global lights set (sometimes)
+
+		directional light
+		point lights array (SSBO)
+		shadow maps	
+
+	4. Environment / sky / IBL
+
+		environment cubemap
+		irradiance map
+		prefiltered specular map
+		BRDF LUT
+
+
+
+
+
+
+
+// shader
+
+Set 0: Frame / Camera
+layout(set = 0, binding = 0) uniform CameraUBO {
+    mat4 view;
+    mat4 proj;
+    vec3 cameraPos;
+} camera;
+
+
+Set 1: Material
+
+layout(set = 1, binding = 0) uniform sampler2D baseColorTex;
+layout(set = 1, binding = 1) uniform sampler2D metallicRoughnessTex;
+
+layout(set = 1, binding = 2) uniform MaterialUBO {
+    vec4 baseColorFactor;
+    float metallicFactor;
+    float roughnessFactor;
+} material;
+
+
+Set 2: Lights
+layout(set = 2, binding = 0) uniform LightUBO {
+    vec4 lightPos;
+    vec4 lightColor;
+} light;
+
+
+Each set = X is:
+
+a separate resource “namespace”
+
+
+--------ROUGHLY--------
+Set 0 = global constants
+Set 1 = material
+Set 2 = environment/lights
+
+
+Set 0 → global (camera + lights)
+Set 1 → material
+Set 2 → instance SSBO
+
+
+
+/!!!!!!!!!!!!!
+Yes — in most cases, 1 binding = 1 buffer (or 1 texture / sampler).
+
+
+Mesh instances (world objects)
+
+use model → view → projection
+affected by camera movement
+often large number of instances
+can benefit from instancing + batching
+
+
+HUD instances (UI elements)
+
+use screen-space (orthographic)
+not affected by world camera
+often needs pixel-perfect positioning
+usually different shaders/pipeline
+
+So yes: they are logically separate.
