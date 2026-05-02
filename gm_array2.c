@@ -50,16 +50,33 @@ void* gmArrayNew(
 	assert(array->data != NULL);
 
 	if (array->len >= array->capacity) {
-		uint32_t old_size = array->capacity *  array->width;
 
-		array->capacity *= 2;
+		uint32_t old_size = array->len *  array->width;
+
+		if (array->capacity == 0){
+			
+    		array->capacity = 4;
+		}
+		else
+		{
+			array->capacity *= 2;
+
+		}
+
+		
 
 		uint32_t new_size = array->capacity *  array->width;
 
 		void *new_data = gm_alloc_aligned(new_size,array->alignment);
-		memset(new_data, 0, new_size);
+
+		assert(new_data != NULL);
+
 		memcpy(new_data, array->data, old_size );
+		
+		memset((char*)new_data + old_size, 0, new_size - old_size);
+
 		gm_free_aligned(array->data);
+
 		array->data = new_data;
 		
 		// array->capacity*=2;
@@ -67,7 +84,7 @@ void* gmArrayNew(
 	}
 
 	void *slot = (char*)array->data + array->len * array->width;
-	
+	memset(slot, 0,  array->width);
 	array->len++;
 
 	return slot; 
@@ -76,17 +93,30 @@ void* gmArrayNew(
 void* gmArrayNewN(struct GmArray * array, uint32_t num){
 	assert(array->data != NULL);
 
-	if (array->len + num >= array->capacity) {
-		uint32_t old_size = array->capacity *  array->width;
+	if (array->len + num > array->capacity) {
 
-		array->capacity *= 2;
-		array->capacity += num;
+		uint32_t old_size = array->len  *  array->width;
+
+		if (array->capacity == 0){
+			
+    		array->capacity = 4;
+		}
+
+		while (array->len + num > array->capacity) {
+            array->capacity *= 2;
+        }
+		
 
 		uint32_t new_size = array->capacity *  array->width;
 
 		void *new_data = gm_alloc_aligned(new_size,array->alignment);
-		memset(new_data, 0, new_size);
+
+		assert(new_data != NULL);
+		
 		memcpy(new_data, array->data, old_size );
+		
+		memset((char*)new_data + old_size, 0, new_size - old_size);
+
 		gm_free_aligned(array->data);
 		array->data = new_data;
 		
@@ -95,7 +125,7 @@ void* gmArrayNewN(struct GmArray * array, uint32_t num){
 	}
 
 	void *slot = (char*)array->data + array->len * array->width;
-	// memset(slot, 0, num * array->width);
+	memset(slot, 0, num * array->width);
 	array->len+=num;
 
 	return slot;

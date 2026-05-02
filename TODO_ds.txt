@@ -1,0 +1,18 @@
+typedef struct {
+    Transform transform;
+    mat4 world;   // <-- result stored here
+    int mesh_id;
+    int parent;
+    int children[MAX_CHILDREN];
+} Entity;
+
+typedef struct {
+    Primitive* primitives;
+    uint32_t primitive_count;
+} Mesh;
+
+typedef struct {
+    VkBuffer vertex_buffer;
+    VkBuffer index_buffer;
+    Material material;
+} Primitive;
