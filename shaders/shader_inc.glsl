@@ -1,44 +1,78 @@
-// #define BINDING_VERT_1_UBO_ViewProjection  10
-// #define BINDING_VERT_1_SSBO_Models   11
-// #define BINDING_VERT_1_SSBO_ObjectIDS   12
-// #define BINDING_VERT_1_SSBO_Colors   13
-// #define BINDING_FRAG_1_UBO_Lights   14
-// #define BINDING_FRAG_1_SAMPLER  15
+#ifndef __SHADERS__
+#pragma once
+#include <stdint.h>
+#endif
 
 
-// #define BINDING_VERT_2_UBO_ViewProjection  20
-// #define BINDING_VERT_2_SSBO_Models   21
-// #define BINDING_VERT_2_SSBO_Colors   22
-// #define BINDING_FRAG_2_SAMPLER  23
-
-
-
-// #define BINDING_VERT_3_UBO_ViewProjection  30
-// #define BINDING_FRAG_3_UBO_Lights 31
-// #define BINDING_VERT_3_SSBO_Models 32
+#define DESC_SET_GLOBALS 0
+#define DESC_SET_INSTANCES 1
+#define DESC_SET_MATERIALS 2
+#define DESC_SET_TEXTURES 3
 
 
 
+#define MAX_MATERIALS 1
+#define MAX_TEXTURES 1
+#define MAX_INSTANCES 1024
+#define MAX_LIGHTS 1;
 
 
+#ifndef __SHADERS__
 
-#define BINDING_3D_SAMPLERS 0
-#define BINDING_2D_SAMPLERS 1
-#define BINDING_VIEW_PROJECTIONS_3D 2
-#define BINDING_VIEW_PROJECTIONS_2D 3
-#define BINDING_VIEW_PROJECTIONS_LIGHT 4
-#define BINDING_MODELS_3D 5
-#define BINDING_MODELS_2D 6
-#define BINDING_DIRECTIONAL_LIGHTS 7
-#define BINDING_OBJECT_IDS 8
-#define BINDING_COLORS 9
-#define BINDING_3D_SAMPLERS_SHADOW 10
+typedef uint32_t uint;
 
-#define BINDING_MAX 11
+#endif
+
+struct Instance_ssbo
+{
+	mat4 model;
+	vec4 color;
+	float color_factor;
+	uint tex_idx;
+	
+};
+struct Camera_o{
+	mat4 view;
+	mat4 model;
+	vec3 pos;
+	vec3 view_dir;
+	vec3 view_pos;
+};
+
+struct Light_o{
+	vec3 pos;
+	vec3 view_dir;
+	vec3 view_pos;
+	vec4 color;
+	float color_factor;
+};
+
+struct Material_ssbo{
+	vec4 color;
+	float color_factor;
+	uint texture_idx;
+};
+
+struct Global_ubo{
+	mat4 view;
+	mat4 proj;
+
+	float time_total;
+	float time_delta;
+
+	uint frame_cnt;
+
+#ifndef __SHADERS__
+	struct 
+#endif	
+	Camera_o cam;
 
 
+#ifndef __SHADERS__
+	struct 
+#endif	
+	Light_o light;
 
 
-#define DESC_SET_GLOBAL 0
-#define DESC_SET_MATERIAL 1
-#define DESC_SET_INSTANCE 2
+	uint instance_cnt;
+};

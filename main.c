@@ -114,9 +114,13 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+
+
+
 #define MAX_IMAGE_VIEWS 16
 
 #define MAX_FRAMES_IN_FLIGHT 2
+
 
 #define TOTAL_3D_OBJECT 30
 
@@ -127,11 +131,80 @@ const bool enableValidationLayers = true;
 
 
 
+uint8_t  texture0[] = 
+{
+	0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x08, 0x06, 0x00, 0x00, 0x00, 0x72, 0xB6, 0x0D, 0x24, 0x00, 0x00, 0x00, 0x01, 0x73, 0x52, 0x47, 0x42, 0x01, 0xD9, 0xC9, 0x2C, 0x7F, 0x00, 0x00, 0x00, 0x04, 0x67, 0x41, 0x4D, 0x41, 0x00, 0x00, 0xB1, 0x8F, 0x0B, 0xFC, 0x61, 0x05, 0x00, 0x00, 0x00, 0x20, 0x63, 0x48, 0x52, 0x4D, 0x00, 0x00, 0x7A, 0x26, 0x00, 0x00, 0x80, 0x84, 0x00, 0x00, 0xFA, 0x00, 0x00, 0x00, 0x80, 0xE8, 0x00, 0x00, 0x75, 0x30, 0x00, 0x00, 0xEA, 0x60, 0x00, 0x00, 0x3A, 0x98, 0x00, 0x00, 0x17, 0x70, 0x9C, 0xBA, 0x51, 0x3C, 0x00, 0x00, 0x00, 0x09, 0x70, 0x48, 0x59, 0x73, 0x00, 0x00, 0x2E, 0x23, 0x00, 0x00, 0x2E, 0x23, 0x01, 0x78, 0xA5, 0x3F, 0x76, 0x00, 0x00, 0x00, 0x18, 0x49, 0x44, 0x41, 0x54, 0x08, 0xD7, 0x05, 0xC1, 0x01, 0x01, 0x00, 0x00, 0x00, 0x82, 0xA0, 0x4E, 0xFA, 0x7F, 0x0A, 0xC1, 0x2A, 0x30, 0xA8, 0x1C, 0x69, 0xA8, 0x0B, 0xF5, 0xA9, 0xC4, 0xF1, 0x86, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+};
+
+struct TextureRes tex_res0;
 
 
 
 
+struct Vertex{
 
+	vec3 pos;
+	vec3 norm;
+	vec2 texCoords;
+};
+
+struct Vertex cube0_vertices[] = {
+    // +Z (front)
+    {{-0.5f,-0.5f, 0.5f}, {0,0,1}, {0,0}},
+    {{ 0.5f,-0.5f, 0.5f}, {0,0,1}, {1,0}},
+    {{ 0.5f, 0.5f, 0.5f}, {0,0,1}, {1,1}},
+    {{-0.5f, 0.5f, 0.5f}, {0,0,1}, {0,1}},
+
+    // -Z (back)
+    {{ 0.5f,-0.5f,-0.5f}, {0,0,-1}, {0,0}},
+    {{-0.5f,-0.5f,-0.5f}, {0,0,-1}, {1,0}},
+    {{-0.5f, 0.5f,-0.5f}, {0,0,-1}, {1,1}},
+    {{ 0.5f, 0.5f,-0.5f}, {0,0,-1}, {0,1}},
+
+    // -X (left)
+    {{-0.5f,-0.5f,-0.5f}, {-1,0,0}, {0,0}},
+    {{-0.5f,-0.5f, 0.5f}, {-1,0,0}, {1,0}},
+    {{-0.5f, 0.5f, 0.5f}, {-1,0,0}, {1,1}},
+    {{-0.5f, 0.5f,-0.5f}, {-1,0,0}, {0,1}},
+
+    // +X (right)
+    {{ 0.5f,-0.5f, 0.5f}, {1,0,0}, {0,0}},
+    {{ 0.5f,-0.5f,-0.5f}, {1,0,0}, {1,0}},
+    {{ 0.5f, 0.5f,-0.5f}, {1,0,0}, {1,1}},
+    {{ 0.5f, 0.5f, 0.5f}, {1,0,0}, {0,1}},
+
+    // +Y (top)
+    {{-0.5f, 0.5f, 0.5f}, {0,1,0}, {0,0}},
+    {{ 0.5f, 0.5f, 0.5f}, {0,1,0}, {1,0}},
+    {{ 0.5f, 0.5f,-0.5f}, {0,1,0}, {1,1}},
+    {{-0.5f, 0.5f,-0.5f}, {0,1,0}, {0,1}},
+
+    // -Y (bottom)
+    {{-0.5f,-0.5f,-0.5f}, {0,-1,0}, {0,0}},
+    {{ 0.5f,-0.5f,-0.5f}, {0,-1,0}, {1,0}},
+    {{ 0.5f,-0.5f, 0.5f}, {0,-1,0}, {1,1}},
+    {{-0.5f,-0.5f, 0.5f}, {0,-1,0}, {0,1}},
+};
+
+uint32_t cube0_indices[] = {
+    // front
+    0, 1, 2, 2, 3, 0,
+
+    // back
+    4, 5, 6, 6, 7, 4,
+
+    // left
+    8, 9,10,10,11, 8,
+
+    // right
+    12,13,14,14,15,12,
+
+    // top
+    16,17,18,18,19,16,
+
+    // bottom
+    20,21,22,22,23,20
+};
 
 
 
@@ -204,15 +277,15 @@ VkImageView swapchainImageViews[MAX_IMAGE_VIEWS];
 
 
 
-VkDescriptorSetLayout descriptorSetLayout4;
+// VkDescriptorSetLayout descriptorSetLayout4;
 
 
 
 
 
-struct GameObject * gameObjectsA;
-struct GameObject * gameObjectsB;
-struct GameObject * gameObjectsC;
+// struct GameObject * gameObjectsA;
+// struct GameObject * gameObjectsB;
+// struct GameObject * gameObjectsC;
 
 
 
@@ -229,40 +302,40 @@ Pipeline main;
 
 */
 
-struct GlobalData{
+// struct GlobalData{
 	
-    mat4 view;
-    mat4 proj;
-    vec3 cameraPos;
-    vec2 screenSize;
-	float time;
-    float deltaTime;
+//     mat4 view;
+//     mat4 proj;
+//     vec3 cameraPos;
+//     vec2 screenSize;
+// 	float time;
+//     float deltaTime;
     
-};
+// };
 
-struct MaterialData{
-	//onlt for this material
+// struct MaterialData{
+// 	//onlt for this material
 
-    vec4 baseColorFactor;
-    float metallicFactor;
-    float roughnessFactor;
-};
+//     vec4 baseColorFactor;
+//     float metallicFactor;
+//     float roughnessFactor;
+// };
 
-struct InstanceDataMesh{
-	mat4 model;
-	vec4 color;
-	uint32_t object_id;
-	uint32_t material_id;
-	uint32_t flags;
-};
-struct InstanceDataHUD{
-    vec2 position;
-    vec2 size;
-    vec4 color;
-    uint32_t material_id;
-    uint32_t object_id;
-	uint32_t flags;
-};
+// struct InstanceDataMesh{
+// 	mat4 model;
+// 	vec4 color;
+// 	uint32_t object_id;
+// 	uint32_t material_id;
+// 	uint32_t flags;
+// };
+// struct InstanceDataHUD{
+//     vec2 position;
+//     vec2 size;
+//     vec4 color;
+//     uint32_t material_id;
+//     uint32_t object_id;
+// 	uint32_t flags;
+// };
 
 struct Pipeline{
 	
@@ -350,9 +423,55 @@ struct TextureRes{
 
 
 
-struct BufferRes ssbo_material;
+// struct BufferRes ssbo_material;
 
-VkDescriptorSet descriptorSets2 [MAX_FRAMES_IN_FLIGHT];
+// VkDescriptorSet descriptorSets2 [MAX_FRAMES_IN_FLIGHT];
+
+
+
+// -- start v4
+
+VkDescriptorPool descriptor_pool = NULL;
+
+VkDescriptorSet descriptor_set_instances [MAX_FRAMES_IN_FLIGHT];
+VkDescriptorSet descriptor_set_globals [MAX_FRAMES_IN_FLIGHT];
+VkDescriptorSet descriptor_set_materials;
+VkDescriptorSet descriptor_set_samplers;
+
+VkDescriptorSetLayout descriptor_layout_global;
+VkDescriptorSetLayout descriptor_layout_instance;
+VkDescriptorSetLayout descriptor_layout_material;
+VkDescriptorSetLayout descriptor_layout_sampler;
+
+ 
+
+VkDescriptorImageInfo  descriptor_image_info_textures[MAX_TEXTURES] = {};
+
+struct BufferRes ssbo_materials;
+
+
+struct GmArray array_data_materials;
+struct GmArray array_data_instances;
+struct Global_ubo data_globals = {};
+
+struct GmList list_vertices;
+struct GmList list_indices;
+
+
+struct GmArray array_vertex_data;
+struct GmArray array_index_data;
+
+struct GmArray array_vertex_ranges;
+struct GmArray array_index_ranges;
+
+struct GmArray array_meshes;
+
+
+struct BufferRes vertex_buffer;
+struct BufferRes index_buffer;
+
+
+// -- end v4
 
 struct Frame{
 
@@ -369,47 +488,43 @@ struct Frame{
 
 
 	
-	VkDescriptorSet globalSets;
-	VkDescriptorSet instanceSets;
+	// VkDescriptorSet globalSets;
+	// VkDescriptorSet instanceSets;
 
 	
-	// -- V1
-	struct BufferRes ubo_ViewProjection;
-	struct BufferRes ubo_Lights;
-	struct BufferRes ssbo_objectIds;
-	struct BufferRes ssbo_models;
-	struct BufferRes ssbo_colors;
+	// // -- V1
+	// struct BufferRes ubo_ViewProjection;
+	// struct BufferRes ubo_Lights;
+	// struct BufferRes ssbo_objectIds;
+	// struct BufferRes ssbo_models;
+	// struct BufferRes ssbo_colors;
 	
 	
 	// -- V2
 	struct BufferRes ubo_global;
-	struct BufferRes ssbo_instance_mesh;
-	struct BufferRes ssbo_instance_hud;
-
-
-
+	struct BufferRes ssbo_instances;
 
 
 
 	struct ImageRes deapth;
 
 
-	struct TextureRes shadow;
+	// struct TextureRes shadow;
 
 
-	VkDescriptorSet* descriptorSets;
+	// VkDescriptorSet* descriptorSets;
 
 	
 
 
 
-	struct{
-		struct ImageRes image;
+	// struct{
+	// 	struct ImageRes image;
 		
-		struct BufferRes buffer;
+	// 	struct BufferRes buffer;
 
-		uint32_t pickedID;
-	} pick;
+	// 	uint32_t pickedID;
+	// } pick;
 
 	
 
@@ -420,15 +535,34 @@ struct Frame frames[MAX_FRAMES_IN_FLIGHT] ={};
 
 struct GmList list_BufferRes;
 
+struct Range{
+	uint32_t start;
+	uint32_t cap;
+	uint32_t len;
+};
+
+struct BufferRes vertexBuffer;
+struct BufferRes indexBuffer;
+
+
+struct Mesh
+{
+	// char * gltfPath;
+	uint32_t index;
+
+	struct Range range_vertex;
+
+	struct Range range_index;
+
+};
+
 struct ModelVertexData2
 {
-	char * gltfPath;
+	// char * gltfPath;
 
-	struct BufferRes vertexBuffer;
-	struct BufferRes indexBuffer;
+	struct Range range_vertex;
 
-
-	uint32_t indices_num;
+	struct Range range_index;
 
 };
 
@@ -436,8 +570,8 @@ struct ModelVertexData2
 #define MODEL_NUM 2
 
 struct ModelVertexData2 modelVertexData_3D[MODEL_NUM]={
-	{.gltfPath = "models_gltf/viking_room.gltf"},
-	{.gltfPath =  "models_gltf/box.gltf"},
+	// {.gltfPath = "models_gltf/viking_room.gltf"},
+	// {.gltfPath =  "models_gltf/box.gltf"},
 };
 
 
@@ -448,29 +582,29 @@ struct ModelVertexData2 modelVertexData_HUD2 = {};
 
 /* END UNIFORM BUFFERS */
 
-VkDescriptorPool descriptorPool = NULL;
+// VkDescriptorPool descriptorPool = NULL;
 
 
 
 
 
 
-VkDescriptorPool descriptorPool2;
+// VkDescriptorPool descriptorPool2;
 
-VkDescriptorSetLayout globalLayout;
-VkDescriptorSetLayout materialLayout;
-VkDescriptorSetLayout instanceLayout;
-
-
-
-VkDescriptorSet materialSet;
+// VkDescriptorSetLayout globalLayout;
+// VkDescriptorSetLayout materialLayout;
+// VkDescriptorSetLayout instanceLayout;
 
 
 
+// VkDescriptorSet materialSet;
 
-struct GmArray arrayTextures_2D;
 
-struct GmArray arrayTextures_3D;
+
+
+// struct GmArray arrayTextures_2D;
+
+// struct GmArray arrayTextures_3D;
 
 
 
@@ -492,34 +626,37 @@ vec3 cameraFront = {-0.7f, 0.0f, 0.7f};
 vec3 cameraUp    = {0.0f, 1.0f, 0.0f};
 
 
-struct PushConst{
-	int texIdx;
-	int hasColor;
-	int objectId;
-};
+float startTime = 0.0f;
+float deltaTime = 0.0f;
+float lastTime = 0.0f;
+
+// struct PushConst{
+// 	int texIdx;
+// 	int hasColor;
+// 	int objectId;
+// };
 
 
-struct PushConst2D{
-	uint32_t texIdx;
-	uint32_t hasColor;
-};
-
-struct Vertex{
-
-	vec3 pos;
-	vec3 norm;
-	vec2 texCoords;
-};
-
-struct Vertex2D{
-
-	vec2 pos;
-	vec2 texCoords;
-};
+// struct PushConst2D{
+// 	uint32_t texIdx;
+// 	uint32_t hasColor;
+// };
 
 
 
+// struct Vertex2D{
 
+// 	vec2 pos;
+// 	vec2 texCoords;
+// };
+
+
+
+
+
+
+
+struct Mesh * model0 ;
 
 
 
@@ -532,181 +669,179 @@ char * model_path_text	= 	"models_gltf/viking_room.png";
 
 
 
-#define INSTANCE_NUM 6
+// #define INSTANCE_NUM 6
 
-uint32_t instanceNum = INSTANCE_NUM;
-
-
+// uint32_t instanceNum = INSTANCE_NUM;
 
 
 
-struct SSBO_ObjectID{
-	uint32_t objectId;
-};
-struct SSBO_Model{
-	mat4 model;
-};
-struct SSBO_Colors{
-	vec4 color;
-};
-
-struct UBO_ViewProjection {
-
-    mat4 view;
-    mat4 proj;
-};
-
-uint32_t UBO_DirectionLightCnt = 1;
-
-struct UBO_DirectionLight {
-  vec4 lightPos; 
-  vec4 viewPos; 
-  vec4 lightColor;
-} UBO_DirLight;
-
-float startTime = 0.0f;
-float deltaTime = 0.0f;
-float lastTime = 0.0f;
 
 
-uint32_t uboPointLightCnt =0 ;
+// struct SSBO_ObjectID{
+// 	uint32_t objectId;
+// };
+// struct SSBO_Model{
+// 	mat4 model;
+// };
+// struct SSBO_Colors{
+// 	vec4 color;
+// };
 
-struct UBOPointLight {    
-    vec3 position;
+// struct UBO_ViewProjection {
+
+//     mat4 view;
+//     mat4 proj;
+// };
+
+// uint32_t UBO_DirectionLightCnt = 1;
+
+// struct UBO_DirectionLight {
+//   vec4 lightPos; 
+//   vec4 viewPos; 
+//   vec4 lightColor;
+// } UBO_DirLight;
+
+
+
+
+// uint32_t uboPointLightCnt =0 ;
+
+// struct UBOPointLight {    
+//     vec3 position;
     
-    float constant;
-    float linear;
-    float quadratic;  
+//     float constant;
+//     float linear;
+//     float quadratic;  
 
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-}; 
-
-
-struct Object3DTransforms{
-	vec3 position;
-	vec3 scale;
-	vec3 rotation;
-
-};
+//     vec3 ambient;
+//     vec3 diffuse;
+//     vec3 specular;
+// }; 
 
 
-struct GameObject {
+// struct Object3DTransforms{
+// 	vec3 position;
+// 	vec3 scale;
+// 	vec3 rotation;
+
+// };
+
+
+// struct GameObject {
 
 
 
-	uint32_t vertexIdx;
+// 	uint32_t vertexIdx;
 
-	uint32_t textureIdx;
+// 	uint32_t textureIdx;
 
-	struct GmArrayView arrayViewUboModel;
+// 	struct GmArrayView arrayViewUboModel;
 	
-	struct GmArrayView arrayViewUboObjectIds;
+// 	struct GmArrayView arrayViewUboObjectIds;
 
-	// struct UBOPointLight * uboLight;
+// 	// struct UBOPointLight * uboLight;
 
 	
-	struct GmArrayView arrayViewGameObjectInstances;
+// 	struct GmArrayView arrayViewGameObjectInstances;
 
 
-};
-struct Range{
-	uint32_t start;
-	uint32_t cap;
-	uint32_t len;
-};
-struct Object3D_Inst{
-	bool visible;
+// };
+// struct Range{
+// 	uint32_t start;
+// 	uint32_t cap;
+// 	uint32_t len;
+// };
+// struct Object3D_Inst{
+// 	bool visible;
 	
-	uint32_t id;
-};
-struct Hud_Inst{
-	bool visible;
+// 	uint32_t id;
+// };
+// struct Hud_Inst{
+// 	bool visible;
 
-	uint32_t id;
-};
-struct Transforms{
-	vec4 position;
-	vec4 scale;
-	vec4 rotation;
-};
-struct ObjColor{
-	vec4 color;
-};
-struct ObjectID{
-	uint32_t objectId;
-};
-struct ObjectType {
-
-
-	uint32_t geometry_idx;
-
-	uint32_t material_idx;
-
-	struct Range object_ids;
-	struct Range instances;
-	struct Range transforms;
-	struct Range color;
-
-};
-struct ObjectHUDType {
+// 	uint32_t id;
+// };
+// struct Transforms{
+// 	vec4 position;
+// 	vec4 scale;
+// 	vec4 rotation;
+// };
+// struct ObjColor{
+// 	vec4 color;
+// };
+// struct ObjectID{
+// 	uint32_t objectId;
+// };
+// struct ObjectType {
 
 
-	uint32_t geometry_idx;
+// 	uint32_t geometry_idx;
 
-	uint32_t material_idx;
+// 	uint32_t material_idx;
 
-	struct Range object_ids;
-	struct Range instances;
-	struct Range transforms;
-	struct Range color;
+// 	struct Range object_ids;
+// 	struct Range instances;
+// 	struct Range transforms;
+// 	struct Range color;
 
-};
+// };
+// struct ObjectHUDType {
 
 
+// 	uint32_t geometry_idx;
 
-struct GmArray arrayGameObjectInstances;
+// 	uint32_t material_idx;
+
+// 	struct Range object_ids;
+// 	struct Range instances;
+// 	struct Range transforms;
+// 	struct Range color;
+
+// };
 
 
 
-struct GmArray arrayGameObjects;
-
-
-struct GmArray array_ssbo_models3d;
-
-struct GmArray array_ssbo_models2d;
-
-
-struct GmArray arraySBO_ObjectIds_1;
-
-
-struct GmArray arrayColors_2;
-
-//-- V2 game object
-
-
-uint32_t total_objects3d = 0;
-uint32_t total_objects2d = 0;
-
-
-struct GmArray array_transforms;
-struct GmArray array_object_ids;
-struct GmArray array_object3d_inst;
-struct GmArray array_hud_inst;
-struct GmArray array_obj_color;
+// struct GmArray arrayGameObjectInstances;
 
 
 
-struct ObjectType obj_rooms_a;
-struct ObjectType obj_rooms_b;
-struct ObjectType obj_cubes;
-struct ObjectType obj_light;
-
-struct GmList list_obj3d;
+// struct GmArray arrayGameObjects;
 
 
-struct ObjectType obj2d_cross;
+// struct GmArray array_ssbo_models3d;
+
+// struct GmArray array_ssbo_models2d;
+
+
+// struct GmArray arraySBO_ObjectIds_1;
+
+
+// struct GmArray arrayColors_2;
+
+// //-- V2 game object
+
+
+// uint32_t total_objects3d = 0;
+// uint32_t total_objects2d = 0;
+
+
+// struct GmArray array_transforms;
+// struct GmArray array_object_ids;
+// struct GmArray array_object3d_inst;
+// struct GmArray array_hud_inst;
+// struct GmArray array_obj_color;
+
+
+
+// struct ObjectType obj_rooms_a;
+// struct ObjectType obj_rooms_b;
+// struct ObjectType obj_cubes;
+// struct ObjectType obj_light;
+
+// struct GmList list_obj3d;
+
+
+// struct ObjectType obj2d_cross;
 
 
 // -- V2 game object
@@ -719,8 +854,10 @@ void cleanBuffer(struct BufferRes * buff);
 void cleanTextureRes(struct TextureRes * tex);
 
 void initVariables();
+void initVariables2();
 
 void freeVariables();
+void freeVariables2();
 
 
 // -- V2
@@ -744,7 +881,7 @@ struct BufferRes * iterateBuffer(
 );
 
 
-
+void createMeshBuffers();
 
 
 
@@ -937,141 +1074,141 @@ float rand_float(float from,float to)
 int32_t rand_int32(int32_t from, int32_t to) {
 	return rand_float(from,to);
 }
-void create_Object(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct ObjectType * out){
+// void create_Object(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct ObjectType * out){
 
 	
 
 
-	out = malloc(sizeof(struct ObjectType));
-	memset(out, 0, sizeof(struct ObjectType));
+// 	out = malloc(sizeof(struct ObjectType));
+// 	memset(out, 0, sizeof(struct ObjectType));
 
-	out->geometry_idx = geometry_id;
-	out->material_idx = material_id;
+// 	out->geometry_idx = geometry_id;
+// 	out->material_idx = material_id;
 	
-	{
+// 	{
 
-		float rand_from = -10.0;
-		float rand_to = 10.0;
+// 		float rand_from = -10.0;
+// 		float rand_to = 10.0;
 
-		out->transforms.start = array_transforms.len;
-		out->transforms.cap = inst_cnt;
-		gmArrayNewN(&array_transforms,inst_cnt);
-		int start=out->transforms.start;
-		int cap = start + inst_cnt;
+// 		out->transforms.start = array_transforms.len;
+// 		out->transforms.cap = inst_cnt;
+// 		gmArrayNewN(&array_transforms,inst_cnt);
+// 		int start=out->transforms.start;
+// 		int cap = start + inst_cnt;
 		
-		for(int i = start;i<cap;i++ ){
-			struct Transforms * inst = gmArrayGet(&array_transforms,i);;
-			GLM_VEC3_SET(inst->position, rand_float(rand_from,rand_to), 0.0, rand_float(rand_from,rand_to));
-			GLM_VEC3_SET(inst->scale, 1.0, 1.0, 1.0);
-			// GLM_VEC3_SET(inst->rotation, 0.0, 0.0, 0.0);
-		}
-	}
+// 		for(int i = start;i<cap;i++ ){
+// 			struct Transforms * inst = gmArrayGet(&array_transforms,i);;
+// 			GLM_VEC3_SET(inst->position, rand_float(rand_from,rand_to), 0.0, rand_float(rand_from,rand_to));
+// 			GLM_VEC3_SET(inst->scale, 1.0, 1.0, 1.0);
+// 			// GLM_VEC3_SET(inst->rotation, 0.0, 0.0, 0.0);
+// 		}
+// 	}
 
 
 
 
 
-	{
-		out->object_ids.start = array_object_ids.len;
-		out->object_ids.cap = inst_cnt;
+// 	{
+// 		out->object_ids.start = array_object_ids.len;
+// 		out->object_ids.cap = inst_cnt;
 	
-		gmArrayNewN(&array_object_ids,inst_cnt);
+// 		gmArrayNewN(&array_object_ids,inst_cnt);
 
-		int start=out->object_ids.start;
-		int cap = start + inst_cnt;
+// 		int start=out->object_ids.start;
+// 		int cap = start + inst_cnt;
 		
-		for(int i = start;i<cap;i++ ){
-			struct ObjectID * inst = gmArrayGet(&array_object_ids,i);
+// 		for(int i = start;i<cap;i++ ){
+// 			struct ObjectID * inst = gmArrayGet(&array_object_ids,i);
 			
-			inst->objectId = i;
-		}
+// 			inst->objectId = i;
+// 		}
 
-	}
-}
+// 	}
+// }
 
-void create_Object3D(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct ObjectType * out){
+// void create_Object3D(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct ObjectType * out){
 
 	
-	create_Object(material_id, geometry_id, inst_cnt, out);
+// 	create_Object(material_id, geometry_id, inst_cnt, out);
 
-	total_objects3d += inst_cnt;
+// 	total_objects3d += inst_cnt;
 	
-	gmListPushBack(&list_obj3d,out);
+// 	gmListPushBack(&list_obj3d,out);
 
-	{
-		out->instances.start = array_object3d_inst.len;
-		out->instances.cap = inst_cnt;
-		gmArrayNewN(&array_object3d_inst,inst_cnt);
-		int start=out->instances.start;
-		int cap = start + inst_cnt;
+// 	{
+// 		out->instances.start = array_object3d_inst.len;
+// 		out->instances.cap = inst_cnt;
+// 		gmArrayNewN(&array_object3d_inst,inst_cnt);
+// 		int start=out->instances.start;
+// 		int cap = start + inst_cnt;
 		
-		for(int i = start;i<cap;i++ ){
-			struct Object3D_Inst * inst = 	gmArrayGet(&array_object3d_inst,i);
-			inst->visible = true;
+// 		for(int i = start;i<cap;i++ ){
+// 			struct Object3D_Inst * inst = 	gmArrayGet(&array_object3d_inst,i);
+// 			inst->visible = true;
 		
-			inst->id = i;
-		}
-	}
+// 			inst->id = i;
+// 		}
+// 	}
 
 
-}
+// }
 
-void create_ObjectHUD(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct ObjectType * out){
+// void create_ObjectHUD(uint32_t material_id, uint32_t geometry_id, uint32_t inst_cnt, struct ObjectType * out){
 
 
 	
-	create_Object(material_id, geometry_id, inst_cnt, out);
+// 	create_Object(material_id, geometry_id, inst_cnt, out);
 
-	total_objects2d += inst_cnt;
+// 	total_objects2d += inst_cnt;
 
 
-	{
-		out->instances.start = array_hud_inst.len;
-		out->instances.cap = inst_cnt;
-		gmArrayNewN(&array_hud_inst,inst_cnt);
-		int start=out->instances.start;
-		int cap = start + inst_cnt;
+// 	{
+// 		out->instances.start = array_hud_inst.len;
+// 		out->instances.cap = inst_cnt;
+// 		gmArrayNewN(&array_hud_inst,inst_cnt);
+// 		int start=out->instances.start;
+// 		int cap = start + inst_cnt;
 		
-		for(int i = start;i<cap;i++ ){
-			struct Hud_Inst * inst = 	gmArrayGet(&array_hud_inst,i);
-			inst->visible = true;
-			inst->id = i;
-		}
-	}
+// 		for(int i = start;i<cap;i++ ){
+// 			struct Hud_Inst * inst = 	gmArrayGet(&array_hud_inst,i);
+// 			inst->visible = true;
+// 			inst->id = i;
+// 		}
+// 	}
 
 
 
-}
+// }
 
 
 
 
-void disable_Models(struct SSBO_Model * array, struct Range slice, uint32_t pos){
-	assert(slice.cap > pos);
+// void disable_Models(struct SSBO_Model * array, struct Range slice, uint32_t pos){
+// 	assert(slice.cap > pos);
 	
-	struct SSBO_Model*  target =  (array + slice.start + pos);
-	struct SSBO_Model*  last = (array + slice.start + slice.len - 1);
+// 	struct SSBO_Model*  target =  (array + slice.start + pos);
+// 	struct SSBO_Model*  last = (array + slice.start + slice.len - 1);
 
-	memcpy(target, last, sizeof(struct SSBO_Model));
+// 	memcpy(target, last, sizeof(struct SSBO_Model));
 
 
-}
-void disable_HudInst(struct Hud_Inst * instances, struct Range slice, uint32_t pos){
-	assert(slice.cap > pos);
+// }
+// void disable_HudInst(struct Hud_Inst * instances, struct Range slice, uint32_t pos){
+// 	assert(slice.cap > pos);
 	
-	struct Hud_Inst*  target =  (instances + slice.start + pos);
-	struct Hud_Inst*  last = (instances + slice.start + slice.len - 1);
+// 	struct Hud_Inst*  target =  (instances + slice.start + pos);
+// 	struct Hud_Inst*  last = (instances + slice.start + slice.len - 1);
 
-	memcpy(target, last, sizeof(struct Object3D_Inst));
-}
-void disable_Object3DInst(struct Object3D_Inst * instances, struct Range slice, uint32_t pos){
-	assert(slice.cap > pos);
+// 	memcpy(target, last, sizeof(struct Object3D_Inst));
+// }
+// void disable_Object3DInst(struct Object3D_Inst * instances, struct Range slice, uint32_t pos){
+// 	assert(slice.cap > pos);
 	
-	struct Object3D_Inst*  target =  (instances + slice.start + pos);
-	struct Object3D_Inst*  last = (instances + slice.start + slice.len - 1);
+// 	struct Object3D_Inst*  target =  (instances + slice.start + pos);
+// 	struct Object3D_Inst*  last = (instances + slice.start + slice.len - 1);
 
-	memcpy(target, last, sizeof(struct Object3D_Inst));
-}
+// 	memcpy(target, last, sizeof(struct Object3D_Inst));
+// }
 
 
 struct BufferRes* buffer_set(
@@ -1241,35 +1378,35 @@ void processInput(GLFWwindow *window){
 	
 }
 
-void createShadowImages(){
+// void createShadowImages(){
 
 	
-	for(int i=0; i< MAX_FRAMES_IN_FLIGHT; i++)
-	{
-		struct  Frame * frame = &frames[i];
+// 	for(int i=0; i< MAX_FRAMES_IN_FLIGHT; i++)
+// 	{
+// 		struct  Frame * frame = &frames[i];
 
-		createDepthResources4(&frame->shadow.image,true);
-		createTextureSamplerShadow(&frame->shadow.textureSampler);
-		frame->shadow.path="";
-		frame->shadow.textureIdx= -1;
+// 		createDepthResources4(&frame->shadow.image,true);
+// 		createTextureSamplerShadow(&frame->shadow.textureSampler);
+// 		frame->shadow.path="";
+// 		frame->shadow.textureIdx= -1;
 	
-		beginSingleTimeCommands(transferCommandBuffers);
-		transitionImageLayout(
-			transferCommandBuffers,
-			&frame->shadow.image.handle,
-			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,  // ← Start in shader-read layout
-			0,
-			0,
-			VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-			VK_IMAGE_ASPECT_DEPTH_BIT,
-			1
-		);
-		endSingleTimeCommands(transferCommandBuffers);
-	}
+// 		beginSingleTimeCommands(transferCommandBuffers);
+// 		transitionImageLayout(
+// 			transferCommandBuffers,
+// 			&frame->shadow.image.handle,
+// 			VK_IMAGE_LAYOUT_UNDEFINED,
+// 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,  // ← Start in shader-read layout
+// 			0,
+// 			0,
+// 			VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+// 			VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+// 			VK_IMAGE_ASPECT_DEPTH_BIT,
+// 			1
+// 		);
+// 		endSingleTimeCommands(transferCommandBuffers);
+// 	}
 	
-}
+// }
 
 void createDepthImages(){
 
@@ -1283,368 +1420,456 @@ void createDepthImages(){
 	}
 	
 }
-void createTextures(){
+// void createTextures(){
 
 	
-	for( int i=0;i < arrayTextures_3D.len ;i++)
-	{
-		struct TextureRes * t = gmArrayGet(&arrayTextures_3D, i);
-		createTextureImage4(t);
+// 	for( int i=0;i < arrayTextures_3D.len ;i++)
+// 	{
+// 		struct TextureRes * t = gmArrayGet(&arrayTextures_3D, i);
+// 		createTextureImage4(t);
 		
 		
-		t->textureIdx = i;
+// 		t->textureIdx = i;
 
-		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+// 		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
-		createTextureSampler(&t->textureSampler);
-	}
-	printf("arrayTextures_2D.len %d\n",arrayTextures_2D.len);
-	for( int i=0;i < arrayTextures_2D.len ;i++)
-	{
-		struct TextureRes * t = gmArrayGet(&arrayTextures_2D, i);
-		createTextureImage4(t);
-		t->textureIdx = i;
-		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+// 		createTextureSampler(&t->textureSampler);
+// 	}
+// 	printf("arrayTextures_2D.len %d\n",arrayTextures_2D.len);
+// 	for( int i=0;i < arrayTextures_2D.len ;i++)
+// 	{
+// 		struct TextureRes * t = gmArrayGet(&arrayTextures_2D, i);
+// 		createTextureImage4(t);
+// 		t->textureIdx = i;
+// 		createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 		
-		createTextureSampler(&t->textureSampler);
-	}
+// 		createTextureSampler(&t->textureSampler);
+// 	}
 
-}
+// }
 
 
-
-void initVariables(){
+void initVariables2(){
 	PRINT_FNAME;
 
 
 	gmListInit(&list_BufferRes);
 
+	gmListInit(&list_vertices);
+	gmListInit(&list_indices);
+
+
+	gmArrayInit(&array_data_instances, sizeof(struct Instance_ssbo), MAX_INSTANCES, _Alignof(struct Instance_ssbo));
+	gmArrayInit(&array_data_materials, sizeof(struct Material_ssbo), MAX_INSTANCES, _Alignof(struct Material_ssbo));
 	
+	gmArrayInit(&array_vertex_ranges, sizeof(struct Range), 64, _Alignof(struct Range));
+	gmArrayInit(&array_index_ranges, sizeof(struct Range), 64, _Alignof(struct Range));
 	
-	gmListInit(&list_obj3d);
-
-	gmArrayInit(&array_hud_inst,sizeof(struct Hud_Inst),10,_Alignof(struct Hud_Inst));
-	gmArrayInit(&array_object3d_inst,sizeof(struct Object3D_Inst),10,_Alignof(struct Object3D_Inst));
-	gmArrayInit(&array_obj_color,sizeof(struct ObjColor),10,_Alignof(struct ObjColor));
-	gmArrayInit(&array_object_ids,sizeof(struct ObjectID),10,_Alignof(struct ObjectID));
-	gmArrayInit(&array_transforms,sizeof(struct Transforms),10,_Alignof(struct Transforms));
-
-
-
-	// uint32_t total_objects = TOTAL_3D_OBJECT + TOTAL_2D_OBJECT;
-
+	gmArrayInit(&array_vertex_data, sizeof(uint8_t), 1024, _Alignof(uint8_t));
+	gmArrayInit(&array_index_data, sizeof(uint8_t), 1024, _Alignof(uint8_t));
 
 	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3,_Alignof(struct Pipeline));
 
-
-	gmArrayInit(&arrayTextures_2D, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
-
-
-	gmArrayInit(&arrayTextures_3D, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
-
-
-	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3, _Alignof(struct GameObject));
-
-
-
-	
-	gmArrayInit(&array_ssbo_models3d, sizeof(struct SSBO_Model), TOTAL_3D_OBJECT , _Alignof(struct SSBO_Model));
-
-	gmArrayInit(&array_ssbo_models2d, sizeof(struct SSBO_Model), TOTAL_2D_OBJECT , _Alignof(struct SSBO_Model));
-
-	
-	gmArrayInit(&arraySBO_ObjectIds_1, sizeof(struct SSBO_ObjectID), TOTAL_3D_OBJECT, _Alignof(struct SSBO_ObjectID));
-
-	gmArrayInit(&arrayGameObjectInstances, sizeof(struct Object3DTransforms), TOTAL_3D_OBJECT, _Alignof(struct Object3DTransforms));
-
-	
-	gmArrayInit(&arrayColors_2, sizeof(vec4), 1, _Alignof(vec4));
-
-
-	{
-
-		struct TextureRes * texRes = gmArrayNew(&arrayTextures_3D);
-		texRes->path = "models_gltf/viking_room.png";
-
-		texRes = gmArrayNew(&arrayTextures_3D);
-		texRes->path = "models_gltf/viking_room2.png";
-
-
-		texRes = gmArrayNew(&arrayTextures_3D);
-		texRes->path = "models_gltf/wooden_small.jpg";
-	}
-
-	
-	{
-
-		struct TextureRes * texRes = gmArrayNew(&arrayTextures_2D);
-		texRes->path = "models_gltf/wooden_small.jpg";
-
-		texRes = gmArrayNew(&arrayTextures_2D);
-		texRes->path = "textures/cross32x32.png";
-
-
-		texRes = gmArrayNew(&arrayTextures_2D);
-		texRes->path = "textures/cross32x32a.png";
-	}
-
-
-
-	
-	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
-	pitch = glm_deg(asin(cameraFront[1]));
-
-	
-	vec4 v = {1.0,1.0,1.0,1.0};
-	GLM_VEC4_COPY(UBO_DirLight.lightColor, v);
-	GLM_VEC4_SET(UBO_DirLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
-	GLM_VEC4_SET(UBO_DirLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
-
-
-	float rand_from = -10.0;
-	float rand_to = 10.0;
-
-	for(int i=0; i < TOTAL_3D_OBJECT; i++)
-	{
-
-		struct SSBO_Model m ;
-		struct Object3DTransforms * g = gmArrayNew(&arrayGameObjectInstances);
-		struct SSBO_ObjectID o ;
-
-		o.objectId = i +1;
-
-		
-		GLM_VEC3_SET(g->position, rand_float(rand_from,rand_to), 0.0, rand_float(rand_from,rand_to));
-		
-
-		glm_mat4_identity(m.model) ;
-		glm_translate(m.model, g->position);
-
-	
-		gmArrayPushValue(&arraySBO_ObjectIds_1,&o);
-
-		gmArrayPushValue(&array_ssbo_models3d,&m);
-
-
-		
-	}
-
-	
-	{
-		vec4 color ={1.0,0.0,1.0,1.0};
-		gmArrayPushValue(&arrayColors_2,color);
-		struct SSBO_Model m ;
-		glm_mat4_identity(m.model) ;
-
-		vec4 pos = {(float) WIDTH / 2, (float) HEIGHT / 2, 0.0, 1.0};
-		glm_translate(m.model, pos);
-
-		gmArrayPushValue(&array_ssbo_models2d,&m);
-	}
+	gmArrayInit(&array_meshes, sizeof(struct Mesh), 16,_Alignof(struct Mesh));
 	
 
 
-	
-	
+	// gmListInit(&list_obj3d);
 
 
-	uint32_t texture_index = 2;
-	uint32_t vertexData_index = 1;
-
-
-	{
-		gameObjectsA = gmArrayNew(&arrayGameObjects);
-	
-		gmArrayViewCreateSlice(&array_ssbo_models3d, &gameObjectsA->arrayViewUboModel ,0, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsA->arrayViewGameObjectInstances ,0, 10);	
-		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsA->arrayViewUboObjectIds ,0, 10);	
-
-
-		gameObjectsA->textureIdx = texture_index;
-		gameObjectsA->vertexIdx = vertexData_index;
-
-		create_Object3D(texture_index, vertexData_index, 10, &obj_cubes);
-	}
-
-	texture_index = 1;
-	vertexData_index = 0;
-	{
-		gameObjectsB = gmArrayNew(&arrayGameObjects);
-	
-		gmArrayViewCreateSlice(&array_ssbo_models3d, &gameObjectsB->arrayViewUboModel ,10, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsB->arrayViewGameObjectInstances ,10, 10);	
-		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsB->arrayViewUboObjectIds ,10, 10);	
-		
-
-		gameObjectsB->textureIdx = texture_index;
-		gameObjectsB->vertexIdx = vertexData_index;
-
-		create_Object3D(texture_index, vertexData_index, 10, &obj_rooms_a);
-			
-	}
-	
-
-
-	texture_index = 0;
-	vertexData_index = 0;
-	{
-		gameObjectsC = gmArrayNew(&arrayGameObjects);
-	
-		gmArrayViewCreateSlice(&array_ssbo_models3d, &gameObjectsC->arrayViewUboModel ,20, 10);	
-		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsC->arrayViewGameObjectInstances ,20, 10);	
-		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsC->arrayViewUboObjectIds ,20, 10);	
-	
-		gameObjectsC->textureIdx = texture_index;
-		gameObjectsC->vertexIdx = vertexData_index;
-		
-
-		create_Object3D(texture_index, vertexData_index, 10, &obj_rooms_b);
-	}
-
-
-	create_Object3D(2, 1, 10, &obj_light);
-
-	create_ObjectHUD(2,0,1, &obj2d_cross);
 	
 }
-void freeVariables(){
+void freeVariables2(){
 
-	gmListFree(&list_obj3d);
-
-	gmArrayFree(&array_hud_inst);
-	gmArrayFree(&array_object3d_inst);
-	gmArrayFree(&array_obj_color);
-	gmArrayFree(&array_object_ids);
-	gmArrayFree(&array_transforms);
-
+		
+	// gmListFree(&list_obj3d);
 	gmListFree(&list_BufferRes);
 
-	gmArrayFree(&arrayTextures_2D);
 
-	gmArrayFree(&arrayTextures_3D);
+	gmListFree(&list_vertices);
+	gmListFree(&list_indices);
 
 
-	gmArrayFree(&arrayColors_2);
+	gmArrayFree(&array_meshes);
+
+	gmArrayFree(&array_data_instances);
+	gmArrayFree(&array_data_materials);
+
+	gmArrayFree(&array_vertex_ranges);
+	gmArrayFree(&array_index_ranges);
+
+
+	gmArrayFree(&array_vertex_data);
+	gmArrayFree(&array_index_data);
 
 	gmArrayFree(&arrayPipelines);
-
-	gmArrayFree(&arrayGameObjects);
-	
-	gmArrayFree(&array_ssbo_models3d);
-
-	gmArrayFree(&array_ssbo_models2d);
-
-	
-	gmArrayFree(&arraySBO_ObjectIds_1);
-
-	gmArrayFree(&arrayGameObjectInstances);
-
 }
-void loadModels(){
-	for(int i=0;i<MODEL_NUM;i++)
-	{
-
-		struct ModelVertexData2 * ref = &modelVertexData_3D[i];
-
-		if(ref->gltfPath == NULL) continue;
-
-		uint32_t verticesCnt;
-		struct Vertex * vertices;
-		
-
-		uint32_t indicesCnt;
-		uint32_t * indices;
-	
-		
-		loadModel(
-			ref->gltfPath,
-			&indicesCnt,
-			&indices,
-			&verticesCnt,
-			&vertices
-		);
-
-		ref->indices_num = indicesCnt;
-
-		createVertexBuffer2(
-			verticesCnt, 
-			vertices, 
-			sizeof(struct Vertex)*verticesCnt, 
-			&ref->vertexBuffer
-		);
-		createIndexBuffer2(
-			indicesCnt, 
-			indices, 
-			&ref->indexBuffer
-		);
-		// createVertexBuffer(
-		// 	verticesCnt,
-		// 	vertices,
-		// 	sizeof(struct Vertex)*verticesCnt,
-		// 	&ref->vertextBuffer,
-		// 	&ref->vertexBufferMemory
-		// );
-
-		// createIndexBuffer(
-		// 	indicesCnt,
-		// 	indices,
-		// 	&ref->indexBuffer,
-		// 	&ref->indexBufferMemory
-		// );
-
-		free(vertices);
-		free(indices);
-	}
+// void initVariables(){
+// 	PRINT_FNAME;
 
 
-	struct Vertex2D vertices[4] = {
-		
-
-		{{-10.0f, -10.0f},   {0.0f, 0.0f}}, 
-
-		{{ 10.0f, -10.0f},   {1.0f, 0.0f}}, 
-
-		{{ 10.0f,  10.0f},   {1.0f, 1.0f}}, 
-
-		{{-10.0f,  10.0f},   {0.0f, 1.0f}}  
-
-	};
-	uint32_t indices[6] = {
-		0, 1, 2,
-		2, 3, 0
-	};
-	modelVertexData_HUD2.indices_num = sizeof(indices)/sizeof(uint32_t);
-
-	createVertexBuffer2(
-		sizeof(vertices)/sizeof(struct Vertex2D),
-		vertices,
-		sizeof(vertices),
-		&modelVertexData_HUD2.vertexBuffer
-	);
-	createIndexBuffer2(
-		modelVertexData_HUD2.indices_num,
-		indices,
-		&modelVertexData_HUD2.indexBuffer
-	);
+// 	gmListInit(&list_BufferRes);
 
 	
-	// createVertexBuffer(
-	// 	sizeof(vertices)/sizeof(struct Vertex2D),
-	// 	vertices,
-	// 	sizeof(vertices),
-	// 	&modelVertexData_HUD.vertextBuffer,
-	// 	&modelVertexData_HUD.vertexBufferMemory
-	// );
+// 	gmListInit(&list_obj3d);
 
-	// createIndexBuffer(
-	// 	modelVertexData_HUD.indices_num,
-	// 	indices,
-	// 	&modelVertexData_HUD.indexBuffer,
-	// 	&modelVertexData_HUD.indexBufferMemory
-	// );
+// 	gmArrayInit(&array_hud_inst,sizeof(struct Hud_Inst),10,_Alignof(struct Hud_Inst));
+// 	gmArrayInit(&array_object3d_inst,sizeof(struct Object3D_Inst),10,_Alignof(struct Object3D_Inst));
+// 	gmArrayInit(&array_obj_color,sizeof(struct ObjColor),10,_Alignof(struct ObjColor));
+// 	gmArrayInit(&array_object_ids,sizeof(struct ObjectID),10,_Alignof(struct ObjectID));
+// 	gmArrayInit(&array_transforms,sizeof(struct Transforms),10,_Alignof(struct Transforms));
 
 
+
+// 	// uint32_t total_objects = TOTAL_3D_OBJECT + TOTAL_2D_OBJECT;
+
+
+// 	gmArrayInit(&arrayPipelines, sizeof(struct Pipeline), 3,_Alignof(struct Pipeline));
+
+
+// 	gmArrayInit(&arrayTextures_2D, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
+
+
+// 	gmArrayInit(&arrayTextures_3D, sizeof(struct TextureRes), 3,_Alignof(struct TextureRes));
+
+
+// 	gmArrayInit(&arrayGameObjects, sizeof(struct GameObject), 3, _Alignof(struct GameObject));
+
+
+
+	
+// 	gmArrayInit(&array_ssbo_models3d, sizeof(struct SSBO_Model), TOTAL_3D_OBJECT , _Alignof(struct SSBO_Model));
+
+// 	gmArrayInit(&array_ssbo_models2d, sizeof(struct SSBO_Model), TOTAL_2D_OBJECT , _Alignof(struct SSBO_Model));
+
+	
+// 	gmArrayInit(&arraySBO_ObjectIds_1, sizeof(struct SSBO_ObjectID), TOTAL_3D_OBJECT, _Alignof(struct SSBO_ObjectID));
+
+// 	gmArrayInit(&arrayGameObjectInstances, sizeof(struct Object3DTransforms), TOTAL_3D_OBJECT, _Alignof(struct Object3DTransforms));
+
+	
+// 	gmArrayInit(&arrayColors_2, sizeof(vec4), 1, _Alignof(vec4));
+
+
+// 	{
+
+// 		struct TextureRes * texRes = gmArrayNew(&arrayTextures_3D);
+// 		texRes->path = "models_gltf/viking_room.png";
+
+// 		texRes = gmArrayNew(&arrayTextures_3D);
+// 		texRes->path = "models_gltf/viking_room2.png";
+
+
+// 		texRes = gmArrayNew(&arrayTextures_3D);
+// 		texRes->path = "models_gltf/wooden_small.jpg";
+// 	}
+
+	
+// 	{
+
+// 		struct TextureRes * texRes = gmArrayNew(&arrayTextures_2D);
+// 		texRes->path = "models_gltf/wooden_small.jpg";
+
+// 		texRes = gmArrayNew(&arrayTextures_2D);
+// 		texRes->path = "textures/cross32x32.png";
+
+
+// 		texRes = gmArrayNew(&arrayTextures_2D);
+// 		texRes->path = "textures/cross32x32a.png";
+// 	}
+
+
+
+	
+// 	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+// 	pitch = glm_deg(asin(cameraFront[1]));
+
+	
+// 	vec4 v = {1.0,1.0,1.0,1.0};
+// 	GLM_VEC4_COPY(UBO_DirLight.lightColor, v);
+// 	GLM_VEC4_SET(UBO_DirLight.lightPos, 1.2f, 1.0f, 2.0f,0.0);
+// 	GLM_VEC4_SET(UBO_DirLight.viewPos, 0.0f, 0.0f, 0.0f, 0.0);
+
+
+// 	float rand_from = -10.0;
+// 	float rand_to = 10.0;
+
+// 	for(int i=0; i < TOTAL_3D_OBJECT; i++)
+// 	{
+
+// 		struct SSBO_Model m ;
+// 		struct Object3DTransforms * g = gmArrayNew(&arrayGameObjectInstances);
+// 		struct SSBO_ObjectID o ;
+
+// 		o.objectId = i +1;
+
+		
+// 		GLM_VEC3_SET(g->position, rand_float(rand_from,rand_to), 0.0, rand_float(rand_from,rand_to));
+		
+
+// 		glm_mat4_identity(m.model) ;
+// 		glm_translate(m.model, g->position);
+
+	
+// 		gmArrayPushValue(&arraySBO_ObjectIds_1,&o);
+
+// 		gmArrayPushValue(&array_ssbo_models3d,&m);
+
+
+		
+// 	}
+
+	
+// 	{
+// 		vec4 color ={1.0,0.0,1.0,1.0};
+// 		gmArrayPushValue(&arrayColors_2,color);
+// 		struct SSBO_Model m ;
+// 		glm_mat4_identity(m.model) ;
+
+// 		vec4 pos = {(float) WIDTH / 2, (float) HEIGHT / 2, 0.0, 1.0};
+// 		glm_translate(m.model, pos);
+
+// 		gmArrayPushValue(&array_ssbo_models2d,&m);
+// 	}
+	
+
+
+	
+	
+
+
+// 	uint32_t texture_index = 2;
+// 	uint32_t vertexData_index = 1;
+
+
+// 	{
+// 		gameObjectsA = gmArrayNew(&arrayGameObjects);
+	
+// 		gmArrayViewCreateSlice(&array_ssbo_models3d, &gameObjectsA->arrayViewUboModel ,0, 10);	
+// 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsA->arrayViewGameObjectInstances ,0, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsA->arrayViewUboObjectIds ,0, 10);	
+
+
+// 		gameObjectsA->textureIdx = texture_index;
+// 		gameObjectsA->vertexIdx = vertexData_index;
+
+// 		create_Object3D(texture_index, vertexData_index, 10, &obj_cubes);
+// 	}
+
+// 	texture_index = 1;
+// 	vertexData_index = 0;
+// 	{
+// 		gameObjectsB = gmArrayNew(&arrayGameObjects);
+	
+// 		gmArrayViewCreateSlice(&array_ssbo_models3d, &gameObjectsB->arrayViewUboModel ,10, 10);	
+// 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsB->arrayViewGameObjectInstances ,10, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsB->arrayViewUboObjectIds ,10, 10);	
+		
+
+// 		gameObjectsB->textureIdx = texture_index;
+// 		gameObjectsB->vertexIdx = vertexData_index;
+
+// 		create_Object3D(texture_index, vertexData_index, 10, &obj_rooms_a);
+			
+// 	}
+	
+
+
+// 	texture_index = 0;
+// 	vertexData_index = 0;
+// 	{
+// 		gameObjectsC = gmArrayNew(&arrayGameObjects);
+	
+// 		gmArrayViewCreateSlice(&array_ssbo_models3d, &gameObjectsC->arrayViewUboModel ,20, 10);	
+// 		gmArrayViewCreateSlice(&arrayGameObjectInstances, &gameObjectsC->arrayViewGameObjectInstances ,20, 10);	
+// 		gmArrayViewCreateSlice(&arraySBO_ObjectIds_1, &gameObjectsC->arrayViewUboObjectIds ,20, 10);	
+	
+// 		gameObjectsC->textureIdx = texture_index;
+// 		gameObjectsC->vertexIdx = vertexData_index;
+		
+
+// 		create_Object3D(texture_index, vertexData_index, 10, &obj_rooms_b);
+// 	}
+
+
+// 	create_Object3D(2, 1, 10, &obj_light);
+
+// 	create_ObjectHUD(2,0,1, &obj2d_cross);
+	
+// }
+// void freeVariables(){
+
+	
+// 	gmArrayFree(&array_hud_inst);
+// 	gmArrayFree(&array_object3d_inst);
+// 	gmArrayFree(&array_obj_color);
+// 	gmArrayFree(&array_object_ids);
+// 	gmArrayFree(&array_transforms);
+	
+// 	gmListFree(&list_obj3d);
+// 	gmListFree(&list_BufferRes);
+
+// 	gmArrayFree(&arrayTextures_2D);
+
+// 	gmArrayFree(&arrayTextures_3D);
+
+
+// 	gmArrayFree(&arrayColors_2);
+
+// 	gmArrayFree(&arrayPipelines);
+
+// 	gmArrayFree(&arrayGameObjects);
+	
+// 	gmArrayFree(&array_ssbo_models3d);
+
+// 	gmArrayFree(&array_ssbo_models2d);
+
+	
+// 	gmArrayFree(&arraySBO_ObjectIds_1);
+
+// 	gmArrayFree(&arrayGameObjectInstances);
+
+// }
+
+void initMeshes(){
+	PRINT_FNAME;
+
+	uint32_t v_cnt = sizeof(cube0_vertices) / sizeof(struct Vertex);
+	uint32_t i_cnt = sizeof(cube0_indices) / sizeof(uint32_t);
+
+
+	uint8_t * v_data = gmArrayNewN(&array_vertex_data, sizeof(cube0_vertices));
+	memcpy(v_data,cube0_vertices,sizeof(cube0_vertices));
+
+	uint8_t * i_data = gmArrayNewN(&array_index_data, sizeof(cube0_indices));
+	memcpy(i_data,cube0_indices,sizeof(cube0_indices));
+
+	// gmListPushBack(&list_vertices, cube0_vertices);
+	// gmListPushBack(&list_indices, cube0_indices);
+
+	struct Range * v_range = gmArrayNew(&array_vertex_ranges);
+	v_range->cap = v_cnt;
+	v_range->len = v_cnt;
+	v_range->start = 0;
+
+	struct Range * i_range = gmArrayNew(&array_index_ranges);
+	i_range->cap = i_cnt;
+	i_range->len = i_cnt;
+	i_range->start = 0;
+
+	model0 = gmArrayNew(&array_meshes);
+
+	model0->range_vertex = *v_range;
+	model0->range_index = *i_range;
+	model0->index =0;
 }
+
+
+// void loadModels(){
+// 	for(int i=0;i<MODEL_NUM;i++)
+// 	{
+
+// 		struct ModelVertexData2 * ref = &modelVertexData_3D[i];
+
+// 		if(ref->gltfPath == NULL) continue;
+
+// 		uint32_t verticesCnt;
+// 		struct Vertex * vertices;
+		
+
+// 		uint32_t indicesCnt;
+// 		uint32_t * indices;
+	
+		
+// 		loadModel(
+// 			ref->gltfPath,
+// 			&indicesCnt,
+// 			&indices,
+// 			&verticesCnt,
+// 			&vertices
+// 		);
+
+// 		ref->indices_num = indicesCnt;
+
+// 		createVertexBuffer2(
+// 			verticesCnt, 
+// 			vertices, 
+// 			sizeof(struct Vertex)*verticesCnt, 
+// 			&ref->vertexBuffer
+// 		);
+// 		createIndexBuffer2(
+// 			indicesCnt, 
+// 			indices, 
+// 			&ref->indexBuffer
+// 		);
+// 		// createVertexBuffer(
+// 		// 	verticesCnt,
+// 		// 	vertices,
+// 		// 	sizeof(struct Vertex)*verticesCnt,
+// 		// 	&ref->vertextBuffer,
+// 		// 	&ref->vertexBufferMemory
+// 		// );
+
+// 		// createIndexBuffer(
+// 		// 	indicesCnt,
+// 		// 	indices,
+// 		// 	&ref->indexBuffer,
+// 		// 	&ref->indexBufferMemory
+// 		// );
+
+// 		free(vertices);
+// 		free(indices);
+// 	}
+
+
+// 	struct Vertex2D vertices[4] = {
+		
+
+// 		{{-10.0f, -10.0f},   {0.0f, 0.0f}}, 
+
+// 		{{ 10.0f, -10.0f},   {1.0f, 0.0f}}, 
+
+// 		{{ 10.0f,  10.0f},   {1.0f, 1.0f}}, 
+
+// 		{{-10.0f,  10.0f},   {0.0f, 1.0f}}  
+
+// 	};
+// 	uint32_t indices[6] = {
+// 		0, 1, 2,
+// 		2, 3, 0
+// 	};
+// 	modelVertexData_HUD2.indices_num = sizeof(indices)/sizeof(uint32_t);
+
+// 	createVertexBuffer2(
+// 		sizeof(vertices)/sizeof(struct Vertex2D),
+// 		vertices,
+// 		sizeof(vertices),
+// 		&modelVertexData_HUD2.vertexBuffer
+// 	);
+// 	createIndexBuffer2(
+// 		modelVertexData_HUD2.indices_num,
+// 		indices,
+// 		&modelVertexData_HUD2.indexBuffer
+// 	);
+
+	
+// 	// createVertexBuffer(
+// 	// 	sizeof(vertices)/sizeof(struct Vertex2D),
+// 	// 	vertices,
+// 	// 	sizeof(vertices),
+// 	// 	&modelVertexData_HUD.vertextBuffer,
+// 	// 	&modelVertexData_HUD.vertexBufferMemory
+// 	// );
+
+// 	// createIndexBuffer(
+// 	// 	modelVertexData_HUD.indices_num,
+// 	// 	indices,
+// 	// 	&modelVertexData_HUD.indexBuffer,
+// 	// 	&modelVertexData_HUD.indexBufferMemory
+// 	// );
+
+
+// }
 
 void loadModel(
 	char *fname,
@@ -2018,6 +2243,27 @@ VkFormat findSupportedFormat(VkFormat *formats,uint32_t len, VkImageTiling tilin
 	
 }
 
+void createMeshBuffers(){
+PRINT_FNAME;
+	int vert_num=0;
+	int index_num=0;
+	for(int i=0;i<array_vertex_ranges.len;i++)
+	{
+		struct Range * range = gmArrayGet(&array_vertex_ranges, i);
+		vert_num+=range->len;
+
+	}
+	createVertexBuffer2(vert_num, array_vertex_data.data, array_vertex_data.len, &vertex_buffer);
+
+	for(int i=0;i<array_index_ranges.len;i++)
+	{
+		struct Range * range = gmArrayGet(&array_index_ranges, i);
+		index_num+=range->len;
+
+	}
+	createIndexBuffer2(index_num, array_index_data.data, &index_buffer);
+
+}
 void createDepthResources4(struct ImageRes * image,bool sampled_bit) {
 	PRINT_FNAME;
 	
@@ -2430,54 +2676,54 @@ uint32_t getMipmapLevels(uint32_t w,uint32_t h){
 	return  d;
 
 }
-void createPickImage(
+// void createPickImage(
 
-){
-	PRINT_FNAME;
+// ){
+// 	PRINT_FNAME;
 
 	
-	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++)
-	{
-		struct Frame *frame = &frames[i];
+// 	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++)
+// 	{
+// 		struct Frame *frame = &frames[i];
 		
 
-		createBuffer(
-			sizeof(uint32_t), 
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			&frame->pick.buffer.handle,
-			&frame->pick.buffer.alloc.memory
-		);
+// 		createBuffer(
+// 			sizeof(uint32_t), 
+// 			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+// 			&frame->pick.buffer.handle,
+// 			&frame->pick.buffer.alloc.memory
+// 		);
 
 
 		
-		vkMapMemory(device, frame->pick.buffer.alloc.memory, 0, VK_WHOLE_SIZE, 0, &frame->pick.buffer.alloc.mapped);
+// 		vkMapMemory(device, frame->pick.buffer.alloc.memory, 0, VK_WHOLE_SIZE, 0, &frame->pick.buffer.alloc.mapped);
 		
-		memset(frame->pick.buffer.alloc.mapped, 0, sizeof(uint32_t));
-		frame->pick.pickedID = 0;
+// 		memset(frame->pick.buffer.alloc.mapped, 0, sizeof(uint32_t));
+// 		frame->pick.pickedID = 0;
 
-		createImage(
-			swapChainExtent.width, 
-			swapChainExtent.height, 
-			1,
-			VK_FORMAT_R32_UINT,
-			VK_IMAGE_TILING_OPTIMAL, 
-			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-			&frame->pick.image.handle, 
-			&frame->pick.image.alloc.memory
-		);
+// 		createImage(
+// 			swapChainExtent.width, 
+// 			swapChainExtent.height, 
+// 			1,
+// 			VK_FORMAT_R32_UINT,
+// 			VK_IMAGE_TILING_OPTIMAL, 
+// 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
+// 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+// 			&frame->pick.image.handle, 
+// 			&frame->pick.image.alloc.memory
+// 		);
 
-		createImageView(
-			&frame->pick.image.view, 
-			&frame->pick.image.handle,
-			VK_FORMAT_R32_UINT, 
-			VK_IMAGE_ASPECT_COLOR_BIT, 
-			1
-		);
+// 		createImageView(
+// 			&frame->pick.image.view, 
+// 			&frame->pick.image.handle,
+// 			VK_FORMAT_R32_UINT, 
+// 			VK_IMAGE_ASPECT_COLOR_BIT, 
+// 			1
+// 		);
 
-	}
-}
+// 	}
+// }
 
 void createTextureImage(
 	char * path, 
@@ -2584,6 +2830,191 @@ void createTextureImage(
 		*mipmap
 	);
 }
+void createTextureImage_from_data(struct TextureRes * tex, uint8_t* in_data,uint32_t in_size)
+{
+	PRINT_FNAME;
+
+	printf("data:%p, size:%d\n",in_data,in_size);
+	int texWidth, texHeight, texChannels;
+
+	
+	
+	stbi_uc* pixels  = stbi_load_from_memory(in_data, in_size,  &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+	if( ! pixels){
+		EXIT_CLEAN("failed to load texture image!");
+	}
+	
+	printf("w:%d, h:%d c:%d\n",texWidth,texHeight,texChannels);
+	
+	tex->image.mipLevels = getMipmapLevels(texWidth,texHeight);
+
+	tex->image.alloc.mapped = NULL;
+	tex->image.alloc.memory = VK_NULL_HANDLE;
+	
+	VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+
+
+	VkBuffer stagingBuffer;
+
+	VkDeviceMemory stagingBufferMemory;
+
+	createBuffer(
+		imageSize, 
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&stagingBuffer,
+		&stagingBufferMemory
+	);
+	
+	void* data = NULL;
+
+	vkMapMemory(device, 
+		stagingBufferMemory,
+		0, 
+		imageSize, 
+		0, 
+		&data
+	);
+	memcpy(data, pixels, imageSize);
+
+	vkUnmapMemory(device, stagingBufferMemory);
+	
+	stbi_image_free(pixels);
+
+	
+	
+	createImage(
+		texWidth, 
+		texHeight, 
+		tex->image.mipLevels,
+		VK_FORMAT_R8G8B8A8_SRGB, 
+		VK_IMAGE_TILING_OPTIMAL, 
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+		&tex->image.handle, 
+		&tex->image.alloc.memory
+	);
+
+
+
+	beginSingleTimeCommands(transferCommandBuffers);
+
+	transitionImageLayout(
+		transferCommandBuffers,
+		&tex->image.handle, 
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		0,  
+		VK_ACCESS_2_TRANSFER_WRITE_BIT,  
+		VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_2_TRANSFER_BIT,  
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		tex->image.mipLevels
+	);
+
+	endSingleTimeCommands(transferCommandBuffers);
+
+	copyBufferToImage(
+		&stagingBuffer, 
+		&tex->image.handle, 
+		texWidth, 
+		texHeight
+	);
+
+
+	vkDestroyBuffer(device, stagingBuffer,  NULL);
+	
+	vkFreeMemory(device, stagingBufferMemory,  NULL);
+
+
+	generateMipmaps(
+		&tex->image.handle, 
+		VK_FORMAT_R8G8B8A8_SRGB, 
+		texWidth, 
+		texHeight, 
+		tex->image.mipLevels
+	);
+}
+// void createTextures2(){
+
+
+
+	
+// 	createTextureImage_from_data(&tex_res0, texture0,sizeof(texture0));
+// 	createImageView4(&tex_res0.image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+// 	createTextureSampler(&tex_res0.textureSampler);
+
+
+// 	VkDescriptorImageInfo fallback = {
+// 		.imageView = tex_res0.image.view,
+// 		.sampler = tex_res0.textureSampler,
+// 		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+// 	};
+
+
+
+// 	for (int i = 0; i < MAX_TEXTURES_2D; i++)
+// 	{
+// 		texture_infos_2d[i] = fallback;
+// 	}
+
+// 	for (int i = 0; i < MAX_TEXTURES_3D; i++)
+// 	{
+// 		texture_infos_3d[i] = fallback;
+// 	}
+
+
+
+// 	struct GmNode * n = list_image_buffers.head;
+// 	while( n != NULL)
+// 	{
+// 		struct DataBuffer * db = n->data;
+
+// 		struct TextureRes * texture = gmArrayNew(&arrayTextures_3D);
+// 		texture->textureIdx = arrayTextures_3D.len - 1;
+// 		createTextureImage_from_data(texture, db->data, db->size);
+		
+// 		// createTextureImage4(texture);
+// 		createImageView4(&texture->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+// 		createTextureSampler(&texture->textureSampler);
+
+
+// 		VkDescriptorImageInfo * di =  &texture_infos_3d [db->idx];
+// 		di->imageView = texture->image.view;
+// 		di->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+// 		di->sampler = texture->textureSampler;
+
+// 		n = n->next;
+// 	}
+
+// 	gmListFree(&list_image_buffers);
+	
+// 	// for( int i=0;i < arrayTextures_3D.len ;i++)
+// 	// {
+// 	// 	struct TextureRes * t = gmArrayGet(&arrayTextures_3D, i);
+// 	// 	createTextureImage4(t);
+		
+		
+// 	// 	t->textureIdx = i;
+
+// 	// 	createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+
+// 	// 	createTextureSampler(&t->textureSampler);
+// 	// }
+// 	// printf("arrayTextures_2D.len %d\n",arrayTextures_2D.len);
+// 	// for( int i=0;i < arrayTextures_2D.len ;i++)
+// 	// {
+// 	// 	struct TextureRes * t = gmArrayGet(&arrayTextures_2D, i);
+// 	// 	createTextureImage4(t);
+// 	// 	t->textureIdx = i;
+// 	// 	createImageView4(&t->image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+		
+// 	// 	createTextureSampler(&t->textureSampler);
+// 	// }
+
+// }
 void createTextureImage4(
 	struct TextureRes * tex
 	
@@ -2815,385 +3246,435 @@ void generateMipmaps(VkImage* image, VkFormat imageFormat, int32_t texWidth, int
 
     endSingleTimeCommands(transferCommandBuffers);
 }
-void allocateDescriptorSets(){
+// void allocateDescriptorSets(){
 
 
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+// 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		
-		struct Frame * f = &frames[i];
+// 		struct Frame * f = &frames[i];
 
-		// VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT];
-		// for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		// 	layouts[i] = globalLayout;
-		// }
+// 		// VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT];
+// 		// for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+// 		// 	layouts[i] = globalLayout;
+// 		// }
 	
-		VkDescriptorSetAllocateInfo allocInfo = {
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			.descriptorPool = descriptorPool,
-			.descriptorSetCount = 1,
-			.pSetLayouts = &globalLayout
-		};
+// 		VkDescriptorSetAllocateInfo allocInfo = {
+// 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+// 			.descriptorPool = descriptorPool,
+// 			.descriptorSetCount = 1,
+// 			.pSetLayouts = &globalLayout
+// 		};
 	
-		vkAllocateDescriptorSets(device, &allocInfo, &f->globalSets);
-		// VkDescriptorSetLayout instanceLayoutsArr[MAX_FRAMES_IN_FLIGHT];
-		// for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		// 	instanceLayoutsArr[i] = instanceLayout;
-		// }
+// 		vkAllocateDescriptorSets(device, &allocInfo, &f->globalSets);
+// 		// VkDescriptorSetLayout instanceLayoutsArr[MAX_FRAMES_IN_FLIGHT];
+// 		// for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+// 		// 	instanceLayoutsArr[i] = instanceLayout;
+// 		// }
 	
-		allocInfo.pSetLayouts = &instanceLayout;
-		// allocInfo.descriptorSetCount = 1;
+// 		allocInfo.pSetLayouts = &instanceLayout;
+// 		// allocInfo.descriptorSetCount = 1;
 	
-		vkAllocateDescriptorSets(device, &allocInfo, &f->instanceSets);
+// 		vkAllocateDescriptorSets(device, &allocInfo, &f->instanceSets);
 
-		VkDescriptorBufferInfo bufferInfo = {
-			.buffer = f->ubo_global.handle,
-			.offset = 0,
-			.range = VK_WHOLE_SIZE
-		};
+// 		VkDescriptorBufferInfo bufferInfo = {
+// 			.buffer = f->ubo_global.handle,
+// 			.offset = 0,
+// 			.range = VK_WHOLE_SIZE
+// 		};
 
-		VkWriteDescriptorSet write = {
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = f->globalSets,
-			.dstBinding = 0,
-			.dstArrayElement = 0,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = 1,
-			.pBufferInfo = &bufferInfo
-		};
+// 		VkWriteDescriptorSet write = {
+// 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 			.dstSet = f->globalSets,
+// 			.dstBinding = 0,
+// 			.dstArrayElement = 0,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = 1,
+// 			.pBufferInfo = &bufferInfo
+// 		};
 
-		vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
 
-		//
+// 		//
 		
-		VkDescriptorBufferInfo meshInfo = {
-			.buffer = f->ssbo_instance_mesh.handle,
-			.offset = 0,
-			.range = VK_WHOLE_SIZE
-		};
+// 		VkDescriptorBufferInfo meshInfo = {
+// 			.buffer = f->ssbo_instance_mesh.handle,
+// 			.offset = 0,
+// 			.range = VK_WHOLE_SIZE
+// 		};
 
-		VkDescriptorBufferInfo hudInfo = {
-			.buffer =  f->ssbo_instance_hud.handle,
-			.offset = 0,
-			.range = VK_WHOLE_SIZE
-		};
+// 		VkDescriptorBufferInfo hudInfo = {
+// 			.buffer =  f->ssbo_instance_hud.handle,
+// 			.offset = 0,
+// 			.range = VK_WHOLE_SIZE
+// 		};
 
-		VkWriteDescriptorSet writes[2] = {
-			{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = f->instanceSets,
-				.dstBinding = 0,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &meshInfo
-			},
-			{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = f->instanceSets,
-				.dstBinding = 1,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &hudInfo
-			}
-		};
+// 		VkWriteDescriptorSet writes[2] = {
+// 			{
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = f->instanceSets,
+// 				.dstBinding = 0,
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &meshInfo
+// 			},
+// 			{
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = f->instanceSets,
+// 				.dstBinding = 1,
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &hudInfo
+// 			}
+// 		};
 
-		vkUpdateDescriptorSets(device, 2, writes, 0, NULL);
+// 		vkUpdateDescriptorSets(device, 2, writes, 0, NULL);
 
 
 
+// 	}
+
+// 	VkDescriptorSetAllocateInfo allocInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+// 		.descriptorPool = descriptorPool,
+// 		.descriptorSetCount = 1,
+// 		.pSetLayouts = &materialLayout
+// 	};
+
+// 	vkAllocateDescriptorSets(device, &allocInfo, &materialSet);
+
+// 	VkDescriptorBufferInfo materialInfo = {
+// 		.buffer = ssbo_material.handle,
+// 		.offset = 0,
+// 		.range = VK_WHOLE_SIZE // or sizeof(MaterialData) * materialCount
+// 	};
+	
+// 	VkWriteDescriptorSet materialWrite = {
+// 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 		.dstSet = materialSet,
+// 		.dstBinding = 0,
+// 		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 		.descriptorCount = 1,
+// 		.pBufferInfo = &materialInfo
+// 	};
+	
+// 	vkUpdateDescriptorSets(device, 1, &materialWrite, 0, NULL);
+
+
+// }
+
+// void createDescriptorSets33(){
+// 	PRINT_FNAME;
+
+	
+
+// 	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT];
+
+// 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+//    		layouts[i] = descriptorSetLayout4;
+// 	}
+
+
+
+// 	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+// 		.descriptorPool = descriptorPool,
+// 		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+// 		.pSetLayouts = layouts,
+// 	};
+// 	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets2);
+
+	
+
+
+// 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
+// 		struct Frame * frame = &frames[i];
+
+// 		frame->descriptorSets = &descriptorSets2[i];
+
+
+// 		{
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ssbo_models.handle,
+// 				.offset = 0,
+// 				.range = sizeof(struct SSBO_Model)*TOTAL_3D_OBJECT
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_MODELS_3D,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+// 		{
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ssbo_models.handle,
+// 				.offset = sizeof(struct SSBO_Model)*TOTAL_3D_OBJECT,
+// 				.range = sizeof(struct SSBO_Model)*TOTAL_2D_OBJECT
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_MODELS_2D,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+// 		{
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ssbo_objectIds.handle,
+// 				.offset = 0,
+// 				.range = frame->ssbo_objectIds.alloc.size
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_OBJECT_IDS,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+// 		{
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ssbo_colors.handle,
+// 				.offset = 0,
+// 				.range = frame->ssbo_colors.alloc.size
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_COLORS,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+// 		{
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ubo_Lights.handle,
+// 				.offset = 0,
+// 				.range = frame->ubo_Lights.alloc.size
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_DIRECTIONAL_LIGHTS,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+		
+
+// 		{
+			
+
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ubo_ViewProjection.handle,
+// 				.offset = 0,
+// 				.range = sizeof(struct UBO_ViewProjection)
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_VIEW_PROJECTIONS_3D,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+// 		{
+			
+
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ubo_ViewProjection.handle,
+// 				.offset = sizeof(struct UBO_ViewProjection) * 1,
+// 				.range = sizeof(struct UBO_ViewProjection)
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_VIEW_PROJECTIONS_2D,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+// 		{
+			
+
+// 			VkDescriptorBufferInfo info = {
+// 				.buffer = frame->ubo_ViewProjection.handle,
+// 				.offset = sizeof(struct UBO_ViewProjection) * 2,
+// 				.range = sizeof(struct UBO_ViewProjection)
+// 			};
+
+// 			VkWriteDescriptorSet write = {
+// 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 				.dstSet = *frame->descriptorSets,
+// 				.dstBinding = BINDING_VIEW_PROJECTIONS_LIGHT,
+// 				.dstArrayElement = 0,   
+
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 				.descriptorCount = 1,
+// 				.pBufferInfo = &info
+// 			};
+// 			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 		}
+// 		{
+// 			{
+// 				VkDescriptorImageInfo info = {
+// 					.imageView = frame->shadow.image.view,
+// 					.sampler = frame->shadow.textureSampler,
+// 					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+// 				};
+
+// 				VkWriteDescriptorSet write = {
+// 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 					.dstSet = *frame->descriptorSets,
+// 					.dstBinding = BINDING_3D_SAMPLERS_SHADOW,
+// 					.dstArrayElement = 0,   
+
+// 					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+// 					.descriptorCount = 1,
+// 					.pImageInfo = &info
+// 				};
+
+// 				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 			}
+// 			for(int k=0;k<arrayTextures_3D.len;k++)
+// 			{
+// 				struct TextureRes * text =  gmArrayGet(&arrayTextures_3D, k);
+// 				VkDescriptorImageInfo info = {
+// 					.imageView = text->image.view,
+// 					.sampler = text->textureSampler,
+// 					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+// 				};
+
+// 				VkWriteDescriptorSet write = {
+// 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 					.dstSet = *frame->descriptorSets,
+// 					.dstBinding = BINDING_3D_SAMPLERS,
+// 					.dstArrayElement = k,   
+
+// 					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+// 					.descriptorCount = 1,
+// 					.pImageInfo = &info
+// 				};
+
+// 				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 			}
+// 			for(int k=0;k<arrayTextures_2D.len;k++)
+// 			{
+// 				struct TextureRes * text =  gmArrayGet(&arrayTextures_2D, k);
+// 				VkDescriptorImageInfo info = {
+// 					.imageView = text->image.view,
+// 					.sampler = text->textureSampler,
+// 					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+// 				};
+
+// 				VkWriteDescriptorSet write = {
+// 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+// 					.dstSet = *frame->descriptorSets,
+// 					.dstBinding = BINDING_2D_SAMPLERS,
+// 					.dstArrayElement = k,   
+
+// 					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+// 					.descriptorCount = 1,
+// 					.pImageInfo = &info
+// 				};
+
+// 				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+// 			}
+
+// 		}
+
+		
+// 	}
+
+// }
+
+void initGameObjects(){
+
+
+
+
+
+	//sizeof(struct MyStruct) % 32 == 0, "Size not multiple of 32"
+	if(sizeof(struct Instance_ssbo) % 32 != 0 && sizeof(struct Instance_ssbo) % 16 != 0){
+		printf("%d %d\n",sizeof(struct Instance_ssbo), sizeof(struct Instance_ssbo) % 16 );
+		EXIT_CLEAN("Instance_ssbo size is not mod 16");
+	}
+	if((sizeof(struct Global_ubo) % 32) != 0 && sizeof(struct Global_ubo) % 16 != 0){
+		printf("%d %d\n",sizeof(struct Global_ubo),sizeof(struct Global_ubo) % 16 );
+		EXIT_CLEAN("Global_ubo size is not mod 16");
+	}
+	if((sizeof(struct Material_ssbo) % 32) != 0 && sizeof(struct Material_ssbo) % 16 != 0){
+		printf("%d %d\n",sizeof(struct Material_ssbo),sizeof(struct Material_ssbo) % 16 );
+		EXIT_CLEAN("Material_ssbo size is not mod 16");
 	}
 
-	VkDescriptorSetAllocateInfo allocInfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = descriptorPool,
-		.descriptorSetCount = 1,
-		.pSetLayouts = &materialLayout
-	};
-
-	vkAllocateDescriptorSets(device, &allocInfo, &materialSet);
-
-	VkDescriptorBufferInfo materialInfo = {
-		.buffer = ssbo_material.handle,
-		.offset = 0,
-		.range = VK_WHOLE_SIZE // or sizeof(MaterialData) * materialCount
-	};
-	
-	VkWriteDescriptorSet materialWrite = {
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.dstSet = materialSet,
-		.dstBinding = 0,
-		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-		.descriptorCount = 1,
-		.pBufferInfo = &materialInfo
-	};
-	
-	vkUpdateDescriptorSets(device, 1, &materialWrite, 0, NULL);
 
 
-}
-
-void createDescriptorSets33(){
-	PRINT_FNAME;
 
 	
+	yaw = glm_deg(atan2(cameraFront[2], cameraFront[0]));
+	pitch = glm_deg(asin(cameraFront[1]));
 
-	VkDescriptorSetLayout layouts [MAX_FRAMES_IN_FLIGHT]={
-		
 
-		
+	{	
+		struct Instance_ssbo * inst0= gmArrayNew(&array_data_instances);
 
-	};
-
-	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-   		layouts[i] = descriptorSetLayout4;
+		GLM_VEC4_SET(inst0->color, 1.0f, 0.4f, 0.7f, 1.0);
+		inst0->color_factor = 0.3;
+		glm_mat4_identity(inst0->model) ;
+		inst0->tex_idx = 0;
 	}
 
+	{
 
-
-	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = descriptorPool,
-		.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
-		.pSetLayouts = layouts,
-	};
-	vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets2);
-
-	
-
-
-	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-
-		struct Frame * frame = &frames[i];
-
-		frame->descriptorSets = &descriptorSets2[i];
-
-
-		{
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ssbo_models.handle,
-				.offset = 0,
-				.range = sizeof(struct SSBO_Model)*TOTAL_3D_OBJECT
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_MODELS_3D,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
-		{
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ssbo_models.handle,
-				.offset = sizeof(struct SSBO_Model)*TOTAL_3D_OBJECT,
-				.range = sizeof(struct SSBO_Model)*TOTAL_2D_OBJECT
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_MODELS_2D,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
-		{
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ssbo_objectIds.handle,
-				.offset = 0,
-				.range = frame->ssbo_objectIds.alloc.size
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_OBJECT_IDS,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
-		{
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ssbo_colors.handle,
-				.offset = 0,
-				.range = frame->ssbo_colors.alloc.size
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_COLORS,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
-		{
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ubo_Lights.handle,
-				.offset = 0,
-				.range = frame->ubo_Lights.alloc.size
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_DIRECTIONAL_LIGHTS,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
+		struct Global_ubo *  glob = &data_globals;
 		
+	
+	
+		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , glob->proj);
+	
+		glob->proj[1][1] *= -1;
 
-		{
-			
+		glob->instance_cnt = array_data_instances.len;
 
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ubo_ViewProjection.handle,
-				.offset = 0,
-				.range = sizeof(struct UBO_ViewProjection)
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_VIEW_PROJECTIONS_3D,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
-		{
-			
-
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ubo_ViewProjection.handle,
-				.offset = sizeof(struct UBO_ViewProjection) * 1,
-				.range = sizeof(struct UBO_ViewProjection)
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_VIEW_PROJECTIONS_2D,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
-		{
-			
-
-			VkDescriptorBufferInfo info = {
-				.buffer = frame->ubo_ViewProjection.handle,
-				.offset = sizeof(struct UBO_ViewProjection) * 2,
-				.range = sizeof(struct UBO_ViewProjection)
-			};
-
-			VkWriteDescriptorSet write = {
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet = *frame->descriptorSets,
-				.dstBinding = BINDING_VIEW_PROJECTIONS_LIGHT,
-				.dstArrayElement = 0,   
-
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1,
-				.pBufferInfo = &info
-			};
-			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-		}
-		{
-			{
-				VkDescriptorImageInfo info = {
-					.imageView = frame->shadow.image.view,
-					.sampler = frame->shadow.textureSampler,
-					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-				};
-
-				VkWriteDescriptorSet write = {
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.dstSet = *frame->descriptorSets,
-					.dstBinding = BINDING_3D_SAMPLERS_SHADOW,
-					.dstArrayElement = 0,   
-
-					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					.descriptorCount = 1,
-					.pImageInfo = &info
-				};
-
-				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-			}
-			for(int k=0;k<arrayTextures_3D.len;k++)
-			{
-				struct TextureRes * text =  gmArrayGet(&arrayTextures_3D, k);
-				VkDescriptorImageInfo info = {
-					.imageView = text->image.view,
-					.sampler = text->textureSampler,
-					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-				};
-
-				VkWriteDescriptorSet write = {
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.dstSet = *frame->descriptorSets,
-					.dstBinding = BINDING_3D_SAMPLERS,
-					.dstArrayElement = k,   
-
-					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					.descriptorCount = 1,
-					.pImageInfo = &info
-				};
-
-				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-			}
-			for(int k=0;k<arrayTextures_2D.len;k++)
-			{
-				struct TextureRes * text =  gmArrayGet(&arrayTextures_2D, k);
-				VkDescriptorImageInfo info = {
-					.imageView = text->image.view,
-					.sampler = text->textureSampler,
-					.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-				};
-
-				VkWriteDescriptorSet write = {
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.dstSet = *frame->descriptorSets,
-					.dstBinding = BINDING_2D_SAMPLERS,
-					.dstArrayElement = k,   
-
-					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					.descriptorCount = 1,
-					.pImageInfo = &info
-				};
-
-				vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
-			}
-
-		}
 
 		
 	}
@@ -3222,153 +3703,291 @@ void unmapBufferMemory(struct BufferRes * buffer){
 	// buffer->alloc.memory = NULL;
 }
 
-void createUniformBuffers33(){
+void updateDefaultDescriptors(){
+PRINT_FNAME;
+
+	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++)
+	{
+		struct Frame * f = &frames[i];
+
+		{	
+			VkDescriptorBufferInfo bufferInfo = {
+				.buffer = f->ubo_global.handle,
+				.offset = 0,
+				.range = VK_WHOLE_SIZE
+			};
+
+			VkWriteDescriptorSet write = {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptor_set_globals[i],
+				.dstBinding = 0,
+				.dstArrayElement = 0,
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.descriptorCount = 1,
+				.pBufferInfo = &bufferInfo
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+		}
+		{
+			VkDescriptorBufferInfo bufferInfo = {
+				.buffer = f->ssbo_instances.handle,
+				.offset = 0,
+				.range = VK_WHOLE_SIZE
+			};
+
+			VkWriteDescriptorSet write = {
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = descriptor_set_instances[i],
+				.dstBinding = 0,
+				.dstArrayElement = 0,
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.descriptorCount = 1,
+				.pBufferInfo = &bufferInfo
+			};
+
+			vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+		}
+		
+	}
+	{
+		VkDescriptorBufferInfo bufferInfo = {
+			
+			.buffer = ssbo_materials.handle,
+			.offset = 0,
+			.range = VK_WHOLE_SIZE
+		};
+
+		VkWriteDescriptorSet write = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = descriptor_set_materials,
+			.dstBinding = 0,
+			.dstArrayElement = 0,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = 1,
+			.pBufferInfo = &bufferInfo
+		};
+
+		vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+	}
+	{
+		
+			
+
+		VkWriteDescriptorSet write = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = descriptor_set_samplers,
+			.dstBinding = 0,
+			.dstArrayElement = 0,   
+
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = MAX_TEXTURES,
+			.pImageInfo = descriptor_image_info_textures
+		};
+
+		vkUpdateDescriptorSets(device, 1, &write, 0, NULL);
+		
+	}
 
 
+}
+void createResources(){
+PRINT_FNAME;
 	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
 
 		struct Frame * frame = &frames[i];
-
 		
 		createBufferRes(
-			sizeof(struct SSBO_Model)*(TOTAL_3D_OBJECT+TOTAL_2D_OBJECT), 
+			sizeof(struct Instance_ssbo)*(MAX_INSTANCES), 
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-			&frame->ssbo_models
+			&frame->ssbo_instances
 		);
-		mapBufferMemory(&frame->ssbo_models);
-		gmListPushBack(&list_BufferRes,&frame->ssbo_models);
+		mapBufferMemory(&frame->ssbo_instances);
+		gmListPushBack(&list_BufferRes,&frame->ssbo_instances);
 
 
 		createBufferRes(
-			sizeof(struct SSBO_Colors)*TOTAL_3D_OBJECT, 
-			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-			&frame->ssbo_colors
-		);
-		mapBufferMemory(&frame->ssbo_colors);
-		gmListPushBack(&list_BufferRes,&frame->ssbo_colors);
-
-		createBufferRes(
-			sizeof(struct SSBO_ObjectID)*TOTAL_3D_OBJECT, 
-			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-			&frame->ssbo_objectIds
-		);
-		mapBufferMemory(&frame->ssbo_objectIds);
-		gmListPushBack(&list_BufferRes,&frame->ssbo_objectIds);
-
-		createBufferRes(
-			sizeof(struct UBO_ViewProjection)*VIEW_PERSPECTIVES, 
+			sizeof(struct Global_ubo), 
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-			&frame->ubo_ViewProjection
+			&frame->ubo_global
 		);
-		mapBufferMemory(&frame->ubo_ViewProjection);
-		gmListPushBack(&list_BufferRes,&frame->ubo_ViewProjection);
+		mapBufferMemory(&frame->ubo_global);
+		gmListPushBack(&list_BufferRes,&frame->ubo_global);
+	}
 
-		createBufferRes(
-			sizeof(struct UBO_DirectionLight)*1, 
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+	createBufferRes(
+			sizeof(struct Material_ssbo)*(MAX_INSTANCES), 
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-			&frame->ubo_Lights
+			&ssbo_materials
 		);
-		mapBufferMemory(&frame->ubo_Lights);
-		gmListPushBack(&list_BufferRes,&frame->ubo_Lights);
+	mapBufferMemory(&ssbo_materials);
+	gmListPushBack(&list_BufferRes,&ssbo_materials);
+
+
+	//create textures default
 
 	
+	createTextureImage_from_data(&tex_res0, texture0, sizeof(texture0));
+	createImageView4(&tex_res0.image,VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+	createTextureSampler(&tex_res0.textureSampler);
+
+
+	VkDescriptorImageInfo fallback = {
+		.imageView = tex_res0.image.view,
+		.sampler = tex_res0.textureSampler,
+		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	};
+
+
+
+	for (int i = 0; i < MAX_TEXTURES; i++)
+	{
+		descriptor_image_info_textures[i] = fallback;
 	}
+
+
+
 }
 
-void createDescriptorPool2() {
+// void createUniformBuffers33(){
 
-	VkDescriptorPoolSize poolSizes[2] = {
-		{
-			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = MAX_FRAMES_IN_FLIGHT // 2
-		},
-		{
-			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 5
-			// 2 global + 1 material + 2 instance
-		}
-	};
+
+// 	for(int i=0; i < MAX_FRAMES_IN_FLIGHT; i++){
+
+// 		struct Frame * frame = &frames[i];
+
+		
+// 		createBufferRes(
+// 			sizeof(struct SSBO_Model)*(TOTAL_3D_OBJECT+TOTAL_2D_OBJECT), 
+// 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 			&frame->ssbo_models
+// 		);
+// 		mapBufferMemory(&frame->ssbo_models);
+// 		gmListPushBack(&list_BufferRes,&frame->ssbo_models);
+
+
+// 		createBufferRes(
+// 			sizeof(struct SSBO_Colors)*TOTAL_3D_OBJECT, 
+// 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 			&frame->ssbo_colors
+// 		);
+// 		mapBufferMemory(&frame->ssbo_colors);
+// 		gmListPushBack(&list_BufferRes,&frame->ssbo_colors);
+
+// 		createBufferRes(
+// 			sizeof(struct SSBO_ObjectID)*TOTAL_3D_OBJECT, 
+// 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 			&frame->ssbo_objectIds
+// 		);
+// 		mapBufferMemory(&frame->ssbo_objectIds);
+// 		gmListPushBack(&list_BufferRes,&frame->ssbo_objectIds);
+
+// 		createBufferRes(
+// 			sizeof(struct UBO_ViewProjection)*VIEW_PERSPECTIVES, 
+// 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 			&frame->ubo_ViewProjection
+// 		);
+// 		mapBufferMemory(&frame->ubo_ViewProjection);
+// 		gmListPushBack(&list_BufferRes,&frame->ubo_ViewProjection);
+
+// 		createBufferRes(
+// 			sizeof(struct UBO_DirectionLight)*1, 
+// 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+// 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+// 			&frame->ubo_Lights
+// 		);
+// 		mapBufferMemory(&frame->ubo_Lights);
+// 		gmListPushBack(&list_BufferRes,&frame->ubo_Lights);
+
+	
+// 	}
+// }
+
+// void createDescriptorPool2() {
+
+// 	VkDescriptorPoolSize poolSizes[2] = {
+// 		{
+// 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = MAX_FRAMES_IN_FLIGHT // 2
+// 		},
+// 		{
+// 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 			.descriptorCount = 5
+// 			// 2 global + 1 material + 2 instance
+// 		}
+// 	};
 		
 
  
 
-	VkDescriptorPoolCreateInfo poolInfo = {
+// 	VkDescriptorPoolCreateInfo poolInfo = {
 				 
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		.pNext = NULL,
-		.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,  
-		.maxSets = 5,  
-		.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize),
-		.pPoolSizes = poolSizes
-	};
+// 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+// 		.pNext = NULL,
+// 		.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,  
+// 		.maxSets = 5,  
+// 		.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize),
+// 		.pPoolSizes = poolSizes
+// 	};
 
 	
 
-	VkResult result = vkCreateDescriptorPool(device, &poolInfo, NULL, &descriptorPool2);
+// 	VkResult result = vkCreateDescriptorPool(device, &poolInfo, NULL, &descriptorPool2);
 
-	if (result != VK_SUCCESS) {
+// 	if (result != VK_SUCCESS) {
 		
 
-	}
+// 	}
 	
 
 
-};
-void createDescriptorPool() {
-
-
-	uint32_t alltextures = arrayTextures_3D.len + arrayTextures_2D.len + 1;
+// };
+void createDescriptors(){
+	PRINT_FNAME;
+	uint32_t cnt_inst = MAX_FRAMES_IN_FLIGHT ;
+	uint32_t cnt_glob = MAX_FRAMES_IN_FLIGHT ;
+	uint32_t cnt_material = 1;
+	uint32_t cnt_textures = 1;
+	uint32_t max_sets = cnt_inst + cnt_glob + cnt_material + cnt_textures;
 
 	VkDescriptorPoolSize poolSizes[] = {
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount =  MAX_FRAMES_IN_FLIGHT * (alltextures)
+			.descriptorCount =   MAX_TEXTURES
 		},
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = 4 *  MAX_FRAMES_IN_FLIGHT
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT
 		},
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 4 *  MAX_FRAMES_IN_FLIGHT
+			.descriptorCount = MAX_FRAMES_IN_FLIGHT * MAX_INSTANCES + MAX_MATERIALS
 		},
+
 	};
+
 	
-
- 
-
 	VkDescriptorPoolCreateInfo poolInfo = {
 				 
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.pNext = NULL,
 		.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,  
-		.maxSets = MAX_FRAMES_IN_FLIGHT,  
+		.maxSets = max_sets,  
 		.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize),
 		.pPoolSizes = poolSizes
 	};
 
-	
-
-	VkResult result = vkCreateDescriptorPool(device, &poolInfo, NULL, &descriptorPool);
-
-	if (result != VK_SUCCESS) {
-		
-
-	}
-	
+	VkResult result = vkCreateDescriptorPool(device, &poolInfo, NULL, &descriptor_pool);
 
 
-};
-
-void createDescriptorSetLayout22(){
-	PRINT_FNAME;
-
-
+	//bindings Global
 	{
 		VkDescriptorSetLayoutBinding globalBinding = {
 			.binding = 0,
@@ -3383,13 +4002,14 @@ void createDescriptorSetLayout22(){
 			.pBindings = &globalBinding
 		};
 
-		VkResult res = vkCreateDescriptorSetLayout(device, &globalLayoutInfo, NULL, &globalLayout);
+		VkResult res = vkCreateDescriptorSetLayout(device, &globalLayoutInfo, NULL, &descriptor_layout_global);
 
 		if(res != VK_SUCCESS){
 			EXIT_CLEAN("vkCreateDescriptorSetLayout4 failed");
 		}
 
 	}
+	//material
 	{
 		VkDescriptorSetLayoutBinding materialBinding = {
 			.binding = 0,
@@ -3404,140 +4024,349 @@ void createDescriptorSetLayout22(){
 			.pBindings = &materialBinding
 		};
 
-		VkResult res = vkCreateDescriptorSetLayout(device, &materialLayoutInfo, NULL, &materialLayout);
+		VkResult res = vkCreateDescriptorSetLayout(device, &materialLayoutInfo, NULL, &descriptor_layout_material);
 
 		if(res != VK_SUCCESS){
 			EXIT_CLEAN("vkCreateDescriptorSetLayout  materialDescriptorSetLayout");
 		}
 
 	}
+	//inst
 	{
-		VkDescriptorSetLayoutBinding instanceBindings[2] = {
-			{
+		VkDescriptorSetLayoutBinding instanceBindings= {
+		
 				.binding = 0,
 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-			},
-			{
-				.binding = 1,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-			}
+				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
 		};
 
 		VkDescriptorSetLayoutCreateInfo instanceLayoutInfo = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-			.bindingCount = 2,
-			.pBindings = instanceBindings
+			.bindingCount = 1,
+			.pBindings = &instanceBindings
 		};
 
-		VkResult res = vkCreateDescriptorSetLayout(device, &instanceLayoutInfo, NULL, &instanceLayout);
+		VkResult res = vkCreateDescriptorSetLayout(device, &instanceLayoutInfo, NULL, &descriptor_layout_instance);
 
 		if(res != VK_SUCCESS){
 			EXIT_CLEAN("vkCreateDescriptorSetLayout instanceDescriptorSetLayout");
 		}
 
 	}
+	//sampler
+	{
+		VkDescriptorSetLayoutBinding samplerBindings= {
+		
+			.binding = 0,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = MAX_TEXTURES,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+		};
+
+		VkDescriptorSetLayoutCreateInfo samplerLayoutInfo = {
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = 1,
+			.pBindings = &samplerBindings
+		};
+
+		VkResult res = vkCreateDescriptorSetLayout(device, &samplerLayoutInfo, NULL, &descriptor_layout_sampler);
+
+		if(res != VK_SUCCESS){
+			EXIT_CLEAN("vkCreateDescriptorSetLayout instanceDescriptorSetLayout");
+		}
+
+	}
+	//allocate globals
+
+	{
+		VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT];
+	
+		for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			layouts[i] = descriptor_layout_global;
+		}
+	
+	
+		VkDescriptorSetAllocateInfo allocInfo = {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.descriptorPool = descriptor_pool,
+				.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+				.pSetLayouts = layouts
+		};
+		
+		vkAllocateDescriptorSets(device, &allocInfo, descriptor_set_globals);
+	}
+
+	
+	{
+		VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT];
+	
+		for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			layouts[i] = descriptor_layout_instance;
+		}
+	
+	
+		VkDescriptorSetAllocateInfo allocInfo = {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.descriptorPool = descriptor_pool,
+				.descriptorSetCount = MAX_FRAMES_IN_FLIGHT,
+				.pSetLayouts = layouts
+		};
+		
+		vkAllocateDescriptorSets(device, &allocInfo, descriptor_set_instances);
+	}
+
+	{
+		
+	
+	
+		VkDescriptorSetAllocateInfo allocInfo = {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.descriptorPool = descriptor_pool,
+				.descriptorSetCount = 1,
+				.pSetLayouts = &descriptor_layout_material
+		};
+		
+		vkAllocateDescriptorSets(device, &allocInfo, &descriptor_set_materials);
+	}
+
+	{
+		
+	
+	
+		VkDescriptorSetAllocateInfo allocInfo = {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.descriptorPool = descriptor_pool,
+				.descriptorSetCount = 1,
+				.pSetLayouts = &descriptor_layout_sampler
+		};
+		
+		vkAllocateDescriptorSets(device, &allocInfo, &descriptor_set_samplers);
+	}
+	
+	
+
 
 }
+// void createDescriptorPool() {
 
 
-void createDescriptorSetLayout2(){
-	PRINT_FNAME;
+// 	uint32_t alltextures = arrayTextures_3D.len + arrayTextures_2D.len + 1;
+
+// 	VkDescriptorPoolSize poolSizes[] = {
+// 		(VkDescriptorPoolSize){
+// 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+// 			.descriptorCount =  MAX_FRAMES_IN_FLIGHT * (alltextures)
+// 		},
+// 		(VkDescriptorPoolSize){
+// 			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = 4 *  MAX_FRAMES_IN_FLIGHT
+// 		},
+// 		(VkDescriptorPoolSize){
+// 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 			.descriptorCount = 4 *  MAX_FRAMES_IN_FLIGHT
+// 		},
+// 	};
+	
+
+ 
+
+// 	VkDescriptorPoolCreateInfo poolInfo = {
+				 
+// 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+// 		.pNext = NULL,
+// 		.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,  
+// 		.maxSets = MAX_FRAMES_IN_FLIGHT,  
+// 		.poolSizeCount = sizeof(poolSizes) / sizeof(VkDescriptorPoolSize),
+// 		.pPoolSizes = poolSizes
+// 	};
+
+	
+
+// 	VkResult result = vkCreateDescriptorPool(device, &poolInfo, NULL, &descriptorPool);
+
+// 	if (result != VK_SUCCESS) {
+		
+
+// 	}
+	
+
+
+// };
+
+// void createDescriptorSetLayout22(){
+// 	PRINT_FNAME;
+
+
+// 	{
+// 		VkDescriptorSetLayoutBinding globalBinding = {
+// 			.binding = 0,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+// 		};
+			
+// 		VkDescriptorSetLayoutCreateInfo globalLayoutInfo = {
+// 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+// 			.bindingCount = 1,
+// 			.pBindings = &globalBinding
+// 		};
+
+// 		VkResult res = vkCreateDescriptorSetLayout(device, &globalLayoutInfo, NULL, &globalLayout);
+
+// 		if(res != VK_SUCCESS){
+// 			EXIT_CLEAN("vkCreateDescriptorSetLayout4 failed");
+// 		}
+
+// 	}
+// 	{
+// 		VkDescriptorSetLayoutBinding materialBinding = {
+// 			.binding = 0,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+// 		};
+			
+// 		VkDescriptorSetLayoutCreateInfo materialLayoutInfo = {
+// 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+// 			.bindingCount = 1,
+// 			.pBindings = &materialBinding
+// 		};
+
+// 		VkResult res = vkCreateDescriptorSetLayout(device, &materialLayoutInfo, NULL, &materialLayout);
+
+// 		if(res != VK_SUCCESS){
+// 			EXIT_CLEAN("vkCreateDescriptorSetLayout  materialDescriptorSetLayout");
+// 		}
+
+// 	}
+// 	{
+// 		VkDescriptorSetLayoutBinding instanceBindings[2] = {
+// 			{
+// 				.binding = 0,
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 			},
+// 			{
+// 				.binding = 1,
+// 				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 				.descriptorCount = 1,
+// 				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 			}
+// 		};
+
+// 		VkDescriptorSetLayoutCreateInfo instanceLayoutInfo = {
+// 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+// 			.bindingCount = 2,
+// 			.pBindings = instanceBindings
+// 		};
+
+// 		VkResult res = vkCreateDescriptorSetLayout(device, &instanceLayoutInfo, NULL, &instanceLayout);
+
+// 		if(res != VK_SUCCESS){
+// 			EXIT_CLEAN("vkCreateDescriptorSetLayout instanceDescriptorSetLayout");
+// 		}
+
+// 	}
+
+// }
+
+
+// void createDescriptorSetLayout2(){
+// 	PRINT_FNAME;
 
 
  
 
-	VkDescriptorSetLayoutBinding lb[BINDING_MAX]={
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_3D_SAMPLERS,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = arrayTextures_3D.len,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_3D_SAMPLERS_SHADOW,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_2D_SAMPLERS,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = arrayTextures_2D.len,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-		},
+// 	VkDescriptorSetLayoutBinding lb[BINDING_MAX]={
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_3D_SAMPLERS,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+// 			.descriptorCount = arrayTextures_3D.len,
+// 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_3D_SAMPLERS_SHADOW,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_2D_SAMPLERS,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+// 			.descriptorCount = arrayTextures_2D.len,
+// 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+// 		},
 		
 
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_VIEW_PROJECTIONS_3D,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_VIEW_PROJECTIONS_2D,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_VIEW_PROJECTIONS_LIGHT,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_DIRECTIONAL_LIGHTS,
-			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_VIEW_PROJECTIONS_3D,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_VIEW_PROJECTIONS_2D,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_VIEW_PROJECTIONS_LIGHT,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_DIRECTIONAL_LIGHTS,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+// 		},
 		
 
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_MODELS_3D,
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_MODELS_2D,
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_OBJECT_IDS,
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-		},
-		(VkDescriptorSetLayoutBinding){
-			.binding = BINDING_COLORS,
-			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			.descriptorCount = 1,
-			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-		},
-	};
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_MODELS_3D,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_MODELS_2D,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_OBJECT_IDS,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 		},
+// 		(VkDescriptorSetLayoutBinding){
+// 			.binding = BINDING_COLORS,
+// 			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+// 			.descriptorCount = 1,
+// 			.stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+// 		},
+// 	};
 	
 	
 
 
-	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		.bindingCount = sizeof(lb) / sizeof(VkDescriptorSetLayoutBinding),
-		.pBindings = lb,
-	};
+// 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+// 		.bindingCount = sizeof(lb) / sizeof(VkDescriptorSetLayoutBinding),
+// 		.pBindings = lb,
+// 	};
 
-	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout4);
+// 	VkResult res= vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &descriptorSetLayout4);
 
-	if(res != VK_SUCCESS){
-		EXIT_CLEAN("vkCreateDescriptorSetLayout4 failed");
-	}
-}
+// 	if(res != VK_SUCCESS){
+// 		EXIT_CLEAN("vkCreateDescriptorSetLayout4 failed");
+// 	}
+// }
 
 
 uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
@@ -4020,83 +4849,83 @@ void createCommandPool(){
 	
 }
 
-void renderHUD(
-	VkCommandBuffer cmd, 
-	struct Frame * frame,
-	uint32_t imageIndex
+// void renderHUD(
+// 	VkCommandBuffer cmd, 
+// 	struct Frame * frame,
+// 	uint32_t imageIndex
 
-){
-	struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
+// ){
+// 	struct Pipeline *pipe_HUD = gmArrayGet(&arrayPipelines, 1);
 
-	{
-		VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-		VkRenderingAttachmentInfo colorAttachmentsInfos[1];
-		{
+// 	{
+// 		VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+// 		VkRenderingAttachmentInfo colorAttachmentsInfos[1];
+// 		{
 
-			colorAttachmentsInfos[0] = (VkRenderingAttachmentInfo){
+// 			colorAttachmentsInfos[0] = (VkRenderingAttachmentInfo){
 				
-				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-				.imageView = swapchainImageViews[imageIndex],
-				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.clearValue = clearColor
+// 				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+// 				.imageView = swapchainImageViews[imageIndex],
+// 				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+// 				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+// 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+// 				.clearValue = clearColor
 				
-			};
+// 			};
 
 		
 
-		}
+// 		}
 	
-		VkRenderingInfo renderingInfoHUD = {
-			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-			.renderArea = { {0, 0}, swapChainExtent },
-			.layerCount = 1,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = colorAttachmentsInfos,
+// 		VkRenderingInfo renderingInfoHUD = {
+// 			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+// 			.renderArea = { {0, 0}, swapChainExtent },
+// 			.layerCount = 1,
+// 			.colorAttachmentCount = 1,
+// 			.pColorAttachments = colorAttachmentsInfos,
 		
-		};
+// 		};
 
-		vkCmdBeginRendering(cmd, &renderingInfoHUD);
-		{
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
-			VkDeviceSize offset = 0;
+// 		vkCmdBeginRendering(cmd, &renderingInfoHUD);
+// 		{
+// 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe_HUD->graphicsPipeline);
+// 			VkDeviceSize offset = 0;
 
 		
 
-			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_HUD2.vertexBuffer.handle, &offset);
-			vkCmdBindIndexBuffer(cmd, modelVertexData_HUD2.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-			vkCmdBindDescriptorSets(
-				cmd, 
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipe_HUD->pipelineLayout
-				,0,1,
-				frame->descriptorSets,
-				0, NULL
-			);
+// 			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_HUD2.vertexBuffer.handle, &offset);
+// 			vkCmdBindIndexBuffer(cmd, modelVertexData_HUD2.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+// 			vkCmdBindDescriptorSets(
+// 				cmd, 
+// 				VK_PIPELINE_BIND_POINT_GRAPHICS,
+// 				pipe_HUD->pipelineLayout
+// 				,0,1,
+// 				frame->descriptorSets,
+// 				0, NULL
+// 			);
 	
-			struct PushConst2D hudConstants = {
-				.texIdx = 2, 
-				.hasColor = 0
-			};
-			vkCmdPushConstants(
-            	cmd,
-				pipe_HUD->pipelineLayout,
-				VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,
-				sizeof(struct PushConst2D),
-				&hudConstants
-			);
+// 			struct PushConst2D hudConstants = {
+// 				.texIdx = 2, 
+// 				.hasColor = 0
+// 			};
+// 			vkCmdPushConstants(
+//             	cmd,
+// 				pipe_HUD->pipelineLayout,
+// 				VK_SHADER_STAGE_FRAGMENT_BIT,
+// 				0,
+// 				sizeof(struct PushConst2D),
+// 				&hudConstants
+// 			);
 			
 
 			
 	
-			vkCmdDrawIndexed(cmd, modelVertexData_HUD2.indices_num, 1, 0, 0, 0  );
-		}
-		vkCmdEndRendering(cmd);
+// 			vkCmdDrawIndexed(cmd, modelVertexData_HUD2.indices_num, 1, 0, 0, 0  );
+// 		}
+// 		vkCmdEndRendering(cmd);
 
-	}
-}
+// 	}
+// }
 void renderMainPass(
 	VkCommandBuffer cmd, 
 	struct Frame * frame,
@@ -4104,45 +4933,45 @@ void renderMainPass(
 ){
 
 
-	{
-			VkImageMemoryBarrier2 beginBarrier[]={
+	// {
+	// 		VkImageMemoryBarrier2 beginBarrier[]={
 
 		
-				(VkImageMemoryBarrier2){
+	// 			(VkImageMemoryBarrier2){
 
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-					.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-					.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-					.srcAccessMask = 0,
-					.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
-					.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = frame->pick.image.handle,
-					.subresourceRange = {
-						.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-						.baseMipLevel = 0,
-						.levelCount = 1,
-						.baseArrayLayer = 0,
-						.layerCount = 1,
-					},
-				},
+	// 				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+	// 				.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+	// 				.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 				.srcAccessMask = 0,
+	// 				.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+	// 				.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,  
+	// 				.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	// 				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 				.image = frame->pick.image.handle,
+	// 				.subresourceRange = {
+	// 					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	// 					.baseMipLevel = 0,
+	// 					.levelCount = 1,
+	// 					.baseArrayLayer = 0,
+	// 					.layerCount = 1,
+	// 				},
+	// 			},
 				
 
-		};
+	// 	};
 
 	
-		VkDependencyInfo beginDepInfo = {
+	// 	VkDependencyInfo beginDepInfo = {
 
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
-			.pImageMemoryBarriers = beginBarrier,
+	// 		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+	// 		.imageMemoryBarrierCount = sizeof(beginBarrier) / sizeof(VkImageMemoryBarrier2),
+	// 		.pImageMemoryBarriers = beginBarrier,
 			
-		};
+	// 	};
 
-		vkCmdPipelineBarrier2(cmd, &beginDepInfo);
-	}
+	// 	vkCmdPipelineBarrier2(cmd, &beginDepInfo);
+	// }
 
 	
 
@@ -4152,9 +4981,9 @@ void renderMainPass(
     VkClearValue clearDepth = {{{1.0f, 0}}};
     
 	
-	const uint32_t colorAttachmentCnt = 2;
+	// const uint32_t colorAttachmentCnt = 1;
 
-	VkRenderingAttachmentInfo colorAttachmentsInfos[colorAttachmentCnt];
+	VkRenderingAttachmentInfo colorAttachmentsInfos[]=
 	{
 
 		colorAttachmentsInfos[0] = (VkRenderingAttachmentInfo){
@@ -4166,21 +4995,21 @@ void renderMainPass(
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.clearValue = clearColor
 			
-		};
+		}
 
-		colorAttachmentsInfos[1] = (VkRenderingAttachmentInfo){
+		// colorAttachmentsInfos[1] = (VkRenderingAttachmentInfo){
 			
-			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-			.imageView = frame->pick.image.view,
-			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-			.clearValue  = { 
-				.color = {{0, 0, 0, 0}} 
-			}
-		};
+		// 	.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+		// 	.imageView = frame->pick.image.view,
+		// 	.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		// 	.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		// 	.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+		// 	.clearValue  = { 
+		// 		.color = {{0, 0, 0, 0}} 
+		// 	}
+		// };
 
-	}
+	};
 
     VkRenderingAttachmentInfo depthAttachmentInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -4199,7 +5028,7 @@ void renderMainPass(
 		},
 		
         .layerCount = 1,
-        .colorAttachmentCount = colorAttachmentCnt,
+        .colorAttachmentCount = sizeof(colorAttachmentsInfos) / sizeof(colorAttachmentsInfos[0]),
         .pColorAttachments = colorAttachmentsInfos,
 
         .pDepthAttachment = &depthAttachmentInfo,
@@ -4233,323 +5062,349 @@ void renderMainPass(
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 
 
+	VkDeviceSize offset = 0;
 
-	
-	
-	for(int i=0; i< arrayGameObjects.len;i++)
-	{
-		VkDeviceSize offset = 0;
-		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
-		
-
-	
-		vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_3D[gameObject->vertexIdx].vertexBuffer.handle, &offset);
-		vkCmdBindIndexBuffer(cmd, modelVertexData_3D[gameObject->vertexIdx].indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-
-		vkCmdBindDescriptorSets(
-			cmd, 
-			VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pipeline->pipelineLayout, 0, 1, 
-			frame->descriptorSets, 
-			0, 
-			NULL
-			
-
-
-		);
-		
-		struct TextureRes * texture = gmArrayGet(&arrayTextures_3D, gameObject->textureIdx);
-		struct PushConst constants0 = {
-			.hasColor = false,
-			.texIdx = texture->textureIdx,
-			.objectId = frame->pick.pickedID
-		};
-		
-
-		vkCmdPushConstants(
-			cmd,
-			pipeline->pipelineLayout,
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			0,
-			sizeof(struct PushConst),
-			&constants0
-		);
-
-		vkCmdDrawIndexed(
-			cmd, 
-			modelVertexData_3D[gameObject->vertexIdx].indices_num,
-			gameObject->arrayViewUboModel.len , 
-			0, 
-			0,
-			gameObject->arrayViewUboModel.offset
-		);
-		
-
-	}
-	// draw light
-	{
-		
-	}
+	vkCmdBindVertexBuffers(cmd, 0, 1,& vertex_buffer.handle, &offset);
+	vkCmdBindIndexBuffer(cmd, index_buffer.handle, 0, VK_INDEX_TYPE_UINT32);
 	
 
-
-
-    vkCmdEndRendering(cmd);
-
-
+	/**
 	
-	VkImageMemoryBarrier2 toTransferBarrier = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-		.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-		.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-		.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-		.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-		.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = frame->pick.image.handle,
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0, .levelCount = 1,
-			.baseArrayLayer = 0, .layerCount = 1
-		},
+	VkDescriptorSet descriptor_set_instances [MAX_FRAMES_IN_FLIGHT];
+VkDescriptorSet descriptor_set_globals [MAX_FRAMES_IN_FLIGHT];
+VkDescriptorSet descriptor_set_materials;
+VkDescriptorSet descriptor_set_samplers;
+	*/
+	VkDescriptorSet dset [4] = {
+		descriptor_set_globals[frameIndex],
+		descriptor_set_instances[frameIndex],
+		descriptor_set_materials,
+		descriptor_set_samplers
 	};
-
-	VkDependencyInfo toTransferDep = {
-		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-		.imageMemoryBarrierCount = 1,
-		.pImageMemoryBarriers = &toTransferBarrier
-	};
-	vkCmdPipelineBarrier2(cmd, &toTransferDep);
 	
 
-	VkBufferImageCopy region = {
-		.bufferOffset = 0,
-		.bufferRowLength = 0,
-		.bufferImageHeight = 0,
-		.imageSubresource = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1
-		},
-		.imageOffset = {swapChainExtent.width/2,swapChainExtent.height/2, 0},
-		.imageExtent = {1, 1, 1}
-	};
-	vkCmdCopyImageToBuffer(
-		cmd,
-		frame->pick.image.handle,
-		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-		frame->pick.buffer.handle,
-		1, 
-		&region
+
+
+	vkCmdBindDescriptorSets(
+		cmd, 
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		pipeline->pipelineLayout, 
+		0, 
+		4, 
+		dset, 
+		0, 
+		NULL
+		
+
 	);
 
-	VkImageMemoryBarrier2 toGeneralBarrier = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-		.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,           
-		.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-		.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,      
-		.dstAccessMask = 0,
-		.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-		.newLayout = VK_IMAGE_LAYOUT_GENERAL,
-		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-		.image = frame->pick.image.handle,
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1
-		}
-	};
-	VkDependencyInfo toGeneralDep = {
-		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-		.imageMemoryBarrierCount = 1,
-		.pImageMemoryBarriers = &toGeneralBarrier
-	};
-	vkCmdPipelineBarrier2(cmd, &toGeneralDep);
-}
-void renderShadowMap(
-	VkCommandBuffer cmd, 
-	struct Frame * frame,
-	uint32_t imageIndex
-){
-
-
-
-	VkImageMemoryBarrier2 barrier = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-
-		
-		.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-        .srcAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-        .dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,  // ✅ FROM
-        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,  // ✅ TO
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-
-		.image = frame->shadow.image.handle,
-
-		// .image = frame->shadow.image.handle,
-		.subresourceRange = {
-			.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-			.levelCount = 1,
-			.layerCount = 1
-		}
-	};
-		
 
 	
-	VkDependencyInfo beginDepInfo = {
-
-		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-		.imageMemoryBarrierCount = 1,
-		.pImageMemoryBarriers = &barrier,
-		
-	};
-
-	vkCmdPipelineBarrier2(cmd, &beginDepInfo);
-	
-
-
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    VkClearValue clearDepth = {{{1.0f, 0}}};
-    
-	
-	
-
-
-    VkRenderingAttachmentInfo depthAttachmentInfo = {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = frame->shadow.image.view,
-        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .clearValue = clearDepth
-    };
-
-    VkRenderingInfo renderingInfo = {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-        .renderArea = { 
-			.offset = {0, 0}, 
-			.extent = swapChainExtent 
-		},
-		
-        .layerCount = 1,
-        .colorAttachmentCount = 0,
-        .pColorAttachments = NULL,
-
-        .pDepthAttachment = &depthAttachmentInfo,
-    };
-
-    vkCmdBeginRendering(cmd, &renderingInfo);
-
-	
-
-	
-	struct Pipeline *  pipeline = gmArrayGet(&arrayPipelines, 2);
-
-	if (!pipeline || pipeline->graphicsPipeline == VK_NULL_HANDLE) {
-	
-		EXIT_CLEAN("ERROR in PIPELINE Shadow");
-	}
-
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
-    
-    VkViewport viewPort = {
-        .x = 0, 
-		.y = 0, 
-		.width = swapChainExtent.width, 
-		.height = swapChainExtent.height, 
-        .minDepth = 0.0f, 
-		.maxDepth = 1.0f
-    };
-
-    vkCmdSetViewport(cmd, 0, 1, &viewPort);
-    
-    VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
-    vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-
-
-	
-	for(int i=0; i< arrayGameObjects.len;i++)
+	for(int i=0; i< array_meshes.len;i++)
 	{
-		VkDeviceSize offset = 0;
-		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
+		struct Mesh * mesh = gmArrayGet(&array_meshes, i);
+		
+		
+		// struct TextureRes * texture = gmArrayGet(&arrayTextures_3D, gameObject->textureIdx);
+		// struct PushConst constants0 = {
+		// 	.hasColor = false,
+		// 	.texIdx = texture->textureIdx,
+		// 	.objectId = frame->pick.pickedID
+		// };
 		
 
-		{
-			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_3D[gameObject->vertexIdx].vertexBuffer.handle, &offset);
-			vkCmdBindIndexBuffer(cmd, modelVertexData_3D[gameObject->vertexIdx].indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-	
-			vkCmdBindDescriptorSets(
-				cmd, 
-				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				pipeline->pipelineLayout, 0, 1, 
-				frame->descriptorSets, 
-				0, 
-				NULL
-				
+		// vkCmdPushConstants(
+		// 	cmd,
+		// 	pipeline->pipelineLayout,
+		// 	VK_SHADER_STAGE_FRAGMENT_BIT,
+		// 	0,
+		// 	sizeof(struct PushConst),
+		// 	&constants0
+		// );
 
 
-			);
+		/*
+		
+		Parameters:
 
-			vkCmdDrawIndexed(
-				cmd, 
-				
+			VkCommandBuffer commandBuffer (aka struct VkCommandBuffer_T *)
+			uint32_t indexCount (aka unsigned int)
+			uint32_t instanceCount (aka unsigned int)
+			uint32_t firstIndex (aka unsigned int)
+			int32_t vertexOffset (aka int)
+			uint32_t firstInstance (aka unsigned int)
+		*/
+		vkCmdDrawIndexed(
+			cmd, 
+			mesh->range_index.len,
+			1 , 
+			mesh->range_index.start, 
+			mesh->range_vertex.start,
+			0
+		);
+		
 
-				modelVertexData_3D[gameObject->vertexIdx].indices_num,
-				gameObject->arrayViewUboModel.len , 
-				0, 
-				0,
-				gameObject->arrayViewUboModel.offset
-			);
-		}
 	}
+
+
+
 
     vkCmdEndRendering(cmd);
 
-	VkImageMemoryBarrier2 endBarrier = {
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-			.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = frame->shadow.image.handle,
-			.subresourceRange = {
-				.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-				.baseMipLevel = 0,
-				.levelCount = 1,
-				.baseArrayLayer = 0,
-				.layerCount = 1
-			},
-		};
-		VkDependencyInfo endDepInfo = {
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.imageMemoryBarrierCount = 1,
-			.pImageMemoryBarriers = &endBarrier,
-		};
-		vkCmdPipelineBarrier2(cmd, &endDepInfo);  // ← MUST be after vkCmdEndRendering
 
+	
+	// VkImageMemoryBarrier2 toTransferBarrier = {
+	// 	.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+	// 	.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 	.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+	// 	.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+	// 	.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+	// 	.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	// 	.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+	// 	.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.image = frame->pick.image.handle,
+	// 	.subresourceRange = {
+	// 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	// 		.baseMipLevel = 0, .levelCount = 1,
+	// 		.baseArrayLayer = 0, .layerCount = 1
+	// 	},
+	// };
 
+	// VkDependencyInfo toTransferDep = {
+	// 	.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+	// 	.imageMemoryBarrierCount = 1,
+	// 	.pImageMemoryBarriers = &toTransferBarrier
+	// };
+	// vkCmdPipelineBarrier2(cmd, &toTransferDep);
+	
 
+	// VkBufferImageCopy region = {
+	// 	.bufferOffset = 0,
+	// 	.bufferRowLength = 0,
+	// 	.bufferImageHeight = 0,
+	// 	.imageSubresource = {
+	// 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	// 		.mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1
+	// 	},
+	// 	.imageOffset = {swapChainExtent.width/2,swapChainExtent.height/2, 0},
+	// 	.imageExtent = {1, 1, 1}
+	// };
+	// vkCmdCopyImageToBuffer(
+	// 	cmd,
+	// 	frame->pick.image.handle,
+	// 	VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+	// 	frame->pick.buffer.handle,
+	// 	1, 
+	// 	&region
+	// );
+
+	// VkImageMemoryBarrier2 toGeneralBarrier = {
+	// 	.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+	// 	.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,           
+	// 	.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+	// 	.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,      
+	// 	.dstAccessMask = 0,
+	// 	.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+	// 	.newLayout = VK_IMAGE_LAYOUT_GENERAL,
+	// 	.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	// 	.image = frame->pick.image.handle,
+	// 	.subresourceRange = {
+	// 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	// 		.baseMipLevel = 0,
+	// 		.levelCount = 1,
+	// 		.baseArrayLayer = 0,
+	// 		.layerCount = 1
+	// 	}
+	// };
+	// VkDependencyInfo toGeneralDep = {
+	// 	.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+	// 	.imageMemoryBarrierCount = 1,
+	// 	.pImageMemoryBarriers = &toGeneralBarrier
+	// };
+	// vkCmdPipelineBarrier2(cmd, &toGeneralDep);
 }
+// void renderShadowMap(
+// 	VkCommandBuffer cmd, 
+// 	struct Frame * frame,
+// 	uint32_t imageIndex
+// ){
+
+
+
+// 	VkImageMemoryBarrier2 barrier = {
+// 		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+
+		
+// 		.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+//         .dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+//         .srcAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+//         .dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+//         .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,  // ✅ FROM
+//         .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,  // ✅ TO
+//         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+
+// 		.image = frame->shadow.image.handle,
+
+// 		// .image = frame->shadow.image.handle,
+// 		.subresourceRange = {
+// 			.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+// 			.levelCount = 1,
+// 			.layerCount = 1
+// 		}
+// 	};
+		
+
+	
+// 	VkDependencyInfo beginDepInfo = {
+
+// 		.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+// 		.imageMemoryBarrierCount = 1,
+// 		.pImageMemoryBarriers = &barrier,
+		
+// 	};
+
+// 	vkCmdPipelineBarrier2(cmd, &beginDepInfo);
+	
+
+
+//     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+//     VkClearValue clearDepth = {{{1.0f, 0}}};
+    
+	
+	
+
+
+//     VkRenderingAttachmentInfo depthAttachmentInfo = {
+//         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+//         .imageView = frame->shadow.image.view,
+//         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+//         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+//         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+//         .clearValue = clearDepth
+//     };
+
+//     VkRenderingInfo renderingInfo = {
+//         .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+//         .renderArea = { 
+// 			.offset = {0, 0}, 
+// 			.extent = swapChainExtent 
+// 		},
+		
+//         .layerCount = 1,
+//         .colorAttachmentCount = 0,
+//         .pColorAttachments = NULL,
+
+//         .pDepthAttachment = &depthAttachmentInfo,
+//     };
+
+//     vkCmdBeginRendering(cmd, &renderingInfo);
+
+	
+
+	
+// 	struct Pipeline *  pipeline = gmArrayGet(&arrayPipelines, 2);
+
+// 	if (!pipeline || pipeline->graphicsPipeline == VK_NULL_HANDLE) {
+	
+// 		EXIT_CLEAN("ERROR in PIPELINE Shadow");
+// 	}
+
+//     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphicsPipeline);
+    
+//     VkViewport viewPort = {
+//         .x = 0, 
+// 		.y = 0, 
+// 		.width = swapChainExtent.width, 
+// 		.height = swapChainExtent.height, 
+//         .minDepth = 0.0f, 
+// 		.maxDepth = 1.0f
+//     };
+
+//     vkCmdSetViewport(cmd, 0, 1, &viewPort);
+    
+//     VkRect2D scissor = { .extent = swapChainExtent, .offset = {0, 0} };
+//     vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+
+
+	
+// 	for(int i=0; i< arrayGameObjects.len;i++)
+// 	{
+// 		VkDeviceSize offset = 0;
+// 		struct GameObject * gameObject = gmArrayGet(&arrayGameObjects, i);
+		
+
+// 		{
+// 			vkCmdBindVertexBuffers(cmd, 0, 1, &modelVertexData_3D[gameObject->vertexIdx].vertexBuffer.handle, &offset);
+// 			vkCmdBindIndexBuffer(cmd, modelVertexData_3D[gameObject->vertexIdx].indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+	
+// 			vkCmdBindDescriptorSets(
+// 				cmd, 
+// 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
+// 				pipeline->pipelineLayout, 0, 1, 
+// 				frame->descriptorSets, 
+// 				0, 
+// 				NULL
+				
+
+
+// 			);
+
+// 			vkCmdDrawIndexed(
+// 				cmd, 
+				
+
+// 				modelVertexData_3D[gameObject->vertexIdx].indices_num,
+// 				gameObject->arrayViewUboModel.len , 
+// 				0, 
+// 				0,
+// 				gameObject->arrayViewUboModel.offset
+// 			);
+// 		}
+// 	}
+
+//     vkCmdEndRendering(cmd);
+
+// 	VkImageMemoryBarrier2 endBarrier = {
+// 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+// 			.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+// 			.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+// 			.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+// 			.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+// 			.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+// 			.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+// 			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+// 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+// 			.image = frame->shadow.image.handle,
+// 			.subresourceRange = {
+// 				.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+// 				.baseMipLevel = 0,
+// 				.levelCount = 1,
+// 				.baseArrayLayer = 0,
+// 				.layerCount = 1
+// 			},
+// 		};
+// 		VkDependencyInfo endDepInfo = {
+// 			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+// 			.imageMemoryBarrierCount = 1,
+// 			.pImageMemoryBarriers = &endBarrier,
+// 		};
+// 		vkCmdPipelineBarrier2(cmd, &endDepInfo);  // ← MUST be after vkCmdEndRendering
+
+
+
+// }
 void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
 	struct Frame * frame = &frames[frameIndex];
 
 	VkCommandBuffer commandBuffer = frame->graphicsCommandBuffers;
-	VkDescriptorSet * descriptorSet = frame->descriptorSets;
+	// VkDescriptorSet * descriptorSet = frame->descriptorSets;
 
-	VkImageView * pickImageView = &frame->pick.image.view;
+	// VkImageView * pickImageView = &frame->pick.image.view;
 
 	VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -4597,7 +5452,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 		vkCmdPipelineBarrier2(commandBuffer, &beginDepInfo);
 	}
 
-	renderShadowMap(commandBuffer,frame, imageIndex);
+	// renderShadowMap(commandBuffer,frame, imageIndex);
 
 	renderMainPass(commandBuffer,frame, imageIndex);
 
@@ -4606,7 +5461,7 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 	
 
 
-	renderHUD(commandBuffer,frame, imageIndex);
+	// renderHUD(commandBuffer,frame, imageIndex);
 
 
 	
@@ -4647,235 +5502,274 @@ void recordCommandBuffer3(uint32_t imageIndex,uint32_t frameIndex){
 
     vkEndCommandBuffer(commandBuffer);
 }
-
-void updateUniformBuffer33(uint32_t currentFrame){
-
-	struct Frame * frame = &frames[currentFrame];
-
+void updateGameObjects(uint32_t currentFrame){
 	
-	memcpy(frame->ssbo_colors.alloc.mapped,arrayColors_2.data,sizeof(struct SSBO_Colors)* arrayColors_2.len);
-
-	memcpy(
-		frame->ssbo_models.alloc.mapped, 
-		array_ssbo_models3d.data, 
-		sizeof(struct SSBO_Model)* array_ssbo_models3d.len
-	);
-
-	memcpy(
-		frame->ssbo_models.alloc.mapped + sizeof(struct SSBO_Model)* array_ssbo_models3d.len, 
-		array_ssbo_models2d.data, 
-		sizeof(struct SSBO_Model)* array_ssbo_models2d.len
-	);
-
-	memcpy(frame->ssbo_objectIds.alloc.mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSBO_ObjectID)* arraySBO_ObjectIds_1.len);
-
-
-	
-
-
-
-	struct UBO_ViewProjection ubo_vp[3];
 	{
-		struct UBO_ViewProjection* ubo = &ubo_vp[0];
-		uint32_t stride = sizeof(struct UBO_ViewProjection);
-		uint32_t offset = 0;
-	
+		
+		
 		vec3 cameraCenter;
 	
 		glm_vec3_add(cameraPos, cameraFront, cameraCenter);
 	
-		glm_lookat(cameraPos, cameraCenter, cameraUp, ubo->view);
-	
-	
-		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
-	
-		ubo->proj[1][1] *= -1;
+		glm_lookat(cameraPos, cameraCenter, cameraUp, data_globals.view);
 
 	}
 	
-
-
-
-
-	{
-
-		struct UBO_ViewProjection* ubo = &ubo_vp[1];
-		glm_mat4_identity(ubo->view);
-	
-		
-		glm_ortho(
-			0.0f, 
-			(float)swapChainExtent.width, 
-			(float)swapChainExtent.height, 
-			0.0f, -1.0f, 1.0f,
-			ubo->proj);
-	
-	
-		
-
-	}
-
-
-	
-
-
-	GLM_VEC3_COPY(UBO_DirLight.viewPos,cameraPos);
-
-
-	
-
-	UBO_DirLight.lightPos[0] = 5.0f*sin(lastTime);
-	
-
-	memcpy(frame->ubo_Lights.alloc.mapped, &UBO_DirLight, sizeof(struct UBO_DirectionLight));
-	
-
-
-
-	{
-
-		struct UBO_ViewProjection* ubo = &ubo_vp[2];
-		glm_mat4_identity(ubo->view);
-	
-	
-		vec3 LightCenter;
-		
-		glm_vec3_add(UBO_DirLight.lightPos, UBO_DirLight.viewPos, LightCenter);
-	
-		glm_lookat(UBO_DirLight.lightPos, LightCenter, cameraUp, ubo->view);
-	
-		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
-	
-		ubo->proj[1][1] *= -1;
-	
-		
-
-	}
-
-	memcpy(frame->ubo_ViewProjection.alloc.mapped, ubo_vp, sizeof(ubo_vp));
-
 }
-void updateUniformBuffer333(uint32_t currentFrame){
+void updateBuffers(uint32_t currentFrame){
 
 	struct Frame * frame = &frames[currentFrame];
 
 	
-	memcpy(frame->ssbo_colors.alloc.mapped,array_obj_color.data,sizeof(struct SSBO_Colors)* array_obj_color.len);
 
 	memcpy(
-		frame->ssbo_models.alloc.mapped, 
-		array_ssbo_models3d.data, 
-		sizeof(struct SSBO_Model)* array_ssbo_models3d.len
+		frame->ssbo_instances.alloc.mapped,
+		array_data_instances.data,
+		sizeof(struct Instance_ssbo)* array_data_instances.len
 	);
+	
 
 	memcpy(
-		frame->ssbo_models.alloc.mapped + sizeof(struct SSBO_Model)* array_ssbo_models3d.len, 
-		array_ssbo_models2d.data, 
-		sizeof(struct SSBO_Model)* array_ssbo_models2d.len
-	);
-
-	memcpy(frame->ssbo_objectIds.alloc.mapped, array_object_ids.data, sizeof(struct SSBO_ObjectID)* array_object_ids.len);
-
-
-	
-
-
-
-	struct UBO_ViewProjection ubo_vp[3];
-	{
-		struct UBO_ViewProjection* ubo = &ubo_vp[0];
-		uint32_t stride = sizeof(struct UBO_ViewProjection);
-		uint32_t offset = 0;
-	
-		vec3 cameraCenter;
-	
-		glm_vec3_add(cameraPos, cameraFront, cameraCenter);
-	
-		glm_lookat(cameraPos, cameraCenter, cameraUp, ubo->view);
-	
-	
-		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
-	
-		ubo->proj[1][1] *= -1;
-
-	}
-	
-
-
-
-
-	{
-
-		struct UBO_ViewProjection* ubo = &ubo_vp[1];
-		glm_mat4_identity(ubo->view);
-	
-		
-		glm_ortho(
-			0.0f, 
-			(float)swapChainExtent.width, 
-			(float)swapChainExtent.height, 
-			0.0f, -1.0f, 1.0f,
-			ubo->proj);
-	
-	
-		
-
-	}
-
-
-	
-
-
-	GLM_VEC3_COPY(UBO_DirLight.viewPos,cameraPos);
-
-
-	
-
-	UBO_DirLight.lightPos[0] = 5.0f*sin(lastTime);
-	
-
-	memcpy(frame->ubo_Lights.alloc.mapped, &UBO_DirLight, sizeof(struct UBO_DirectionLight));
-	
-
-	
-	struct SSBO_Model * mod = gmArrayGet(&array_ssbo_models3d, obj_light.object_ids.start);
-	glm_mat4_identity(mod->model);
-	
-	glm_translate(mod->model, UBO_DirLight.lightPos);
-
-	memcpy(
-		frame->ssbo_models.alloc.mapped + obj_light.object_ids.start, 
-		mod->model, 
-		sizeof(struct SSBO_Model)
+		frame->ubo_global.alloc.mapped,
+		&data_globals,
+		sizeof(struct Global_ubo)
 	);
 
 
-
-	
-
-	{
-
-		struct UBO_ViewProjection* ubo = &ubo_vp[2];
-		glm_mat4_identity(ubo->view);
-	
-	
-		vec3 LightCenter;
-		
-		glm_vec3_add(UBO_DirLight.lightPos, UBO_DirLight.viewPos, LightCenter);
-	
-		glm_lookat(UBO_DirLight.lightPos, LightCenter, cameraUp, ubo->view);
-	
-		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
-	
-		ubo->proj[1][1] *= -1;
-	
-		
-
-	}
-
-	memcpy(frame->ubo_ViewProjection.alloc.mapped, ubo_vp, sizeof(ubo_vp));
-
+	memcpy(
+		ssbo_materials.alloc.mapped,
+		array_data_materials.data,
+		sizeof(struct Material_ssbo)* array_data_materials.len
+	);
 }
+// void updateUniformBuffer33(uint32_t currentFrame){
+
+// 	struct Frame * frame = &frames[currentFrame];
+
+	
+// 	memcpy(frame->ssbo_colors.alloc.mapped,arrayColors_2.data,sizeof(struct SSBO_Colors)* arrayColors_2.len);
+
+// 	memcpy(
+// 		frame->ssbo_models.alloc.mapped, 
+// 		array_ssbo_models3d.data, 
+// 		sizeof(struct SSBO_Model)* array_ssbo_models3d.len
+// 	);
+
+// 	memcpy(
+// 		frame->ssbo_models.alloc.mapped + sizeof(struct SSBO_Model)* array_ssbo_models3d.len, 
+// 		array_ssbo_models2d.data, 
+// 		sizeof(struct SSBO_Model)* array_ssbo_models2d.len
+// 	);
+
+// 	memcpy(frame->ssbo_objectIds.alloc.mapped, arraySBO_ObjectIds_1.data, sizeof(struct SSBO_ObjectID)* arraySBO_ObjectIds_1.len);
+
+
+	
+
+
+
+// 	struct UBO_ViewProjection ubo_vp[3];
+// 	{
+// 		struct UBO_ViewProjection* ubo = &ubo_vp[0];
+// 		uint32_t stride = sizeof(struct UBO_ViewProjection);
+// 		uint32_t offset = 0;
+	
+// 		vec3 cameraCenter;
+	
+// 		glm_vec3_add(cameraPos, cameraFront, cameraCenter);
+	
+// 		glm_lookat(cameraPos, cameraCenter, cameraUp, ubo->view);
+	
+	
+// 		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
+	
+// 		ubo->proj[1][1] *= -1;
+
+// 	}
+	
+
+
+
+
+// 	{
+
+// 		struct UBO_ViewProjection* ubo = &ubo_vp[1];
+// 		glm_mat4_identity(ubo->view);
+	
+		
+// 		glm_ortho(
+// 			0.0f, 
+// 			(float)swapChainExtent.width, 
+// 			(float)swapChainExtent.height, 
+// 			0.0f, -1.0f, 1.0f,
+// 			ubo->proj);
+	
+	
+		
+
+// 	}
+
+
+	
+
+
+// 	GLM_VEC3_COPY(UBO_DirLight.viewPos,cameraPos);
+
+
+	
+
+// 	UBO_DirLight.lightPos[0] = 5.0f*sin(lastTime);
+	
+
+// 	memcpy(frame->ubo_Lights.alloc.mapped, &UBO_DirLight, sizeof(struct UBO_DirectionLight));
+	
+
+
+
+// 	{
+
+// 		struct UBO_ViewProjection* ubo = &ubo_vp[2];
+// 		glm_mat4_identity(ubo->view);
+	
+	
+// 		vec3 LightCenter;
+		
+// 		glm_vec3_add(UBO_DirLight.lightPos, UBO_DirLight.viewPos, LightCenter);
+	
+// 		glm_lookat(UBO_DirLight.lightPos, LightCenter, cameraUp, ubo->view);
+	
+// 		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
+	
+// 		ubo->proj[1][1] *= -1;
+	
+		
+
+// 	}
+
+// 	memcpy(frame->ubo_ViewProjection.alloc.mapped, ubo_vp, sizeof(ubo_vp));
+
+// }
+// void updateUniformBuffer333(uint32_t currentFrame){
+
+// 	struct Frame * frame = &frames[currentFrame];
+
+	
+// 	memcpy(frame->ssbo_colors.alloc.mapped,array_obj_color.data,sizeof(struct SSBO_Colors)* array_obj_color.len);
+
+// 	memcpy(
+// 		frame->ssbo_models.alloc.mapped, 
+// 		array_ssbo_models3d.data, 
+// 		sizeof(struct SSBO_Model)* array_ssbo_models3d.len
+// 	);
+
+// 	memcpy(
+// 		frame->ssbo_models.alloc.mapped + sizeof(struct SSBO_Model)* array_ssbo_models3d.len, 
+// 		array_ssbo_models2d.data, 
+// 		sizeof(struct SSBO_Model)* array_ssbo_models2d.len
+// 	);
+
+// 	memcpy(frame->ssbo_objectIds.alloc.mapped, array_object_ids.data, sizeof(struct SSBO_ObjectID)* array_object_ids.len);
+
+
+	
+
+
+
+// 	struct UBO_ViewProjection ubo_vp[3];
+// 	{
+// 		struct UBO_ViewProjection* ubo = &ubo_vp[0];
+// 		uint32_t stride = sizeof(struct UBO_ViewProjection);
+// 		uint32_t offset = 0;
+	
+// 		vec3 cameraCenter;
+	
+// 		glm_vec3_add(cameraPos, cameraFront, cameraCenter);
+	
+// 		glm_lookat(cameraPos, cameraCenter, cameraUp, ubo->view);
+	
+	
+// 		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
+	
+// 		ubo->proj[1][1] *= -1;
+
+// 	}
+	
+
+
+
+
+// 	{
+
+// 		struct UBO_ViewProjection* ubo = &ubo_vp[1];
+// 		glm_mat4_identity(ubo->view);
+	
+		
+// 		glm_ortho(
+// 			0.0f, 
+// 			(float)swapChainExtent.width, 
+// 			(float)swapChainExtent.height, 
+// 			0.0f, -1.0f, 1.0f,
+// 			ubo->proj);
+	
+	
+		
+
+// 	}
+
+
+	
+
+
+// 	GLM_VEC3_COPY(UBO_DirLight.viewPos,cameraPos);
+
+
+	
+
+// 	UBO_DirLight.lightPos[0] = 5.0f*sin(lastTime);
+	
+
+// 	memcpy(frame->ubo_Lights.alloc.mapped, &UBO_DirLight, sizeof(struct UBO_DirectionLight));
+	
+
+	
+// 	struct SSBO_Model * mod = gmArrayGet(&array_ssbo_models3d, obj_light.object_ids.start);
+// 	glm_mat4_identity(mod->model);
+	
+// 	glm_translate(mod->model, UBO_DirLight.lightPos);
+
+// 	memcpy(
+// 		frame->ssbo_models.alloc.mapped + obj_light.object_ids.start, 
+// 		mod->model, 
+// 		sizeof(struct SSBO_Model)
+// 	);
+
+
+
+	
+
+// 	{
+
+// 		struct UBO_ViewProjection* ubo = &ubo_vp[2];
+// 		glm_mat4_identity(ubo->view);
+	
+	
+// 		vec3 LightCenter;
+		
+// 		glm_vec3_add(UBO_DirLight.lightPos, UBO_DirLight.viewPos, LightCenter);
+	
+// 		glm_lookat(UBO_DirLight.lightPos, LightCenter, cameraUp, ubo->view);
+	
+// 		glm_perspective(glm_rad(45.0f), (float)swapChainExtent.width / swapChainExtent.height, 0.1f, 40.0f , ubo->proj);
+	
+// 		ubo->proj[1][1] *= -1;
+	
+		
+
+// 	}
+
+// 	memcpy(frame->ubo_ViewProjection.alloc.mapped, ubo_vp, sizeof(ubo_vp));
+
+// }
 
 
 VkResult acquireNextImage(
@@ -4919,13 +5813,13 @@ void drawFrame3() {
 	}
 
 
-	uint32_t pickedObjectId = *(uint32_t*)frame->pick.buffer.alloc.mapped;
-	frame->pick.pickedID = pickedObjectId;
-	if(frame->pick.pickedID != 0)
-	{
+	// uint32_t pickedObjectId = *(uint32_t*)frame->pick.buffer.alloc.mapped;
+	// frame->pick.pickedID = pickedObjectId;
+	// if(frame->pick.pickedID != 0)
+	// {
 		
 
-	}
+	// }
 
 	uint32_t imageIndex =  -1;
 
@@ -4948,7 +5842,10 @@ void drawFrame3() {
 	}
 	
 	
-	updateUniformBuffer33(frameIndex);
+	updateGameObjects(frameIndex);
+
+	updateBuffers(frameIndex);
+	// updateUniformBuffer33(frameIndex);
 	
 	vkResetFences(device, 1, &frame->inFlightFence);
 
@@ -5738,8 +6635,8 @@ void cleanupPickImages(){
 	{
 		struct Frame * frame = &frames[i];
 
-		cleanImageRes(&frame->pick.image);
-		cleanBuffer(&frame->pick.buffer);
+		// cleanImageRes(&frame->pick.image);
+		// cleanBuffer(&frame->pick.buffer);
 	
 	}
 }
@@ -5779,13 +6676,13 @@ void recreateSwapChain(){
 
 	cleanupSwapChain();
 
-	cleanupPickImages();
+	// cleanupPickImages();
 
 	createSwapchain();	
 
 	createImageViews();
 
-	createPickImage();
+	// createPickImage();
 	
 }
 
@@ -6170,11 +7067,18 @@ void createShadowPipeline(struct Pipeline * pipeline){
 	};
 
 
+	VkDescriptorSetLayout layouts []={
+		  descriptor_layout_global,
+			descriptor_layout_instance,
+			descriptor_layout_material,
+			descriptor_layout_sampler
+	};
+
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = 1,
-		.pSetLayouts = &descriptorSetLayout4,
+		.setLayoutCount = sizeof(layouts)/sizeof(layouts[0]),
+		.pSetLayouts = layouts,
 		.pushConstantRangeCount  = 0,
 		
 
@@ -6226,19 +7130,19 @@ void createShadowPipeline(struct Pipeline * pipeline){
 		&pipeline->graphicsPipeline
 	);
 }
-void createHUDPipeline(struct  Pipeline * pipeline){
+// void createHUDPipeline(struct  Pipeline * pipeline){
 
-	PRINT_FNAME;
+// 	PRINT_FNAME;
 
 
-
-	
 
 	
 
-	char * path = pipeline->frag_path;
-	uint8_t* data = NULL;
-	uint32_t dataSize = createShaderFromFile(path, &data);
+	
+
+// 	char * path = pipeline->frag_path;
+// 	uint8_t* data = NULL;
+// 	uint32_t dataSize = createShaderFromFile(path, &data);
 	
 	
 
@@ -6247,245 +7151,245 @@ void createHUDPipeline(struct  Pipeline * pipeline){
  
 		
 
-	if(dataSize == 0)
-	{
+// 	if(dataSize == 0)
+// 	{
 
-		printf("Shader path: %s\n",path);
-		EXIT_CLEAN("failed to read fragment shader file\n");
+// 		printf("Shader path: %s\n",path);
+// 		EXIT_CLEAN("failed to read fragment shader file\n");
 	
-	}
-	VkShaderModuleCreateInfo createInfo={
-		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		.pCode = (uint32_t*)data,
-		.codeSize = dataSize,
+// 	}
+// 	VkShaderModuleCreateInfo createInfo={
+// 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+// 		.pCode = (uint32_t*)data,
+// 		.codeSize = dataSize,
 	 
 		
-	};
+// 	};
  
-	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleFrag);
+// 	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleFrag);
 
-	free(data);
-
-
+// 	free(data);
 
 
-	
+
 
 	
-	path = pipeline->vert_path;
 
-	dataSize = createShaderFromFile(path, &data);
+	
+// 	path = pipeline->vert_path;
+
+// 	dataSize = createShaderFromFile(path, &data);
 	
 	 
-	if(dataSize == 0)
-	{
-		printf("Shader path: %s\n",path);
-		EXIT_CLEAN("failed to read vertext shader file\n");
+// 	if(dataSize == 0)
+// 	{
+// 		printf("Shader path: %s\n",path);
+// 		EXIT_CLEAN("failed to read vertext shader file\n");
 		
-	}
+// 	}
 
-	createInfo = (VkShaderModuleCreateInfo) {
-		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		.pCode = (uint32_t*)data,
-		.codeSize = dataSize,
+// 	createInfo = (VkShaderModuleCreateInfo) {
+// 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+// 		.pCode = (uint32_t*)data,
+// 		.codeSize = dataSize,
 		
-	};
+// 	};
 	
-	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleVert);
-	free(data);
+// 	vkCreateShaderModule(device, &createInfo, NULL, &pipeline->shaderModuleVert);
+// 	free(data);
 	
 
 
 	 
-	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-		.stage = VK_SHADER_STAGE_VERTEX_BIT,
-		.module = pipeline->shaderModuleVert,
-		.pName = "main",
+// 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+// 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
+// 		.module = pipeline->shaderModuleVert,
+// 		.pName = "main",
 		
 
-	};
+// 	};
 
-	VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-		.module = pipeline->shaderModuleFrag,
-		.pName = "main",
+// 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+// 		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+// 		.module = pipeline->shaderModuleFrag,
+// 		.pName = "main",
 
-	};
+// 	};
 
-	VkDynamicState dynamicState[]={
-		VK_DYNAMIC_STATE_VIEWPORT, 
-		VK_DYNAMIC_STATE_SCISSOR
-	};
+// 	VkDynamicState dynamicState[]={
+// 		VK_DYNAMIC_STATE_VIEWPORT, 
+// 		VK_DYNAMIC_STATE_SCISSOR
+// 	};
 
-	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		.dynamicStateCount = sizeof(dynamicState)/sizeof(VkDynamicState),
-		.pDynamicStates = dynamicState,
+// 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+// 		.dynamicStateCount = sizeof(dynamicState)/sizeof(VkDynamicState),
+// 		.pDynamicStates = dynamicState,
 		
-	};
+// 	};
 
 	
-	VkPipelineShaderStageCreateInfo shaderStageCreateInf[] = {
-		shaderStageCreateInfoVert,
-		shaderStageCreateInfoFrag
-	};
+// 	VkPipelineShaderStageCreateInfo shaderStageCreateInf[] = {
+// 		shaderStageCreateInfoVert,
+// 		shaderStageCreateInfoFrag
+// 	};
 
-	uint32_t shaderStageCreateInfCnt = sizeof(shaderStageCreateInf) /  sizeof(VkPipelineShaderStageCreateInfo);
+// 	uint32_t shaderStageCreateInfCnt = sizeof(shaderStageCreateInf) /  sizeof(VkPipelineShaderStageCreateInfo);
 
 
-	VkVertexInputBindingDescription vertexInputBindingDescription={
-		.binding = 0,
-		.stride = sizeof(struct Vertex2D),
-		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-	};
+// 	VkVertexInputBindingDescription vertexInputBindingDescription={
+// 		.binding = 0,
+// 		.stride = sizeof(struct Vertex2D),
+// 		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+// 	};
 
   
 
-	VkVertexInputAttributeDescription vertexInputAttributeDescriptions[2];
+// 	VkVertexInputAttributeDescription vertexInputAttributeDescriptions[2];
 
-	vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){0, 0, VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex2D, pos)};
-	vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){1, 0, VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex2D, texCoords)};
+// 	vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){0, 0, VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex2D, pos)};
+// 	vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){1, 0, VK_FORMAT_R32G32_SFLOAT,  offsetof(struct Vertex2D, texCoords)};
  
 
-	uint32_t vertexInputAttributeDescriptionsCount = sizeof(vertexInputAttributeDescriptions) / (sizeof(VkVertexInputAttributeDescription));
+// 	uint32_t vertexInputAttributeDescriptionsCount = sizeof(vertexInputAttributeDescriptions) / (sizeof(VkVertexInputAttributeDescription));
 
 
 
-	VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.vertexBindingDescriptionCount = 1,
-		.pVertexBindingDescriptions = &vertexInputBindingDescription,
-		.vertexAttributeDescriptionCount = vertexInputAttributeDescriptionsCount,
-		.pVertexAttributeDescriptions = vertexInputAttributeDescriptions,
+// 	VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+// 		.vertexBindingDescriptionCount = 1,
+// 		.pVertexBindingDescriptions = &vertexInputBindingDescription,
+// 		.vertexAttributeDescriptionCount = vertexInputAttributeDescriptionsCount,
+// 		.pVertexAttributeDescriptions = vertexInputAttributeDescriptions,
 	
-	};
+// 	};
 
-	VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-	};
+// 	VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+// 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+// 	};
 
  
 	
 
 
-	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		.pViewports = 0,
-		.viewportCount = 1,
-		.pScissors = 0,
-		.scissorCount  =1,
-	};
+// 	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+// 		.pViewports = 0,
+// 		.viewportCount = 1,
+// 		.pScissors = 0,
+// 		.scissorCount  =1,
+// 	};
 
  
 
-	VkPipelineRasterizationStateCreateInfo rasterizer = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		.depthClampEnable = VK_FALSE,
-		.rasterizerDiscardEnable = VK_FALSE,
-		.polygonMode = VK_POLYGON_MODE_FILL,
-		.cullMode = VK_CULL_MODE_BACK_BIT,
-		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-		.depthBiasEnable = VK_FALSE,
-		.depthBiasSlopeFactor = 1.0f,
-		.lineWidth = 1.0f,
+// 	VkPipelineRasterizationStateCreateInfo rasterizer = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+// 		.depthClampEnable = VK_FALSE,
+// 		.rasterizerDiscardEnable = VK_FALSE,
+// 		.polygonMode = VK_POLYGON_MODE_FILL,
+// 		.cullMode = VK_CULL_MODE_BACK_BIT,
+// 		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+// 		.depthBiasEnable = VK_FALSE,
+// 		.depthBiasSlopeFactor = 1.0f,
+// 		.lineWidth = 1.0f,
 		
-	};
+// 	};
 
  
-	VkPipelineMultisampleStateCreateInfo multisampling = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-		.sampleShadingEnable = VK_FALSE,
-	};
+// 	VkPipelineMultisampleStateCreateInfo multisampling = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+// 		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+// 		.sampleShadingEnable = VK_FALSE,
+// 	};
 
  
-	VkPipelineDepthStencilStateCreateInfo depthStencil={
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-		.depthTestEnable = VK_FALSE,
-		.depthWriteEnable = VK_FALSE,
+// 	VkPipelineDepthStencilStateCreateInfo depthStencil={
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+// 		.depthTestEnable = VK_FALSE,
+// 		.depthWriteEnable = VK_FALSE,
 
-		.depthCompareOp = VK_COMPARE_OP_ALWAYS,
+// 		.depthCompareOp = VK_COMPARE_OP_ALWAYS,
 
-		.depthBoundsTestEnable = VK_FALSE,
-		.stencilTestEnable = VK_FALSE,
-	};
+// 		.depthBoundsTestEnable = VK_FALSE,
+// 		.stencilTestEnable = VK_FALSE,
+// 	};
 
+
+	
 
 	
 
 	
 
-	
+// 	VkPipelineColorBlendAttachmentState colorBlendAttachmentState[]=
+// 	{
 
-	VkPipelineColorBlendAttachmentState colorBlendAttachmentState[]=
-	{
+// 		(VkPipelineColorBlendAttachmentState){
+// 			.blendEnable = VK_TRUE, 
 
-		(VkPipelineColorBlendAttachmentState){
-			.blendEnable = VK_TRUE, 
-
-			.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
-			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			.colorBlendOp = VK_BLEND_OP_ADD,
-			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-			.alphaBlendOp = VK_BLEND_OP_ADD,
-		},
+// 			.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+// 			.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+// 			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+// 			.colorBlendOp = VK_BLEND_OP_ADD,
+// 			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+// 			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+// 			.alphaBlendOp = VK_BLEND_OP_ADD,
+// 		},
 
 	
-	};
+// 	};
 
 
-	VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo={
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		.logicOpEnable = VK_FALSE,
-		.logicOp = VK_LOGIC_OP_COPY,
-		.attachmentCount = sizeof(colorBlendAttachmentState) / sizeof(VkPipelineColorBlendAttachmentState),
-		.pAttachments = colorBlendAttachmentState,
-	};
+// 	VkPipelineColorBlendStateCreateInfo colorBlendStateCreateInfo={
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+// 		.logicOpEnable = VK_FALSE,
+// 		.logicOp = VK_LOGIC_OP_COPY,
+// 		.attachmentCount = sizeof(colorBlendAttachmentState) / sizeof(VkPipelineColorBlendAttachmentState),
+// 		.pAttachments = colorBlendAttachmentState,
+// 	};
 
 
-	VkPushConstantRange pushRange = {};
-	pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	pushRange.offset = 0;
-	pushRange.size = sizeof(struct PushConst2D);
+// 	// VkPushConstantRange pushRange = {};
+// 	// pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+// 	// pushRange.offset = 0;
+// 	// pushRange.size = sizeof(struct PushConst2D);
 
-	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = 1,
-		.pSetLayouts = &descriptorSetLayout4,
-		.pushConstantRangeCount  = 1,
-		.pPushConstantRanges = &pushRange
-	};
+// 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+// 		.setLayoutCount = 1,
+// 		.pSetLayouts = &descriptorSetLayout4,
+// 		.pushConstantRangeCount  = 0,
+// 		.pPushConstantRanges = NULL
+// 	};
 
-	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipeline->pipelineLayout );
+// 	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipeline->pipelineLayout );
 
 
-	VkFormat depthFormat = findDepthFormat();
+// 	VkFormat depthFormat = findDepthFormat();
 
 
 
 	
 
-	VkFormat formats[] = {
-		swapchainSurfaceFormat,   
+// 	VkFormat formats[] = {
+// 		swapchainSurfaceFormat,   
 
-		
-
-	};
-
-	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-		.colorAttachmentCount = 1,
-		
-		.pColorAttachmentFormats = formats,
-		.depthAttachmentFormat = depthFormat,
 		
 
-	};
+// 	};
+
+// 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+// 		.colorAttachmentCount = 1,
+		
+// 		.pColorAttachmentFormats = formats,
+// 		.depthAttachmentFormat = depthFormat,
+		
+
+// 	};
 	
 
 
@@ -6493,38 +7397,38 @@ void createHUDPipeline(struct  Pipeline * pipeline){
 
 
 
-	VkGraphicsPipelineCreateInfo  graphicsPipelineCreateInfo = {
-		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO , 
-		.pNext = &pipelineRenderingCreateInfo,
-		.stageCount = shaderStageCreateInfCnt,
-		.pStages = shaderStageCreateInf,
-		.pVertexInputState = &pipelineVertexInputStateCreateInfo,
-		.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo,
-		.pViewportState = &viewportStateCreateInfo,
-		.pRasterizationState = &rasterizer,
-		.pMultisampleState = &multisampling,
-		.pColorBlendState = &colorBlendStateCreateInfo,
-		.pDynamicState = &dynamicStateCreateInfo,
-		.layout = pipeline->pipelineLayout,
-		.renderPass = VK_NULL_HANDLE,
-		.basePipelineHandle = VK_NULL_HANDLE,
-		.basePipelineIndex = - 1,
-		.pDepthStencilState = &depthStencil,
+// 	VkGraphicsPipelineCreateInfo  graphicsPipelineCreateInfo = {
+// 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO , 
+// 		.pNext = &pipelineRenderingCreateInfo,
+// 		.stageCount = shaderStageCreateInfCnt,
+// 		.pStages = shaderStageCreateInf,
+// 		.pVertexInputState = &pipelineVertexInputStateCreateInfo,
+// 		.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo,
+// 		.pViewportState = &viewportStateCreateInfo,
+// 		.pRasterizationState = &rasterizer,
+// 		.pMultisampleState = &multisampling,
+// 		.pColorBlendState = &colorBlendStateCreateInfo,
+// 		.pDynamicState = &dynamicStateCreateInfo,
+// 		.layout = pipeline->pipelineLayout,
+// 		.renderPass = VK_NULL_HANDLE,
+// 		.basePipelineHandle = VK_NULL_HANDLE,
+// 		.basePipelineIndex = - 1,
+// 		.pDepthStencilState = &depthStencil,
 			
-	};
+// 	};
 
-	vkCreateGraphicsPipelines(
-		device,
-		NULL, 
-		1, 
-		&graphicsPipelineCreateInfo,
-		NULL, 
-		&pipeline->graphicsPipeline
-	);
+// 	vkCreateGraphicsPipelines(
+// 		device,
+// 		NULL, 
+// 		1, 
+// 		&graphicsPipelineCreateInfo,
+// 		NULL, 
+// 		&pipeline->graphicsPipeline
+// 	);
 
-}
+// }
 void createPipelines(){
-
+	PRINT_FNAME;
 	
 
 	struct Pipeline * worldPipeline  = 	gmArrayNew(&arrayPipelines);
@@ -6544,21 +7448,21 @@ void createPipelines(){
 	*/
 
 	 
-	struct Pipeline * hudPipeline = gmArrayNew(&arrayPipelines);
+	// struct Pipeline * hudPipeline = gmArrayNew(&arrayPipelines);
 
-	hudPipeline->frag_path = "shaders/out/frag_hud.spv";
-	hudPipeline->vert_path = "shaders/out/vert_hud.spv";
-
-
-	createHUDPipeline(hudPipeline);
+	// hudPipeline->frag_path = "shaders/out/frag_hud.spv";
+	// hudPipeline->vert_path = "shaders/out/vert_hud.spv";
 
 
-	struct Pipeline * shadowPipeline = gmArrayNew(&arrayPipelines);
+	// createHUDPipeline(hudPipeline);
 
-	shadowPipeline->frag_path = "shaders/out/frag_shadow.spv";
-	shadowPipeline->vert_path = "shaders/out/vert_shadow.spv";
 
-	createShadowPipeline(shadowPipeline);
+	// struct Pipeline * shadowPipeline = gmArrayNew(&arrayPipelines);
+
+	// shadowPipeline->frag_path = "shaders/out/frag_shadow.spv";
+	// shadowPipeline->vert_path = "shaders/out/vert_shadow.spv";
+
+	// createShadowPipeline(shadowPipeline);
 
 
 	
@@ -6772,16 +7676,16 @@ void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 			.alphaBlendOp = VK_BLEND_OP_ADD,
 		},
 
-		(VkPipelineColorBlendAttachmentState){
-			.blendEnable = VK_FALSE,
-			.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
-			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			.colorBlendOp = VK_BLEND_OP_ADD,
-			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-			.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-			.alphaBlendOp = VK_BLEND_OP_ADD,
-		},
+		// (VkPipelineColorBlendAttachmentState){
+		// 	.blendEnable = VK_FALSE,
+		// 	.colorWriteMask  = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		// 	.srcColorBlendFactor  = VK_BLEND_FACTOR_SRC_ALPHA,
+		// 	.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+		// 	.colorBlendOp = VK_BLEND_OP_ADD,
+		// 	.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+		// 	.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+		// 	.alphaBlendOp = VK_BLEND_OP_ADD,
+		// },
 	};
 
 
@@ -6791,22 +7695,32 @@ void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		.logicOpEnable = VK_FALSE,
 		.logicOp = VK_LOGIC_OP_COPY,
-		.attachmentCount = sizeof(colorBlendAttachmentState)/ sizeof(VkPipelineColorBlendAttachmentState),
+		.attachmentCount = sizeof(colorBlendAttachmentState)/ sizeof(colorBlendAttachmentState[0]),
 		.pAttachments = colorBlendAttachmentState,
 	};
 
 
-	VkPushConstantRange pushRange = {};
-	pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	pushRange.offset = 0;
-	pushRange.size = sizeof(struct PushConst);
+	// VkPushConstantRange pushRange = {};
+	// pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	// pushRange.offset = 0;
+	// pushRange.size = sizeof(struct PushConst);
+
+		VkDescriptorSetLayout layouts []={
+			descriptor_layout_global,
+			descriptor_layout_instance,
+			descriptor_layout_material,
+			descriptor_layout_sampler
+		};
+
+
+
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = 1,
-		.pSetLayouts = &descriptorSetLayout4,
-		.pushConstantRangeCount  = 1,
-		.pPushConstantRanges = &pushRange
+		.setLayoutCount =sizeof(layouts)/sizeof(layouts[0]),
+		.pSetLayouts = layouts,
+		.pushConstantRangeCount  = 0,
+		.pPushConstantRanges = NULL
 	};
 
 	vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL, &pipeline->pipelineLayout );
@@ -6821,7 +7735,7 @@ void createGraphicsPipeline(struct  Pipeline * pipeline ) {
 	VkFormat formats[] = {
 		swapchainSurfaceFormat,   
 
-		VK_FORMAT_R32_UINT          
+		// VK_FORMAT_R32_UINT          
 
 	};
 
@@ -6893,11 +7807,14 @@ void initVulkan(){
 
 	createImageViews();
 
-	createPickImage();
+	// createPickImage();
 
 	createQueue();
 
-	createDescriptorSetLayout2();
+
+	createDescriptors();
+
+	//createDescriptorSetLayout2();
 
 	createPipelines();
 
@@ -6909,24 +7826,34 @@ void initVulkan(){
 	createSyncObjects3();
 
 
+	createResources();
+	
+
+	updateDefaultDescriptors();
+
 	createDepthImages();
 
-	createShadowImages();
+	// createShadowImages();
 
-	createTextures();
+	// createTextures();
 
-	loadModels();
+	// loadModels();
 	
 
 	
 
 
-	createUniformBuffers33();
+	// createUniformBuffers33();
 
-	createDescriptorPool();
+	//createDescriptorPool();
 
 
-	createDescriptorSets33();
+	//createDescriptorSets33();
+
+
+	initMeshes();
+
+	createMeshBuffers();
 	
 
 }
@@ -7003,27 +7930,30 @@ void cleanup(){
 		struct Frame *frame = &frames[i];
 
 		cleanImageRes(&frame->deapth);
-		cleanImageRes(&frame->shadow.image);
-		vkDestroySampler(device, frame->shadow.textureSampler,0);
+		// cleanImageRes(&frame->shadow.image);
+		// vkDestroySampler(device, frame->shadow.textureSampler,0);
 
 
 	}
 
-	for( int i=0;i<arrayTextures_3D.len ;i++)
-	{
-		struct TextureRes * t = gmArrayGet(&arrayTextures_3D, i);
 
-		cleanTextureRes(t);
+	cleanTextureRes(&tex_res0);
+
+	// for( int i=0;i<arrayTextures_3D.len ;i++)
+	// {
+	// 	struct TextureRes * t = gmArrayGet(&arrayTextures_3D, i);
+
+	// 	cleanTextureRes(t);
 		
-	}
+	// }
 
-	for( int i=0;i<arrayTextures_2D.len ;i++)
-	{
-		struct TextureRes * t = gmArrayGet(&arrayTextures_2D, i);
+	// for( int i=0;i<arrayTextures_2D.len ;i++)
+	// {
+	// 	struct TextureRes * t = gmArrayGet(&arrayTextures_2D, i);
 
-		cleanTextureRes(t);
+	// 	cleanTextureRes(t);
 
-	}
+	// }
 
 	for(int i=0;i<arrayPipelines.len;i++)
 	{
@@ -7042,11 +7972,23 @@ void cleanup(){
 
 	
 
-	vkDestroyDescriptorSetLayout(device, descriptorSetLayout4, NULL);
+	// descriptor_layout_global,
+	// 		descriptor_layout_instance,
+	// 		descriptor_layout_material,
+	// 		descriptor_layout_sampler
 
-	vkFreeDescriptorSets(device,descriptorPool, MAX_FRAMES_IN_FLIGHT,descriptorSets2);
 
-	vkDestroyDescriptorPool(device, descriptorPool, NULL);
+	vkDestroyDescriptorSetLayout(device, descriptor_layout_global, NULL);
+	vkDestroyDescriptorSetLayout(device, descriptor_layout_instance, NULL);
+	vkDestroyDescriptorSetLayout(device, descriptor_layout_material, NULL);
+	vkDestroyDescriptorSetLayout(device, descriptor_layout_sampler, NULL);
+
+	vkFreeDescriptorSets(device,descriptor_pool, 1,&descriptor_set_materials);
+	vkFreeDescriptorSets(device,descriptor_pool, MAX_FRAMES_IN_FLIGHT,descriptor_set_instances);
+	vkFreeDescriptorSets(device,descriptor_pool, MAX_FRAMES_IN_FLIGHT,descriptor_set_globals);
+	vkFreeDescriptorSets(device,descriptor_pool, 1,&descriptor_set_samplers);
+
+	vkDestroyDescriptorPool(device, descriptor_pool, NULL);
 
 	for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++)
 	{
@@ -7062,19 +8004,21 @@ void cleanup(){
 
 	vkDestroyCommandPool(device, transferCommnadPool, NULL);
 	
+	cleanBuffer(&vertex_buffer);
+	cleanBuffer(&index_buffer);
 
 
-	for(int i=0; i < MODEL_NUM; i++)
-	{
-		struct ModelVertexData2 * ref = &modelVertexData_3D[i];
-		// freeModelVertexData(ref);
-		cleanBuffer(&ref->vertexBuffer);
-		cleanBuffer(&ref->indexBuffer);
+	// for(int i=0; i < MODEL_NUM; i++)
+	// {
+	// 	struct ModelVertexData2 * ref = &modelVertexData_3D[i];
+	// 	// freeModelVertexData(ref);
+	// 	cleanBuffer(&ref->vertexBuffer);
+	// 	cleanBuffer(&ref->indexBuffer);
 		
-	}
+	// }
 
-	cleanBuffer(&modelVertexData_HUD2.vertexBuffer);
-	cleanBuffer(&modelVertexData_HUD2.indexBuffer);
+	// cleanBuffer(&modelVertexData_HUD2.vertexBuffer);
+	// cleanBuffer(&modelVertexData_HUD2.indexBuffer);
 	// freeModelVertexData(&modelVertexData_HUD);
 
 	cleanShaderBuffers();
@@ -7138,14 +8082,17 @@ int main(){
 
 	PRINT_FNAME;
 
-	initVariables();
+	initVariables2();
 
 	initWindow();
 	initVulkan();
+
+	initGameObjects();
+
 	mainLoop();
 	cleanup();
 
-	freeVariables();
+	freeVariables2();
 
 	return 0;
 };
