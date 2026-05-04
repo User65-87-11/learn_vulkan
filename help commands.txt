@@ -1,0 +1,4 @@
+file to C byte array
+
+[System.IO.File]::ReadAllBytes("C:\Users\user\Documents\32x32.png")
+($data | ForEach-Object { "0x{0:X2}" -f $_ }) -join ", "
