@@ -4,8 +4,6 @@
 
 #include "shader_inc.glsl"
 
-
-
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in flat uint instance_id;
@@ -13,39 +11,38 @@ layout(location = 2) in flat uint instance_id;
 //to the first color attachment
 layout(location = 0) out vec4 out_color;
 
+layout(set = DESC_SET_GLOBALS, binding = 0) uniform Global
+{
+    Global_ubo global;
+};
 
 layout(std430, set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
 {
-	Instance_ssbo inst[];
+    Instance_ssbo inst[];
 };
 
 layout(std430, set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
 {
-	Material_ssbo material[];
+    Material_ssbo material[];
 };
 
-layout(set = DESC_SET_TEXTURES, binding = 0) uniform sampler2D  tex[MAX_TEXTURES];
-
-
-
+layout(set = DESC_SET_TEXTURES, binding = 0) uniform sampler2D tex[MAX_TEXTURES];
 
 void main() {
-	
-	uint idx = instance_id;
+    uint idx = instance_id;
 
-	uint tex_idx = inst[idx].tex_idx;
+    uint tex_idx = inst[idx].tex_idx;
 
-	vec4 texColor = texture(tex[tex_idx], texCoord);
+    vec2 distorted_uv = texCoord;
+    // distorted_uv.x += sin(texCoord.y * 10.0 + global.time_total) * 0.05;
 
-	vec4 inst_color = inst[idx].color;
+    vec4 texColor = texture(tex[tex_idx], distorted_uv);
 
-	float color_factor = inst[idx].color_factor;
+    vec4 inst_color = inst[idx].color;
 
-	vec4 finalColor = mix(texColor, inst_color, color_factor);
+    float color_factor = inst[idx].color_factor;
 
-	out_color = finalColor;
+    vec4 finalColor = mix(texColor, inst_color, color_factor);
 
-
-
+    out_color = finalColor;
 }
-

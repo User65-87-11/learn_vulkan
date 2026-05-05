@@ -17,10 +17,10 @@ pub fn build(b: *std.Build) void {
         .file = b.path("main.c"),
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("gm_array2.c"),
+        .file = b.path("util/gm_array.c"),
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("gm_list.c"),
+        .file = b.path("util/gm_list.c"),
     });
 
     // Include paths
@@ -31,6 +31,10 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addIncludePath(.{
         .cwd_relative = "c:/libs/glfw-ucrt/include",
     });
+
+  //  exe.root_module.addIncludePath(.{
+   //     .cwd_relative = ".",
+  //  });
 
     // Library paths
     exe.root_module.addLibraryPath(.{ .cwd_relative = "C:/VulkanSDK/1.4.341.1/Lib" });

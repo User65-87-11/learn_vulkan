@@ -39,8 +39,8 @@
 
 #include "shaders/shader_inc.glsl"
 
-#include "util/gm_array.h"
-#include "util/gm_list.h"
+#include "gm_array2.h"
+#include "gm_list.h"
 
 const uint32_t WIDTH = 800;
 

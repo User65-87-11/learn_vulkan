@@ -1,7 +1,7 @@
 
 
 
-// 
+//
 
 #include "cglm/vec3.h"
 #include <vulkan/vulkan_core.h>
@@ -38,7 +38,7 @@
 // #define TINYOBJ_LOADER_C_IMPLEMENTATION
 // #include "obj_loader/tinyobj_loader_c.h"
 
-#define CGLTF_IMPLEMENTATION 
+#define CGLTF_IMPLEMENTATION
 #include "cgltf/cgltf.h"
 
 
@@ -73,13 +73,13 @@ void loadModel(char *fname){
 	printf("load model: %s\n",fname);
 	/*
 	cgltf_load_buffers(const cgltf_options *options, cgltf_data *data, const char *gltf_path) -> cgltf_result
-	
+
 	*/
 	const cgltf_options options={};
 	cgltf_data *data;
 	uint32_t data_size;
 	const char * gltf_path = fname;
-	
+
 	cgltf_result res;
 
 	/**
@@ -90,7 +90,7 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
   	res = cgltf_parse_file(&options,fname,&data);
 
 
-	// res = cgltf_load_buffers(&options,data,gltf_path);	
+	// res = cgltf_load_buffers(&options,data,gltf_path);
 
 	if(res != cgltf_result_success)
 	{
@@ -127,7 +127,7 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 	// 	printf(" .stride:%ld\n",data->buffer_views[i].stride);
 	// 	printf(" .data:%p\n",data->buffer_views[i].data);
 	// }
-	
+
 	printf("Scene count: %d\n",data->scenes_count);
 	for(int i=0;i<data->scenes_count;i++)
 	{
@@ -149,12 +149,12 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 
 	printf("Meshes cnt [%d]:\n",data->meshes_count);
 	for(int i=0;i<data->meshes_count;i++){
-		
-		printf("Meshes \n");	
+
+		printf("Meshes \n");
 		printf(" .name:%s\n",data->meshes[i].name);
-	
+
 		printf(" .primitives_count:%ld\n",data->meshes[i].primitives_count);
-		
+
 
 		for(int j=0;j<data->meshes[i].primitives_count;j++){
 
@@ -208,7 +208,7 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 					printf("    .cgltf_type:%d\n",accessor->type);
 				}
 
-				
+
 			}
 			printf(" .primitives_count:%ld\n",data->meshes[i].primitives_count);
 		}
@@ -219,25 +219,25 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 
 
 		char url_path[256] ;
-	 
+
 		uint32_t n = snprintf(url_path, sizeof(url_path), "models_gltf/%s", data->buffers[0].uri);
 
 		if (n >= (uint32_t)sizeof(url_path)) {
-			
-		 
+
+
 			EXIT_CLEAN("url_path Overflow!");
 		}
 
 
 		printf("Buffer.path:%s\n",url_path);
-		 
+
 		cgltf_load_buffers(&options,data,url_path);
 
 		printf("Buffer.data:%p\n",data->buffers[0].data);
 		printf("Buffer.size:%ld\n",data->buffers[0].size);
-		
+
 	}
-	
+
 	printf("data.data_extensions_count. %ld\n",data->data_extensions_count);
 	printf("data.buffer_views_count %ld\n",data->buffer_views_count);
 	printf("data.animations_count %ld\n",data->animations_count);
@@ -247,7 +247,7 @@ cgltf_result cgltf_parse_file(const cgltf_options* options, const
 	printf("data.buffers_count %ld\n",data->buffers_count);
 	printf("data.lights_count %ld\n",data->lights_count);
 	printf("data.meshes_count %ld\n",data->meshes_count);
- 
+
 
 
 	//LOAD MODEL
@@ -282,11 +282,11 @@ typedef enum cgltf_type
 
 	*/
 	// cgltf_primitive *primitive = &data->meshes[0].primitives[0];
-	 
+
 
 	// cgltf_accessor *acc_idx = primitive->indices;
-	// cgltf_accessor *acc_vert = NULL; 
- 	
+	// cgltf_accessor *acc_vert = NULL;
+
 	// for(int i=0;i < primitive->attributes_count;i++){
 
 	// 	cgltf_attribute attr =  primitive->attributes[i];
@@ -294,7 +294,7 @@ typedef enum cgltf_type
 	// 	{
 
 	// 		cgltf_accessor* accessor = attr.data;
-		
+
 	// 		cgltf_buffer_view* view = accessor->buffer_view;
 
 	// 		uint8_t* base = (uint8_t*)view->buffer->data + view->offset + accessor->offset;
@@ -304,19 +304,19 @@ typedef enum cgltf_type
 
 	// 		printf("verticesNum: %d\n",verticesNum);
 	// 		printf("stride: %ld\n",stride);
-		 
 
-		 
+
+
 	// 	}
 
-		
+
 	// }
 
 
 	// for(int i=0;i<primitive->attributes_count;i++){
 
 	// 	cgltf_attribute attr =  primitive->attributes[i];
-		
+
 	// 	if(attr.type == cgltf_attribute_type_normal)
 	// 	{
 	// 		assert(attr.data->type == cgltf_type_vec3);
@@ -329,22 +329,22 @@ typedef enum cgltf_type
 	// 		size_t stride = accessor->stride ? accessor->stride : sizeof(float) * 2;
 
 	// 		size_t verticesNum = accessor->count;
-	
+
 
 	// 		for (size_t d = 0; d < verticesNum; d++) {
 	// 			float* data = (float*)(base + d * stride);
- 
+
 	// 		}
 	// 		break;
 	// 	}
 	// }
 
 
- 
+
 	// for(int i=0;i<primitive->attributes_count;i++){
 
 	// 	cgltf_attribute attr =  primitive->attributes[i];
-		
+
 	// 	if(attr.type == cgltf_attribute_type_texcoord)
 	// 	{
 	// 		assert(attr.data->type == cgltf_type_vec2);
@@ -362,7 +362,7 @@ typedef enum cgltf_type
 
 	// 		for (size_t d = 0; d < verticesNum; d++) {
 	// 			float* data = (float*)(base + d * stride);
- 
+
 	// 		}
 	// 		break;
 	// 	}
@@ -370,7 +370,7 @@ typedef enum cgltf_type
 
 	// if(primitive->indices)
 	// {
-	
+
 	// 	// printf("primitive->indices->component_type %d\n",primitive->indices->component_type);
 	// 	// assert(primitive->indices->component_type == cgltf_component_type_r_16u);
 
@@ -389,8 +389,8 @@ typedef enum cgltf_type
 
 	// 	size_t indicesNum = primitive->indices->count;
 
-		 
- 
+
+
 	// 	for(int d=0;d<indicesNum;d++){
 
 	// 		uint8_t* ptr = base + d * stride;
@@ -411,17 +411,17 @@ typedef enum cgltf_type
 	// 				}
 	// 				break;
 	// 		}
-			
+
 	// 	}
-		
+
 	// }
 
- 
+
 
 	cgltf_free(data);
 
 
- 
+
 }
 
 

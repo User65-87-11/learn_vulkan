@@ -1,0 +1,53 @@
+#pragma once
+#include <stdio.h>
+
+#include "cglm/cglm.h"
+#include "cglm/mat4.h"
+#include "cglm/types.h"
+#include "cglm/util.h"
+
+
+
+void cleanup();
+#define PRINT_FNAME printf("Call to: %s\n", __FUNCTION__)
+
+#define ARR_LEN(A) sizeof(A) / sizeof(A[0])
+
+#define EXIT_CLEAN(msg)                                                        \
+  do {                                                                         \
+    printf("ERROR: %s\n", msg);                                                \
+    cleanup();                                                                 \
+    exit(1);                                                                   \
+  } while (0)
+
+#define GLM_VEC3_COPY(dst, src)                                                \
+  do {                                                                         \
+    dst[0] = src[0];                                                           \
+    dst[1] = src[1];                                                           \
+    dst[2] = src[2];                                                           \
+  } while (0)
+
+#define GLM_MAT4_COPY(dst, src) memcpy(dst, src, sizeof(mat4))
+
+#define GLM_VEC4_COPY(dst, src)                                                \
+  do {                                                                         \
+    dst[0] = src[0];                                                           \
+    dst[1] = src[1];                                                           \
+    dst[2] = src[2];                                                           \
+    dst[3] = src[3];                                                           \
+  } while (0)
+
+#define GLM_VEC4_SET(dst, a, b, c, d)                                          \
+  do {                                                                         \
+    dst[0] = a;                                                                \
+    dst[1] = b;                                                                \
+    dst[2] = c;                                                                \
+    dst[3] = d;                                                                \
+  } while (0)
+
+#define GLM_VEC3_SET(dst, a, b, c)                                             \
+  do {                                                                         \
+    dst[0] = a;                                                                \
+    dst[1] = b;                                                                \
+    dst[2] = c;                                                                \
+  } while (0)
