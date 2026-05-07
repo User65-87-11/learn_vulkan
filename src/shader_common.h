@@ -1,6 +1,11 @@
 #ifndef __SHADERS__
 #pragma once
 #include <stdint.h>
+#include "cglm/cam.h"
+#include "cglm/cglm.h"
+#include "cglm/mat4.h"
+#include "cglm/types.h"
+#include "cglm/util.h"
 #endif
 
 

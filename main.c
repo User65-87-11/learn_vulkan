@@ -2,7 +2,6 @@
 
 #include <time.h>
 #include <vulkan/vulkan_core.h>
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -1138,8 +1137,8 @@ void createTextureSampler(VkSampler *sampler) {
 
       .maxAnisotropy = physicalDeviceProperties.limits.maxSamplerAnisotropy,
 
-      .compareOp = VK_COMPARE_OP_ALWAYS,
-
+      // .compareOp = VK_COMPARE_OP_ALWAYS,
+      .compareOp = VK_COMPARE_OP_LESS,
       .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
       .unnormalizedCoordinates = VK_FALSE,
   };
@@ -1946,22 +1945,7 @@ void createDescriptors() {
   }
 }
 
-uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-  VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
-  vkGetPhysicalDeviceMemoryProperties(physicalDevice,
-                                      &physicalDeviceMemoryProperties);
 
-  for (uint32_t i = 0; i < physicalDeviceMemoryProperties.memoryTypeCount;
-       i++) {
-    if ((typeFilter & (1 << i)) &&
-        (physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags &
-         properties) == properties) {
-      return i;
-    }
-  }
-
-  EXIT_CLEAN("failed to find suitable memory type!");
-}
 
 void createBufferRes(VkDeviceSize size, VkBufferUsageFlags usage,
                      VkMemoryPropertyFlags properties,

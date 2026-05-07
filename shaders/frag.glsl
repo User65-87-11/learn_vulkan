@@ -2,7 +2,7 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "shader_inc.glsl"
+#include "shader_common.h"
 
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 normal;

@@ -1,8 +1,8 @@
 @ECHO off
 
-glslangValidator -D__SHADERS__ -V -S frag ./shaders/frag.glsl -o ./shaders/out/frag.spv -e main
+glslangValidator -Isrc -D__SHADERS__  -V -S frag ./shaders/frag.glsl -o ./shaders/out/frag.spv -e main
 
-glslangValidator -D__SHADERS__  -V -S vert ./shaders/vert.glsl -o ./shaders/out/vert.spv -e main
+glslangValidator -Isrc -D__SHADERS__   -V -S vert ./shaders/vert.glsl -o ./shaders/out/vert.spv -e main
 
 
 @REM glslangValidator -V -S frag ./shaders/frag_hud.glsl -o ./shaders/out/frag_hud.spv -e main

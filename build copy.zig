@@ -14,26 +14,15 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/main.c"),
+        .file = b.path("main.c"),
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/util/gm_array.c"),
+        .file = b.path("util/gm_array.c"),
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/util/gm_list.c"),
+        .file = b.path("util/gm_list.c"),
     });
-    exe.root_module.addCSourceFile(.{
-        .file = b.path("src/instance.c"),
-    });
-    exe.root_module.addCSourceFile(.{
-        .file = b.path("src/platform.c"),
-    });
-    exe.root_module.addCSourceFile(.{
-        .file = b.path("src/descriptors.c"),
-    });
-    exe.root_module.addCSourceFile(.{
-        .file = b.path("src/resource.c"),
-    });
+
     // Include paths
     exe.root_module.addIncludePath(.{
         .cwd_relative = "C:/VulkanSDK/1.4.341.1/Include",
@@ -43,13 +32,9 @@ pub fn build(b: *std.Build) void {
         .cwd_relative = "c:/libs/glfw-ucrt/include",
     });
 
-    exe.root_module.addIncludePath(.{
-        .cwd_relative = ".",
-    });
-
-    // exe.root_module.addIncludePath(.{
-    //     .cwd_relative = "src",
-    //  });
+  //  exe.root_module.addIncludePath(.{
+   //     .cwd_relative = ".",
+  //  });
 
     // Library paths
     exe.root_module.addLibraryPath(.{ .cwd_relative = "C:/VulkanSDK/1.4.341.1/Lib" });

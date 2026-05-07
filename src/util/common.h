@@ -8,7 +8,16 @@
 
 
 
-void cleanup();
+#define MAX_IMAGE_VIEWS 16
+
+#define MAX_FRAMES_IN_FLIGHT 2
+
+#define MAX_VERTICES  100000
+
+#define MAX_INDICES   300000
+
+
+extern void cleanup();
 #define PRINT_FNAME printf("Call to: %s\n", __FUNCTION__)
 
 #define ARR_LEN(A) sizeof(A) / sizeof(A[0])
@@ -51,3 +60,10 @@ void cleanup();
     dst[1] = b;                                                                \
     dst[2] = c;                                                                \
   } while (0)
+
+
+  struct Range {
+    uint32_t start;
+    uint32_t len;
+  };
+
