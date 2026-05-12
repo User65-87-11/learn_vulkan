@@ -9,19 +9,19 @@
 #include <stdlib.h>
 #else
 #include <unistd.h>
-
 #endif
 
-
-const uint32_t WIDTH = 800;
-
-const uint32_t HEIGHT = 600;
+#include "app.h"
 
 
+#define WIDTH  800
 
-void Platform_InitWindow();
+#define HEIGHT  600
 
-void Platform_GetFramebufferSize(uint32_t* width, uint32_t* height);
+
+
+void Platform_InitWindow(struct ApplicationContext * context);
+
 
 void Platform_WaitForEvents();
 void Platform_Shutdown();
@@ -30,11 +30,16 @@ void Platform_Shutdown();
 // void Platform_mouseCallback(GLFWwindow *window, double xposIn, double yposIn);
 
 
+void Platform_createSurface(VkInstance instance);
+void Platform_destroySurface(VkInstance instance);
+
 VkSurfaceKHR Platform_GetSurface();
 
 int Platform_GetMouseButtonState(int button);
 
 void Platform_GetCursorPos(double* x, double* y);
+
+float Platform_GetAspectRatio();
 
 int Platform_GetKeyState(int key);
 
@@ -45,3 +50,7 @@ float Platform_GetTime();
 int Platform_ShouldCloseWindow();
 
 void Platform_SetShouldCloseWindow( uint32_t value);
+
+bool Platform_HasFrameBufferResized();
+
+void Platform_GetFramebufferSize(uint32_t* width, uint32_t* height);

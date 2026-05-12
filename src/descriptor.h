@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include "shader_common.h"
 
 struct DescriptorContext {
     VkDescriptorPool pool;
@@ -9,6 +10,10 @@ struct DescriptorContext {
     VkDescriptorSetLayout instanceLayout;
     VkDescriptorSetLayout materialLayout;
     VkDescriptorSetLayout samplerLayout;
+
+    //should work on load only
+    VkDescriptorImageInfo descriptor_image_info_textures[MAX_TEXTURES];
+    uint32_t descriptor_texture_last_used ;
 };
 
 
@@ -27,6 +32,17 @@ struct DescriptorContext* Descriptor_GetContext();
 // allocation
 VkDescriptorSet Descriptor_Allocate(VkDescriptorSetLayout layout);
 
+void Descriptor_SetTextureToDescriptorInfoArray(
+	VkImageView view,
+	VkSampler sampler,
+	uint32_t position
+);
+void Descriptor_UpdateTextureDescriptors(
+	VkDescriptorSet descriptor_set, 
+	VkDescriptorImageInfo * arr,
+	uint32_t count,
+	uint32_t offset
+);
 // updates
 void Descriptor_UpdateBuffer(
     VkDescriptorSet set,

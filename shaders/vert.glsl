@@ -7,19 +7,28 @@ layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_norm;
 layout(location = 2) in vec2 in_texCoord;
 
-layout(set = DESC_SET_GLOBALS, binding = 0) uniform Global
+layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_GLOBAL) uniform Global
 {
-    Global_ubo global;
+    GlobalData global;
 };
 
-layout(std430, set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
+layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_CAMERA) uniform Global_Camera
 {
-    Instance_ssbo inst[];
+    CameraData camera;
+};
+layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_LIGHT) uniform Global_Lights
+{
+    LightData light;
 };
 
-layout(std430, set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
+layout(set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
 {
-    Material_ssbo material[];
+    InstanceData inst[];
+};
+
+layout(set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
+{
+    MaterialData material[];
 };
 
 layout(location = 0) out vec2 out_texCoord;
@@ -28,14 +37,49 @@ layout(location = 1) out vec3 out_norm;
 
 layout(location = 2) out flat uint out_instance_id;
 
+mat4 get_proj() {
+    float fov = radians(45.0);
+    float aspect = 16.0 / 9.0;
+    float near = 0.1;
+    float far = 10.0;
+
+    float f = 1.0 / tan(fov * 0.5);
+
+    mat4 proj = mat4(
+            f / aspect, 0.0, 0.0, 0.0,
+            0.0, f, 0.0, 0.0,
+            0.0, 0.0, (far + near) / (near - far), -1.0,
+            0.0, 0.0, (2.0 * far * near) / (near - far), 0.0
+        );
+
+    proj[1][1] *= -1.0;
+    return proj;
+}
+vec3 positions[3] = vec3[](
+        vec3(-1.6, -1.4, -6.0),
+        vec3(1.6, -1.4, -6.0),
+        vec3(1.0, 1.6, -6.0)
+    );
+
 void main() {
+    mat4 view = mat4(1.0);
+
+    // Hard-coded triangle vertices
+
+    // Select vertex based on built-in ID
+    vec3 pos = positions[gl_VertexIndex];
+
+    // gl_Position = vec4(pos, 0.0, 1.0);
+    gl_Position = camera.view_proj * vec4(in_position, 1.0);
+    return;
+
     vec3 disstorted_pos = in_position;
 
     // disstorted_pos.x += (sin(in_position.y * 10.0 + global.time_total * 5) + 1.0) * 0.05;
 
     vec4 world_pos = inst[gl_InstanceIndex].model * vec4(disstorted_pos, 1.0);
 
-    gl_Position = global.proj * global.view * world_pos;
+    gl_Position = camera.view_proj * world_pos;
 
     out_texCoord = in_texCoord;
 

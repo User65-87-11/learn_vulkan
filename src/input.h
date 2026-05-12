@@ -12,11 +12,13 @@ struct InputState {
     double cursorPosY;
     double prevPosX;
     double prevPosY;
+    float sensitivity;
     int   mouseButtons[MAX_MOUSE_BUTTONS];
     int   keys[MAX_KEYS];
-} InputState;
+};
 
 
 
+struct InputState * Input_Get();
 void Input_Update();
-struct InputState * Input_getState();
+void Input_Init();

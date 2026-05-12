@@ -1,4 +1,4 @@
-floor
-
-    4) Alternative: Ray-plane intersection (fullscreen pass)
-sky
+1. glfwInit()
+2. glfwCreateWindow()
+3. vkCreateInstance()
+4. glfwCreateWindowSurface()   ← surface created here

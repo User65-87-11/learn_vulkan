@@ -3,8 +3,8 @@
 
 
 
-void Instance_CreateInstance();
+void Instance_Create();
 
 void Instance_DestroyInstance();
 
-VkInstance Instance_getInstance();
+VkInstance Instance_Get();

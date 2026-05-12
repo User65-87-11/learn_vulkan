@@ -17,7 +17,7 @@
 #define MAX_INDICES   300000
 
 
-extern void cleanup();
+// extern void cleanup();
 #define PRINT_FNAME printf("Call to: %s\n", __FUNCTION__)
 
 #define ARR_LEN(A) sizeof(A) / sizeof(A[0])
@@ -25,7 +25,6 @@ extern void cleanup();
 #define EXIT_CLEAN(msg)                                                        \
   do {                                                                         \
     printf("ERROR: %s\n", msg);                                                \
-    cleanup();                                                                 \
     exit(1);                                                                   \
   } while (0)
 

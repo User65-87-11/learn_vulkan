@@ -11,24 +11,41 @@ layout(location = 2) in flat uint instance_id;
 //to the first color attachment
 layout(location = 0) out vec4 out_color;
 
-layout(set = DESC_SET_GLOBALS, binding = 0) uniform Global
+layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_GLOBAL) uniform Global
 {
-    Global_ubo global;
+    GlobalData global;
 };
 
-layout(std430, set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
+layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_CAMERA) uniform Global_Camera
 {
-    Instance_ssbo inst[];
+    CameraData camera;
+};
+layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_LIGHT) uniform Global_Lights
+{
+    LightData light;
 };
 
-layout(std430, set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
+layout(set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
 {
-    Material_ssbo material[];
+    InstanceData inst[];
+};
+
+layout(set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
+{
+    MaterialData material[];
 };
 
 layout(set = DESC_SET_TEXTURES, binding = 0) uniform sampler2D tex[MAX_TEXTURES];
 
 void main() {
+    if (global.frame_cnt == 0x88)
+    {
+        out_color = vec4(1.0, 0.0, 0.0, 1.0);
+    } else
+    {
+        out_color = vec4(0.2, 0.8, 1.0, 1.0);
+    }
+    return;
     uint idx = instance_id;
 
     uint tex_idx = inst[idx].tex_idx;

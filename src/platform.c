@@ -1,8 +1,11 @@
+#include "src/app.h"
+#include "vulkan/vk_platform.h"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 #include "util/common.h"
 #include "platform.h"
+#include "renderer.h"
 #include "instance.h"
 
 #ifdef _WIN32
@@ -24,12 +27,11 @@ static GLFWwindow *window = NULL;
 
 // static double mouseX, mouseY;
 
-static bool framebufferResized = false;
-
 static float posX, posY;
 
 static VkSurfaceKHR surface = VK_NULL_HANDLE;
-static VkInstance instance = VK_NULL_HANDLE;
+
+// static VkInstance instance = VK_NULL_HANDLE;
 
 
 static VkSurfaceCapabilitiesKHR surfaceCapabilities;
@@ -37,39 +39,27 @@ static VkSurfaceCapabilitiesKHR surfaceCapabilities;
 
 static void  mouseCallback(GLFWwindow *window, double xposIn, double yposIn) ;
 
-static void initWindow();
+static void frameResizeCallback(
+	GLFWwindow* window,
+    int width,
+    int height
+);
 
-static void framebufferResizeCallback(GLFWwindow *win, int w, int h) {
-  framebufferResized = true;
-}
 
-void Platform_InitWindow(){
-	instance = Instance_getInstance();
-	initWindow();
-	glfwCreateWindowSurface(instance, window, NULL, &surface);
+
+void Platform_createSurface(VkInstance instance){
+	VkResult result = glfwCreateWindowSurface(instance, window, NULL, &surface);
 	
 }
-void Platform_WaitForEvents(){
-	 glfwWaitEvents();
+void Platform_destroySurface(VkInstance instance)
+{
+		vkDestroySurfaceKHR(instance, surface, NULL);
 }
-void Platform_GetFramebufferSize(uint32_t* width, uint32_t* height){
-
-	 glfwGetFramebufferSize(window, width, height);
-}
-
-void Platform_Shutdown(){
-
-	vkDestroySurfaceKHR(instance, surface, NULL);
-	glfwDestroyWindow(window);
-}
-
-VkSurfaceKHR Platform_GetSurface(){
+void Platform_InitWindow(struct ApplicationContext * app){
+	PRINT_FNAME;
 	
-	return surface;
-}
-static void initWindow() {
-
-  printf("%s %d %d\n", __FUNCTION__, WIDTH, HEIGHT);
+	// instance = Instance_getInstance();
+ printf("%s %d %d\n", __FUNCTION__, WIDTH, HEIGHT);
 
   glfwInit();
 
@@ -88,10 +78,63 @@ static void initWindow() {
 
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-  glfwSetCursorPosCallback(window, mouseCallback);
+  // glfwSetCursorPosCallback(window, mouseCallback);
 
-  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+  glfwSetWindowUserPointer(window, app);
   
+  glfwSetFramebufferSizeCallback(window, frameResizeCallback);
+  
+  
+
+}
+static void frameResizeCallback(
+	GLFWwindow* window,
+    int width,
+    int height
+){
+ 	struct ApplicationContext * app = glfwGetWindowUserPointer(window);
+
+    app->renderer.framebuffer_resized = true;
+    app->scene.camera_data.aspect_ratio = Platform_GetAspectRatio();
+   	glm_perspective(
+    	glm_rad( app->scene.camera_data.fov),
+		app->scene.camera_data.aspect_ratio, 
+		app->scene.camera_data.near_plane,
+		app->scene.camera_data.far_plane, 
+		app->scene.camera_data.proj
+	);
+	app->scene.camera_data.proj[1][1] *= -1.f;
+}
+void Platform_WaitForEvents(){
+	 glfwWaitEvents();
+}
+void Platform_GetFramebufferSize(uint32_t* width, uint32_t* height){
+
+	 glfwGetFramebufferSize(window, width, height);
+}
+
+float Platform_GetAspectRatio(){
+	VkExtent2D extent;
+	Platform_GetFramebufferSize(&extent.width,&extent.height);
+  
+	float aspect_ratio = (float)extent.width / (float)extent.height;
+
+	return aspect_ratio;
+}
+
+void Platform_Shutdown(){
+
+
+	glfwDestroyWindow(window);
+}
+
+VkSurfaceKHR Platform_GetSurface(){
+	
+	return surface;
+}
+static void initWindow() {
+
+
 }
 
 
@@ -116,8 +159,9 @@ float Platform_GetTime(){
 // }
 
 void Platform_GetCursorPos(double* x, double* y){
-	*x = posX;
-	*y = posY;
+	glfwGetCursorPos(window, x, y);
+	// *x = posX;
+	// *y = posY;
 }
 
 static void mouseCallback(GLFWwindow *window, double xposIn, double yposIn) {

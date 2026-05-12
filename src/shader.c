@@ -25,7 +25,7 @@ void Shader_Destroy(
 	VkDevice device, 
 	VkShaderModule shader
 ){
-	vkDestroyShaderModule(Device_Get()->device, shader, NULL);
+	vkDestroyShaderModule(device, shader, NULL);
 }
 VkShaderModule Shader_CreateFromFile(
 	VkDevice device, 

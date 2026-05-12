@@ -4,11 +4,6 @@
 #include "util/common.h"
 #include "shader_common.h"
 
-static void createDescriptors();
-	
-static void createCommandPool();
-
-static void createSyncObjects();
 
 // static VkFormat findDepthFormat();
 
@@ -18,12 +13,10 @@ void Pipeline_CreateGraphics(
    struct GraphicsPipeline* pipeline
    
 )
-
-// static void createGraphicsPipeline()
 {
 		
 	PRINT_FNAME;
-	VkDevice device = Device_Get()->device;
+	VkDevice device = Device_Get()->logical_device;
 	
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
 	    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -72,16 +65,22 @@ void Pipeline_CreateGraphics(
 
   VkVertexInputAttributeDescription vertexInputAttributeDescriptions[3];
 
-  vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){
-      0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)};
-  vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){
-      1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)};
-  vertexInputAttributeDescriptions[2] = (VkVertexInputAttributeDescription){
-      2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)};
+  vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription)
+  {
+      0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)
+  };
+  vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription)
+  {
+      1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)
+  };
+  vertexInputAttributeDescriptions[2] = (VkVertexInputAttributeDescription)
+  {
+      2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)
+  };
 
-  uint32_t vertexInputAttributeDescriptionsCount =
-      sizeof(vertexInputAttributeDescriptions) /
-      (sizeof(VkVertexInputAttributeDescription));
+  uint32_t vertexInputAttributeDescriptionsCount = ARR_LEN(vertexInputAttributeDescriptions);
+      // sizeof(vertexInputAttributeDescriptions) /
+      // (sizeof(VkVertexInputAttributeDescription));
 
   VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -170,12 +169,16 @@ void Pipeline_CreateGraphics(
       .pPushConstantRanges = NULL
   };
 
-  vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, NULL,
-                         &pipeline->layout);
+	vkCreatePipelineLayout(
+		device, 
+		&pipelineLayoutCreateInfo, 
+		NULL,
+		&pipeline->layout
+	);
 
-  VkFormat formats[]={
-  	info->colorFormat,
-  };
+	VkFormat formats[]={
+		info->colorFormat,
+	};
   
   
   VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
@@ -205,7 +208,8 @@ void Pipeline_CreateGraphics(
 
   };
 
-  vkCreateGraphicsPipelines(device, NULL, 1, &graphicsPipelineCreateInfo, NULL,                            &pipeline->handle);
+  
+  vkCreateGraphicsPipelines(device, NULL, 1, &graphicsPipelineCreateInfo, NULL, &pipeline->handle);
 }
 
 

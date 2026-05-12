@@ -9,30 +9,9 @@
 
 static struct Device device;
 
-// static VkQueue graphicsQueue = NULL;
 
-// static VkQueue transferQueue = NULL;
-
-// static uint32_t queueFamilyIndexCount = 2;
-
-// static uint32_t graphicsQueueFamilyArrayIndex = 0;
-
-// static uint32_t transferQueueFamilyArrayIndex = 1;
-
-// static uint32_t queueFamilyIndeces[2] = {
-//     -1,
-//     -1,
-// };
-
-// static uint32_t presentationSupportQueueFamilyIndex = -1;
-
-
-
-
-// static VkPhysicalDevice physicalDevice = NULL;
-
-// static VkDevice device = NULL;
-
+// static VkCommandBuffer transferCommandBuffer;
+// static VkFence transferFence;
 
 static  uint32_t requiredDeviceExtensionCnt = 1;
 
@@ -42,20 +21,13 @@ static  const char *requiredDeviceExtensions[] = {
 
 
 
-
-
-
-
-
-
-
 static void createPhysicalDevice();
 static void createLogicalDevice() ;
 static void physicalDeviceExtensionCheck();
 static void physicalDeviceFeatureCheck();
-
+static void createTransferCommandBuffer();
 static void createQueue();
-
+static void createTransferFence();
 
 static VkFormat findSupportedFormat(
 	VkFormat *formats,
@@ -79,18 +51,41 @@ void Device_Create(){
 	createQueue();
 
 	createCommandPool();
+
+	createTransferCommandBuffer();
+
+	createTransferFence();
+
+
+
 	
 }
 void Device_Destroy(void){
-
-	if(device.device != NULL)
+PRINT_FNAME;
+	if(device.logical_device != NULL)
 	{
-		vkDestroyDevice(device.device, NULL);
-		device.device = NULL;
+		vkDestroyDevice(device.logical_device, NULL);
+		device.logical_device = NULL;
 	}
 }
+
+static void createTransferFence(){
+	VkFenceCreateInfo fenceInfo = {
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
+	};
+	vkCreateFence(device.logical_device, &fenceInfo, NULL, &device.transfer_fence);
+
+}
+
+static void createTransferCommandBuffer(){
+	
+	Device_AllocateCommandBuffer(device.transfer_pool,&device.transfer_cmd_buffer);
+	
+}
+
+
 void Device_WaitIdle(){
-	vkDeviceWaitIdle(device.device);
+	vkDeviceWaitIdle(device.logical_device);
 }
 
 struct Device * Device_Get(void){
@@ -201,23 +196,22 @@ static void physicalDeviceExtensionCheck() {
      	}
 	}
   }
-
-  if (!(supportedCnt == requiredDeviceExtensionCnt)) {
-    printf("No suported extensions\n");
-    printf("supportedCnt: %d of %d\n", supportedCnt,
-           requiredDeviceExtensionCnt);
-
-    for (int i = 0; i < deviceExtensionPropertieCount; i++) {
-
-      printf("\tfound: %s\n", exp_props[i].extensionName);
-    }
-    for (int i = 0; i < requiredDeviceExtensionCnt; i++) {
-
-      printf("\trequired: %s\n", requiredDeviceExtensions[i]);
-    }
-
-    EXIT_CLEAN("\n");
-  }
+	
+	if (!(supportedCnt == requiredDeviceExtensionCnt)) {
+		printf("No suported extensions\n");
+		printf("supportedCnt: %d of %d\n", supportedCnt,requiredDeviceExtensionCnt);
+	
+	for (int i = 0; i < deviceExtensionPropertieCount; i++) {
+	
+		printf("\tfound: %s\n", exp_props[i].extensionName);
+	}
+	for (int i = 0; i < requiredDeviceExtensionCnt; i++) {
+	
+		printf("\trequired: %s\n", requiredDeviceExtensions[i]);
+	}
+	
+		EXIT_CLEAN("\n");
+	}
 }
 
 static void physicalDeviceFeatureCheck() {
@@ -402,7 +396,7 @@ static void createLogicalDevice() {
 
   device.graphics_family = find_graphics_family(device.physical_device);
   device.transfer_family = find_transfer_family(device.physical_device);
-  device.present_family = find_presentation_family(device.physical_device,Platform_GetSurface());
+  device.present_family = find_presentation_family(device.physical_device, Platform_GetSurface());
   
 
   float queuePriority = 1.0f;
@@ -480,13 +474,13 @@ static void createLogicalDevice() {
 
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
       .pQueueCreateInfos = queueInfos,
-      .queueCreateInfoCount = ARR_LEN(queueInfos),
+      .queueCreateInfoCount = queueCount,
       .pNext = &physicalDeviceFeatures2,
       .ppEnabledExtensionNames = requiredDeviceExtensions,
       .enabledExtensionCount = requiredDeviceExtensionCnt,
   };
 
-  VkResult res = vkCreateDevice(device.physical_device, &deviceCreateInfo, NULL, &device.device);
+  VkResult res = vkCreateDevice(device.physical_device, &deviceCreateInfo, NULL, &device.logical_device);
 
   if (res != VK_SUCCESS) {
     EXIT_CLEAN("failed to create logical device");
@@ -495,14 +489,16 @@ static void createLogicalDevice() {
 
 static void createPhysicalDevice() {
 	PRINT_FNAME;
+
+	VkInstance instance = Instance_Get();
 	
 	uint32_t physicalDeviceCount = 0;
 	
-	vkEnumeratePhysicalDevices(Instance_getInstance(), &physicalDeviceCount, NULL);
+	vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, NULL);
 	
 	VkPhysicalDevice physicalDevices[physicalDeviceCount];
 	
-	vkEnumeratePhysicalDevices(Instance_getInstance(), &physicalDeviceCount, physicalDevices);
+	vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices);
 	
 	VkPhysicalDeviceFeatures features;
 	
@@ -585,14 +581,14 @@ VkBool32 debugCallback(
 static void createQueue() {
 
 	vkGetDeviceQueue(
-        device.device,
+        device.logical_device,
         device.graphics_family,
         0,
         &device.graphics_queue
     );
 
     vkGetDeviceQueue(
-        device.device,
+        device.logical_device,
         device.transfer_family,
         0,
         &device.transfer_queue
@@ -617,7 +613,7 @@ static void createCommandPool()
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 	};
 	 VkResult result = vkCreateCommandPool(
-		device.device, 
+		device.logical_device, 
 		&commandPoolCreateInfo, 
 		NULL,
 		&device.graphics_pool
@@ -635,7 +631,7 @@ static void createCommandPool()
 	};
 	
 	 result = vkCreateCommandPool(
-		device.device, 
+		device.logical_device, 
 		&commandPoolCreateInfo2, 
 		NULL,
 		&device.transfer_pool
@@ -683,7 +679,7 @@ void Device_AllocateCommandBuffer(VkCommandPool pool, VkCommandBuffer * out){
     };
 
     VkCommandBuffer cmd;
-    VkResult res = vkAllocateCommandBuffers(device.device, &allocInfo, out);
+    VkResult res = vkAllocateCommandBuffers(device.logical_device, &allocInfo, out);
 
     if (res != VK_SUCCESS) {
         EXIT_CLEAN("Failed to allocate command buffer");

@@ -79,105 +79,109 @@ static void setupDebugMessenger() {
 
 
 
-void Instance_CreateInstance() {
-  printf("%s\n", __FUNCTION__);
+void Instance_Create() {
+	PRINT_FNAME;
+	
+	VkApplicationInfo applicationInfo = {
+	    .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+	    .pApplicationName = "Hello Triangle",
+	    .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+	    .pEngineName = "No Engine",
+	    .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+	    .apiVersion = VK_API_VERSION_1_4};
+	
+	uint32_t glfwExtensionCount = 0;
+	const char **glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-  VkApplicationInfo applicationInfo = {
-      .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-      .pApplicationName = "Hello Triangle",
-      .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-      .pEngineName = "No Engine",
-      .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-      .apiVersion = VK_API_VERSION_1_4};
+	printf("glfwExtensionCount %d\n",glfwExtensionCount);
+	
+	uint32_t glfwExtensionCountExtra = glfwExtensionCount + 1;
+	
+	const char *glfwExtensionsExtra[glfwExtensionCountExtra];
+	
+	for (int i = 0; i < glfwExtensionCount; i++) {
+		glfwExtensionsExtra[i] = glfwExtensions[i];
+	}
+	
+	if (enableValidationLayers) {
+	
+		glfwExtensionsExtra[glfwExtensionCount] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+	} else {
+		glfwExtensionCountExtra = glfwExtensionCount;
+	}
 
-  uint32_t glfwExtensionCount = 0;
-  const char **glfwExtensions =
-      glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+	for (int i = 0; i < glfwExtensionCountExtra; i++) {
+	
+		printf("\tglfw required extensions: %s\n", glfwExtensionsExtra[i]);
+	}
 
-  uint32_t glfwExtensionCountExtra = glfwExtensionCount + 1;
-  const char *glfwExtensionsExtra[glfwExtensionCountExtra];
-
-  for (int i = 0; i < glfwExtensionCount; i++) {
-    glfwExtensionsExtra[i] = glfwExtensions[i];
-  }
-
-  if (enableValidationLayers) {
-
-    glfwExtensionsExtra[glfwExtensionCount] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-  } else {
-    glfwExtensionCountExtra = glfwExtensionCount;
-  }
-
-  for (int i = 0; i < glfwExtensionCountExtra; i++) {
-
-    printf("\tglfw required extensions: %s\n", glfwExtensionsExtra[i]);
-  }
-
-  {
-
-    uint32_t layerCount = 0;
-    VkResult result = vkEnumerateInstanceLayerProperties(&layerCount, NULL);
-    if (result != VK_SUCCESS) {
-      printf("Failed to get layer count\n");
-      return;
-    }
-
-    VkLayerProperties layers[layerCount];
-    result = vkEnumerateInstanceLayerProperties(&layerCount, layers);
-    if (result != VK_SUCCESS) {
-      printf("Failed to enumerate layers\n");
-
-      return;
-    }
-
-    printf("Print layers: %d\n", layerCount);
-    bool validationLayerSupported = false;
-    for (uint32_t i = 0; i < layerCount; i++) {
-
-      printf("layer: %s\n", layers[i].layerName);
-
-      uint32_t cnt = 0;
-      vkEnumerateInstanceExtensionProperties(layers[i].layerName, &cnt, NULL);
-
-      if (cnt > 0) {
-        VkExtensionProperties expr[cnt];
-        vkEnumerateInstanceExtensionProperties(layers[i].layerName, &cnt, expr);
-
-        for (int i = 0; i < cnt; i++) {
-
-          printf("\tlayer extensions: %s\n", expr[i].extensionName);
-        }
-      }
-
-      if (strcmp(layers[i].layerName, validationLayers[0]) == 0) {
-        validationLayerSupported = true;
-      }
-    }
-    if (validationLayerSupported == false) {
-      printf("Required layer is not supported \n\t%s\n", validationLayers[0]);
-      return;
-    }
-  }
-
-  VkInstanceCreateInfo instanceCreateInfo = {
-      .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-      .pApplicationInfo = &applicationInfo,
-      .enabledExtensionCount = glfwExtensionCountExtra,
-      .ppEnabledExtensionNames = glfwExtensionsExtra,
-
-  };
-
-  if (enableValidationLayers) {
-    instanceCreateInfo.enabledLayerCount = validationLayerCnt;
-    instanceCreateInfo.ppEnabledLayerNames = validationLayers;
-  }
-
-  if (vkCreateInstance(&instanceCreateInfo, NULL, &instance) != VK_SUCCESS) {
-
-    EXIT_CLEAN("vkCreateInstance failed");
-  }
-
-  setupDebugMessenger();
+	{
+	
+	uint32_t layerCount = 0;
+	VkResult result = vkEnumerateInstanceLayerProperties(&layerCount, NULL);
+	if (result != VK_SUCCESS) {
+	    printf("Failed to get layer count\n");
+	    return;
+	}
+	
+	VkLayerProperties layers[layerCount];
+	result = vkEnumerateInstanceLayerProperties(&layerCount, layers);
+	if (result != VK_SUCCESS) {
+	    printf("Failed to enumerate layers\n");
+	
+	    return;
+	}
+	
+	printf("Print layers: %d\n", layerCount);
+	bool validationLayerSupported = false;
+	for (uint32_t i = 0; i < layerCount; i++) {
+		
+		    printf("layer: %s\n", layers[i].layerName);
+		
+		    uint32_t cnt = 0;
+		    vkEnumerateInstanceExtensionProperties(layers[i].layerName, &cnt, NULL);
+		
+		    if (cnt > 0) {
+		    VkExtensionProperties expr[cnt];
+		    vkEnumerateInstanceExtensionProperties(layers[i].layerName, &cnt, expr);
+		
+		    for (int i = 0; i < cnt; i++) {
+		
+		        printf("\tlayer extensions: %s\n", expr[i].extensionName);
+		    }
+		    }
+		
+		    if (strcmp(layers[i].layerName, validationLayers[0]) == 0) {
+		    validationLayerSupported = true;
+		    }
+		}
+		if (validationLayerSupported == false) {
+		    printf("Required layer is not supported \n\t%s\n", validationLayers[0]);
+		    return;
+		}
+	}
+	
+	VkInstanceCreateInfo instanceCreateInfo = {
+	    .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+	    .pApplicationInfo = &applicationInfo,
+	    .enabledExtensionCount = glfwExtensionCountExtra,
+	    .ppEnabledExtensionNames = glfwExtensionsExtra,
+	
+	};
+	
+	if (enableValidationLayers) {
+		instanceCreateInfo.enabledLayerCount = validationLayerCnt;
+		instanceCreateInfo.ppEnabledLayerNames = validationLayers;
+	}
+	
+	if (vkCreateInstance(&instanceCreateInfo, NULL, &instance) != VK_SUCCESS) {
+	
+		EXIT_CLEAN("vkCreateInstance failed");
+	}else {
+		printf("vkCreateInstance CREATED\n");
+	}
+	
+	setupDebugMessenger();
 }
 
 
@@ -195,6 +199,6 @@ void Instance_DestroyInstance(){
   }
 }
 
-VkInstance Instance_getInstance(){
+VkInstance Instance_Get(){
 	return instance;
 }

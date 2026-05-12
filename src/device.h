@@ -4,7 +4,7 @@
 
 struct Device {
     VkPhysicalDevice physical_device;
-    VkDevice device;
+    VkDevice logical_device;
 
     VkQueue graphics_queue;
     VkQueue transfer_queue;
@@ -17,6 +17,9 @@ struct Device {
 
     VkCommandPool graphics_pool;
     VkCommandPool transfer_pool;
+    VkCommandBuffer transfer_cmd_buffer;
+    VkFence transfer_fence;
+    
 };
 
 void Device_Create();

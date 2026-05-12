@@ -9,12 +9,13 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
             .root_source_file = null,
         }),
     });
 
-    exe.root_module.addCSourceFile(.{
-        .file = b.path("src/main.c"),
+	exe.root_module.addCSourceFile(.{
+        .file = b.path("src/assets/asset0.c"),
     });
     exe.root_module.addCSourceFile(.{
         .file = b.path("src/util/gm_array.c"),
@@ -23,17 +24,50 @@ pub fn build(b: *std.Build) void {
         .file = b.path("src/util/gm_list.c"),
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/instance.c"),
+        .file = b.path("src/app.c"),
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/platform.c"),
+        .file = b.path("src/descriptor.c"),
     });
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/device.c"),
+	});
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/input.c"),
+	});
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/instance.c"),
+	});	
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/loader.c"),
+	});
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/main2.c"),
+	});
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/pipeline.c"),
+	});
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/platform.c"),
+	});
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/descriptors.c"),
+        .file = b.path("src/renderer.c"),
     });
     exe.root_module.addCSourceFile(.{
         .file = b.path("src/resource.c"),
     });
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/scene.c"),
+	});
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/shader.c"),
+	});
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/swapchain.c"),
+	});
+	
+	
+	
     // Include paths
     exe.root_module.addIncludePath(.{
         .cwd_relative = "C:/VulkanSDK/1.4.341.1/Include",
@@ -43,9 +77,10 @@ pub fn build(b: *std.Build) void {
         .cwd_relative = "c:/libs/glfw-ucrt/include",
     });
 
-    exe.root_module.addIncludePath(.{
-        .cwd_relative = ".",
-    });
+	exe.root_module.addIncludePath(.{
+		.cwd_relative = ".",
+	});
+
 
     // exe.root_module.addIncludePath(.{
     //     .cwd_relative = "src",
@@ -56,14 +91,14 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addLibraryPath(.{ .cwd_relative = "c:/libs/glfw-ucrt/lib" });
 
     // Link libraries
-    exe.linkSystemLibrary("glfw3");
-    exe.linkSystemLibrary("vulkan-1");
+     exe.root_module.linkSystemLibrary("glfw3",.{});
+     exe.root_module.linkSystemLibrary("vulkan-1",.{});
 
-    exe.linkSystemLibrary("gdi32");
-    exe.linkSystemLibrary("user32");
-    exe.linkSystemLibrary("kernel32");
+     exe.root_module.linkSystemLibrary("gdi32",.{});
+     exe.root_module.linkSystemLibrary("user32",.{});
+     exe.root_module.linkSystemLibrary("kernel32",.{});
 
-    exe.linkLibC();
+    //exe.linkLibC();
 
     // const install = b.addInstallArtifact(exe, .{
     //     .dest_dir = .{ .override = .{ .custom = "out" } },

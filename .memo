@@ -21,3 +21,7 @@ zig cc main.c -o app.exe   -I C:\VulkanSDK\1.4.341.1\Include   -L C:\VulkanSDK\1
 
 
 zig build --prefix ./out
+
+
+--terminal search
+ctrl+shift+f

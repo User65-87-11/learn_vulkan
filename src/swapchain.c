@@ -6,23 +6,6 @@
 #include "device.h"
 
 
-// static VkSurfaceCapabilitiesKHR surfaceCapabilities;
-
-// static VkExtent2D swapChainExtent;
-
-// static VkFormat swapchainSurfaceFormat = -1;
-
-// static uint32_t swapchainSurfaceColorSpace = -1;
-
-// static VkSwapchainKHR swapchain = NULL;
-
-// static uint32_t image_view_cnt = 0;
-
-// static VkImage images[MAX_IMAGE_VIEWS];
-// static VkImageView image_views[MAX_IMAGE_VIEWS]={};
-// // struct ImageRes swapchain_images[MAX_IMAGE_VIEWS] = {};
-// static VkSurfaceKHR surface0 = VK_NULL_HANDLE;
-
 
 static void createImageView(
 	VkImage image, 
@@ -125,10 +108,8 @@ void Swapchain_Create(
   if (sc->extent .width > surfaceCapabilities.maxImageExtent.width &&
       sc->extent .height > surfaceCapabilities.maxImageExtent.height) {
 
-    sc->extent  = (VkExtent2D){
-        .width = WIDTH,
-        .height = HEIGHT,
-    };
+      sc->extent.width = WIDTH;
+       sc->extent.height = HEIGHT;
   }
 
   uint32_t width, height;
@@ -255,7 +236,7 @@ static void createImageView(
 
   };
 
-  vkCreateImageView(Device_Get()->device, &viewInfo, NULL, view);
+  vkCreateImageView(Device_Get()->logical_device, &viewInfo, NULL, view);
 }
 
 void Swapchain_Destroy(struct Swapchain* sc, VkDevice device) {

@@ -36,7 +36,7 @@
 #endif
 #include <limits.h>
 
-#include "shaders/shader_inc.glsl"
+#include "src/shader_common.h"
 
 #include "util/gm_array.h"
 #include "util/gm_list.h"
@@ -178,6 +178,7 @@ struct Frame {
   VkFence inFlightFence;
 
   struct BufferRes ubo_global;
+
   struct BufferRes ssbo_instances;
 
   struct ImageRes deapth;
@@ -569,11 +570,12 @@ void mouseCallback(GLFWwindow *window, double xposIn, double yposIn) {
   float ypos = yposIn;
 
   if (firstMouse) {
+  
     lastX = xpos;
     lastY = ypos;
     firstMouse = false;
   }
-
+  
   float xoffset = xpos - lastX;
   float yoffset = lastY - ypos;
   lastX = xpos;
