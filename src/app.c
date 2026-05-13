@@ -86,6 +86,12 @@ static void mainLoop() {
 		    running = 0;
 		}
 	}
+
+	Swapchain_Destroy(&app_context.renderer.swapchain);
+	
+	Renderer_Destroy(&app_context.renderer);
+
+	Descriptor_Destroy();
 	
 	Device_Destroy();
 

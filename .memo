@@ -25,3 +25,6 @@ zig build --prefix ./out
 
 --terminal search
 ctrl+shift+f
+
+
+----------------GIT--------

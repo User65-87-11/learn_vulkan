@@ -28,7 +28,7 @@ void Swapchain_Create(
     VkExtent2D extent
 );
 
-void Swapchain_Destroy(struct Swapchain* sc, VkDevice device);
+void Swapchain_Destroy(struct Swapchain* sc);
 
 void Swapchain_Recreate(
     struct Swapchain* sc,

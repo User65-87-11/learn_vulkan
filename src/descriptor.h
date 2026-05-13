@@ -21,7 +21,7 @@ struct DescriptorContext {
 // lifecycle
 void Descriptor_Init();
 
-void Descriptor_Shutdown();
+void Descriptor_Destroy();
 
 // pool control
 void Descriptor_ResetPool();

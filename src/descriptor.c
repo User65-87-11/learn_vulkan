@@ -244,7 +244,7 @@ void Descriptor_UpdateTextureDescriptors(
 	
 	vkUpdateDescriptorSets(device->logical_device, 1, &write, 0, NULL);
 }
-void Descriptor_Shutdown(){
+void Descriptor_Destroy(){
 	VkDevice device = Device_Get()->logical_device;
 	
 	 vkDestroyDescriptorPool(device, context.pool, NULL);

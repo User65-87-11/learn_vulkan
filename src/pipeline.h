@@ -1,11 +1,5 @@
 #pragma once
-
 #include <vulkan/vulkan.h>
-
-struct GraphicsPipeline {
-    VkPipeline handle;
-    VkPipelineLayout layout;
-};
 
 struct GraphicsPipelineCreateInfo {
     VkDevice device;
@@ -23,9 +17,17 @@ struct GraphicsPipelineCreateInfo {
 
 };
 
+
+struct GraphicsPipeline {
+    VkPipeline handle;
+    VkPipelineLayout layout;
+
+    struct GraphicsPipelineCreateInfo info;
+};
+
+
 void Pipeline_CreateGraphics(
-   struct  GraphicsPipelineCreateInfo* info,
-   struct GraphicsPipeline * pipeline
+	struct 	GraphicsPipeline * pipeline
 );
 
 void Pipeline_Destroy(

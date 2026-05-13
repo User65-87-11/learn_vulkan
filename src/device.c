@@ -56,7 +56,16 @@ void Device_Create(){
 	
 }
 void Device_Destroy(void){
-PRINT_FNAME;
+	PRINT_FNAME;
+	
+	
+
+	
+	
+	vkDestroyCommandPool(device.logical_device, device.transfer_pool, NULL);
+	vkDestroyCommandPool(device.logical_device, device.graphics_pool, NULL);
+	vkDestroyFence(device.logical_device, device.transfer_fence, NULL);
+	
 	if(device.logical_device != NULL)
 	{
 		vkDestroyDevice(device.logical_device, NULL);

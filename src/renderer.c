@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <vulkan/vulkan_core.h>
 #include <string.h>
 
@@ -30,7 +31,60 @@ static void renderMainPass(
 	uint32_t frame_index,
 	uint32_t imageIndex
 );
+void Renderer_Destroy(struct Renderer * renderer){
+	PRINT_FNAME;
+	VkDevice device = Device_Get()->logical_device;
 
+
+	Pipeline_Destroy(device,&renderer->pipeline);
+	
+	for(int i=0;i < MAX_FRAMES_IN_FLIGHT ; i++){
+
+		vkDestroyFence(
+			device, 
+			renderer->frames[i].inFlightFence,
+			NULL
+		);
+		
+		vkDestroySemaphore(
+			device, 
+			renderer->frames[i].imageAvailable,
+			NULL
+		);
+		vkDestroySemaphore(
+			device, 
+			renderer->frames[i].renderFinished,
+			NULL
+		);
+		
+		Resource_FreeBuffer(&renderer->frames[i].buffer_global);
+		Resource_FreeBuffer(&renderer->frames[i].buffer_global_camera);
+		Resource_FreeBuffer(&renderer->frames[i].buffer_global_light);
+		Resource_FreeBuffer(&renderer->frames[i].buffer_instances);
+		Resource_FreeImage(&renderer->frames[i].depth_image);
+	}
+	for(int i=0;i< renderer->texture_cnt;i++)
+	{
+		struct Texture texture = renderer->textures[i];
+		Resource_FreeTexture(&texture);
+	}
+	renderer->texture_cnt = 0;
+	Resource_FreeBuffer(&renderer->buffer_index);
+	Resource_FreeBuffer(&renderer->buffer_vertex);
+	Resource_FreeBuffer(&renderer->buffer_materials);
+
+
+	
+
+
+	// vkFreeDescriptorSets(device, Descriptor_GetContext()->pool, 1, &renderer->desc_set_materials);
+	// vkFreeDescriptorSets(device, Descriptor_GetContext()->pool, 1, &renderer->desc_set_samplers);
+	// vkFreeDescriptorSets(device, Descriptor_GetContext()->pool, MAX_FRAMES_IN_FLIGHT, renderer->desc_set_globals);
+	// vkFreeDescriptorSets(device, Descriptor_GetContext()->pool, MAX_FRAMES_IN_FLIGHT, renderer->desc_set_instances);
+	
+	
+
+}
 void Renderer_Init(
 	struct Renderer * renderer
 ){
@@ -65,11 +119,12 @@ void Renderer_Init(
 		extent
 	); 
 
-	struct GraphicsPipelineCreateInfo create_info = {};
+	
+	memset(&renderer->pipeline.info, 0, sizeof(renderer->pipeline.info));
 
 
-	create_info.vertexShader = Shader_CreateFromFile(device->logical_device, DEFAULT_SHADER_VERT);
-	create_info.fragmentShader = Shader_CreateFromFile(device->logical_device, DEFAULT_SHADER_FRAG);
+	renderer->pipeline.info.vertexShader = Shader_CreateFromFile(device->logical_device, DEFAULT_SHADER_VERT);
+	renderer->pipeline.info.fragmentShader = Shader_CreateFromFile(device->logical_device, DEFAULT_SHADER_FRAG);
 
  	struct DescriptorContext* ctx = Descriptor_GetContext();
 	
@@ -80,8 +135,8 @@ void Renderer_Init(
 		ctx->samplerLayout
 	};
 	
-	create_info.descriptorSetLayouts = layouts;
-	create_info.descriptorSetLayoutCount = ARR_LEN(layouts);
+	renderer->pipeline.info.descriptorSetLayouts = layouts;
+	renderer->pipeline.info.descriptorSetLayoutCount = ARR_LEN(layouts);
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
  		
@@ -95,12 +150,12 @@ void Renderer_Init(
 	
 
 	
-	create_info.depthFormat = renderer->swapchain.depthFormat;
-	create_info.colorFormat = renderer->swapchain.surfaceFormat;
+	renderer->pipeline.info.depthFormat = renderer->swapchain.depthFormat;
+	renderer->pipeline.info.colorFormat = renderer->swapchain.surfaceFormat;
 	
 	
 	
-	Pipeline_CreateGraphics(&create_info,&renderer->pipeline);
+	Pipeline_CreateGraphics(&renderer->pipeline);
 
 	/*
 

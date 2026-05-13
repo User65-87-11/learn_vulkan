@@ -1,16 +1,16 @@
-#include "pipeline.h"
 #include "device.h"
 #include "vertex.h"
 #include "util/common.h"
 #include "shader_common.h"
+#include "vulkan/vulkan_core.h"
+#include "pipeline.h"
 
 
 // static VkFormat findDepthFormat();
 
 
 void Pipeline_CreateGraphics(
-   struct  GraphicsPipelineCreateInfo* info,
-   struct GraphicsPipeline* pipeline
+      struct GraphicsPipeline* pipeline
    
 )
 {
@@ -21,7 +21,7 @@ void Pipeline_CreateGraphics(
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
 	    .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 	    .stage = VK_SHADER_STAGE_VERTEX_BIT,
-	    .module = info->vertexShader,
+	    .module = pipeline->info.vertexShader,
 	    .pName = "main",
 	
 	};
@@ -29,7 +29,7 @@ void Pipeline_CreateGraphics(
   VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-      .module = info->fragmentShader,
+      .module = pipeline->info.fragmentShader,
       .pName = "main",
 
   };
@@ -163,8 +163,8 @@ void Pipeline_CreateGraphics(
 
   VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .setLayoutCount = info->descriptorSetLayoutCount,
-      .pSetLayouts = info->descriptorSetLayouts,
+      .setLayoutCount = pipeline->info.descriptorSetLayoutCount,
+      .pSetLayouts = pipeline->info.descriptorSetLayouts,
       .pushConstantRangeCount = 0,
       .pPushConstantRanges = NULL
   };
@@ -177,7 +177,7 @@ void Pipeline_CreateGraphics(
 	);
 
 	VkFormat formats[]={
-		info->colorFormat,
+		pipeline->info.colorFormat,
 	};
   
   
@@ -185,7 +185,7 @@ void Pipeline_CreateGraphics(
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
       .colorAttachmentCount = ARR_LEN(formats),
       .pColorAttachmentFormats = formats,
-      .depthAttachmentFormat =info->depthFormat,
+      .depthAttachmentFormat =pipeline->info.depthFormat,
   };
 
   VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {
@@ -215,3 +215,13 @@ void Pipeline_CreateGraphics(
 
 
 
+
+void Pipeline_Destroy(
+    VkDevice device,
+    struct GraphicsPipeline * pipeline
+){
+	vkDestroyShaderModule(device, pipeline->info.fragmentShader,NULL);
+	vkDestroyShaderModule(device, pipeline->info.vertexShader,NULL);
+	vkDestroyPipelineLayout(device, pipeline->layout, NULL);
+	vkDestroyPipeline(device, pipeline->handle, NULL);
+}

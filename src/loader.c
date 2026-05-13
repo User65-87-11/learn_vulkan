@@ -1,9 +1,13 @@
-#include "src/scene.h"
 #include <stdint.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 #include "loader.h"
+#include "scene.h"
 #include "util/common.h"
+
+#define CGLTF_IMPLEMENTATION
+#include "cgltf/cgltf.h"
+
 
 
 void Loader_LoadImageDataFromFile(char * path, struct ImageData * out){
@@ -58,25 +62,25 @@ void Loader_FreeImageData(struct ImageData * image_data){
 		image_data->data = NULL;
 	}
 }
+void Loader_LoadGLTF(char *path, struct Scene * out);
 
-
-void Loader_LoadGLTF(char *path, struct Scene * out){
-	// void loadModel(char *fname, uint32_t *indicesNum, uint32_t **indices,
- //               uint32_t *verticesNum, struct Vertex **vertices) 
-	// {
+//void Loader_LoadGLTF(char *path, struct Scene * out){
+	void loadModel(char *path, uint32_t *indicesNum, uint32_t **indices,
+               uint32_t *verticesNum, struct Vertex **vertices) 
+	{
 	
   PRINT_FNAME;
 
-  printf("load model: %s\n", fname);
+  printf("load model: %s\n", path);
 
   const cgltf_options options = {};
   cgltf_data *data;
   uint32_t data_size;
-  const char *gltf_path = fname;
+  const char *gltf_path = path;
 
   cgltf_result res;
 
-  res = cgltf_parse_file(&options, fname, &data);
+  res = cgltf_parse_file(&options, path, &data);
 
   if (res != cgltf_result_success) {
     printf("res %d\n", res);

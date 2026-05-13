@@ -67,6 +67,7 @@ void Renderer_Init( struct Renderer * renderer);
 
 void Renderer_Render(struct Renderer * renderer, struct Scene * scene, float time, float delta_time);
 
+void Renderer_Destroy(struct Renderer * renderer);
 
 struct Texture *  Renderer_NewTexture(struct Renderer * renderer,  void * data, uint32_t size);
 

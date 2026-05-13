@@ -239,18 +239,20 @@ static void createImageView(
   vkCreateImageView(Device_Get()->logical_device, &viewInfo, NULL, view);
 }
 
-void Swapchain_Destroy(struct Swapchain* sc, VkDevice device) {
+void Swapchain_Destroy(struct Swapchain* sc) {
 	PRINT_FNAME;
-	
+	struct Device* device = Device_Get();
+
+	vkDeviceWaitIdle(device->logical_device);
 	
 	for (int i = 0; i < sc->imageCount; i++) {
 	// cleanImageRes(&swapchain_images[i]);
-		vkDestroyImageView(device, sc->image_views[i], NULL);
+		vkDestroyImageView(device->logical_device, sc->image_views[i], NULL);
 	}
 	// swapchainImageViewCount = 0;
 	 sc->imageCount = 0;
 	
-	vkDestroySwapchainKHR(device, sc->handle, NULL);
+	vkDestroySwapchainKHR(device->logical_device, sc->handle, NULL);
 	
 	sc->handle = NULL;
 }
@@ -277,7 +279,7 @@ void Swapchain_Recreate(
   vkDeviceWaitIdle(device);
 
   // Destroy old swapchain
-  Swapchain_Destroy(sc, device);
+  Swapchain_Destroy(sc);
 
   VkExtent2D newExtent={
 	.width =width,
