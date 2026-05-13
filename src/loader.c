@@ -1,8 +1,8 @@
 #include <stdint.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
 #include "loader.h"
 #include "scene.h"
+#include "stb/stb_image.h"
 #include "util/common.h"
 
 #define CGLTF_IMPLEMENTATION
@@ -10,67 +10,51 @@
 
 
 
-void Loader_LoadImageDataFromFile(char * path, struct ImageData * out){
-	
- 	int w,h,c;
+static void print_gltf(char *path);
 
-	stbi_uc *pixels = stbi_load(
-		path,	
-		&w, 
-		&h, 
-		&c, 
-		STBI_rgb_alpha
-	);
-	
-	if (!pixels) {
-		EXIT_CLEAN("failed to load texture image!");
-	}
-	out->width = w;
-	out->height = h;
-	out->channels = c;
-	out->data = pixels;
-	out->size = w *h * 4;
+void Loader_LoadImageDataFromFile(char *path, struct ImageData *out) {
+
+  int w, h, c;
+
+  stbi_uc *pixels = stbi_load(path, &w, &h, &c, STBI_rgb_alpha);
+
+  if (!pixels) {
+    EXIT_CLEAN("failed to load texture image!");
+  }
+  out->width = w;
+  out->height = h;
+  out->channels = c;
+  out->data = pixels;
+  out->size = w * h * 4;
 }
-void Loader_LoadImageDataFromMemory(void * data, uint32_t size , struct ImageData * out){
-	
-	// int texWidth, texHeight, texChannels;
-	int w,h,c;
-	stbi_uc *pixels = stbi_load_from_memory(
-		data,
-		size, 	
-		&w, 
-		&h, 
-		&c,
-		STBI_rgb_alpha
-	);
-	
-	if (!pixels) {
-		EXIT_CLEAN("failed to load texture image!");
-	}
+void Loader_LoadImageDataFromMemory(void *data, uint32_t size,
+                                    struct ImageData *out) {
 
-	out->width = w;
-	out->height = h;
-	out->channels = c;
-	out->data = pixels;
-	out->size = size;
+  // int texWidth, texHeight, texChannels;
+  int w, h, c;
+  stbi_uc *pixels =
+      stbi_load_from_memory(data, size, &w, &h, &c, STBI_rgb_alpha);
+
+  if (!pixels) {
+    EXIT_CLEAN("failed to load texture image!");
+  }
+
+  out->width = w;
+  out->height = h;
+  out->channels = c;
+  out->data = pixels;
+  out->size = size;
 }
-void Loader_FreeImageData(struct ImageData * image_data){
-
-	if(image_data->data != NULL)
-	{
-		stbi_image_free(image_data->data);
-		image_data->data = NULL;
-	}
+void Loader_FreeImageData(struct ImageData *image_data) {
+  if (image_data->data != NULL) {
+    stbi_image_free(image_data->data);
+    image_data->data = NULL;
+  }
 }
-void Loader_LoadGLTF(char *path, struct Scene * out);
 
-//void Loader_LoadGLTF(char *path, struct Scene * out){
-	void loadModel(char *path, uint32_t *indicesNum, uint32_t **indices,
-               uint32_t *verticesNum, struct Vertex **vertices) 
-	{
-	
+static void print_gltf(char *path) {
+
   PRINT_FNAME;
-
   printf("load model: %s\n", path);
 
   const cgltf_options options = {};
@@ -203,6 +187,26 @@ void Loader_LoadGLTF(char *path, struct Scene * out);
   printf("data.buffers_count %ld\n", data->buffers_count);
   printf("data.lights_count %ld\n", data->lights_count);
   printf("data.meshes_count %ld\n", data->meshes_count);
+  cgltf_free(data);
+}
+// void Loader_LoadGLTF(char *path, struct Scene * out){
+void loadModel(char *path, uint32_t *indicesNum, uint32_t **indices,
+               uint32_t *verticesNum, struct Vertex **vertices) {
+  PRINT_FNAME;
+
+  const cgltf_options options = {};
+  cgltf_data *data;
+  uint32_t data_size;
+  const char *gltf_path = path;
+
+  cgltf_result res;
+
+  res = cgltf_parse_file(&options, path, &data);
+
+  if (res != cgltf_result_success) {
+    printf("res %d\n", res);
+    EXIT_CLEAN("Cant load buffers :(");
+  }
 
   cgltf_primitive *primitive = &data->meshes[0].primitives[0];
 
@@ -341,5 +345,4 @@ void Loader_LoadGLTF(char *path, struct Scene * out);
   }
 
   cgltf_free(data);
-
 }

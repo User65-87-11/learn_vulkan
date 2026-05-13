@@ -6,16 +6,14 @@ points.txt
 todo.txt
 shaders/*.spv
 shaders3
-out
+/out
 bootstrap_gen.text
-build
-assets
-.vscode
-zig-out
-out
-.zig-cache
+/build
+/assets
+/.vscode
+/zig-out
+/.zig-cache
 
 gltf_viewer.exe
 gltf_viewer.pdb
 main.txt
-
