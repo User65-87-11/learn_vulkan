@@ -96,6 +96,7 @@ static void mainLoop() {
 	Device_Destroy();
 
 	Platform_destroySurface(Instance_Get());
+	
 	Platform_Shutdown();
 	
 	Instance_DestroyInstance();
