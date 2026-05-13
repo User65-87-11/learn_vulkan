@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#include "scene.h"
+
 struct ImageData{
 	uint32_t width;
 	uint32_t height;
@@ -13,3 +15,5 @@ struct ImageData{
 void Loader_LoadImageDataFromFile(char * path, struct ImageData * out);
 void Loader_LoadImageDataFromMemory(void * data, uint32_t size , struct ImageData * out);
 void Loader_FreeImageData(struct ImageData * out);
+
+void Loader_LoadGLTF(char *path, struct Scene * out);

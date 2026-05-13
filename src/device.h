@@ -17,7 +17,7 @@ struct Device {
 
     VkCommandPool graphics_pool;
     VkCommandPool transfer_pool;
-    VkCommandBuffer transfer_cmd_buffer;
+    // VkCommandBuffer transfer_cmd_buffer;
     VkFence transfer_fence;
     
 };
@@ -30,7 +30,7 @@ struct Device *  Device_Get(void);
 
 void Device_WaitIdle();
 
-
+VkCommandBuffer Device_createTransferCommandBuffer();
 
 VkFormat Device_findDepthFormat();
 
@@ -43,7 +43,8 @@ void Device_AllocateCommandBuffer(VkCommandPool pool, VkCommandBuffer * out);
 uint32_t Device_findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 VkFormat Device_findSupportedFormat(
-	VkFormat *formats, uint32_t len,
-	VkImageTiling tiling,
-	VkFormatFeatureFlags features
+	const VkFormat *formats,
+    uint32_t len,
+    VkImageTiling tiling,
+    VkFormatFeatureFlags2 features 
 );

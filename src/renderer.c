@@ -201,9 +201,10 @@ void Renderer_Init(
 		Resource_CreateImageView(&f->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
 		// Resource_transitionImageLayout(VkCommandBuffer cmdBuffer, VkImage *image, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkImageAspectFlagBits aspectFlags, uint32_t mipLevels)
 
-		Resource_beginSingleTimeCommands(Device_Get()->transfer_cmd_buffer);
+	VkCommandBuffer command = Resource_beginSingleTimeCommands();
+	
 		Resource_transitionImageLayout(
-			Device_Get()->transfer_cmd_buffer,
+			command,
 			&f->depth_image.handle,
 			VK_IMAGE_LAYOUT_UNDEFINED, 
 			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 
@@ -214,7 +215,7 @@ void Renderer_Init(
 			VK_IMAGE_ASPECT_DEPTH_BIT,
 			1
 		);
-		Resource_endSingleTimeCommands(	Device_Get()->transfer_cmd_buffer);
+		Resource_endSingleTimeCommands(command);
 	}
 
 	Resource_CreateBuffer(
@@ -296,7 +297,7 @@ struct Texture *  Renderer_NewTexture(struct Renderer * renderer,  void * data, 
 	
 	struct ImageData imageData;
 
-	struct Texture * texture = &renderer->textures[renderer->texture_cnt];
+	struct Texture * texture = &renderer->textures[renderer->texture_cnt++];
 	Loader_LoadImageDataFromMemory(data,size, &imageData);
 	Resource_CreateTexture(
 		imageData.data, 

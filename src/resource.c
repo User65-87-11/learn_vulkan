@@ -22,6 +22,7 @@
 static void copyBufferOffset(VkBuffer dstBuffer, uint32_t dstOffset, VkBuffer srcBuffer, uint32_t srcOffset, VkDeviceSize size);
 
 static void generateMipmaps(
+	VkCommandBuffer command,
 	VkImage *image, 
 	VkFormat imageFormat, 
 	int32_t texWidth,
@@ -32,6 +33,7 @@ static void generateMipmaps(
 
 
 static void copyBufferToImage(
+	VkCommandBuffer command,
 	VkBuffer *buffer, 
 	VkImage *image, 
 	uint32_t width,
@@ -48,7 +50,7 @@ static void copyBufferOffset(VkBuffer dstBuffer, uint32_t dstOffset, VkBuffer sr
 
 	struct Device * device = Device_Get();
 	
-	Resource_beginSingleTimeCommands(device->transfer_cmd_buffer);
+	VkCommandBuffer command = Resource_beginSingleTimeCommands();
 
 
 	VkBufferCopy2 region = {
@@ -65,9 +67,9 @@ static void copyBufferOffset(VkBuffer dstBuffer, uint32_t dstOffset, VkBuffer sr
 	    .pRegions = &region,
 	    .regionCount = 1,
 	};
-	vkCmdCopyBuffer2(device->transfer_cmd_buffer, &copyBufferInfo2);
+	vkCmdCopyBuffer2(command, &copyBufferInfo2);
 	
-	Resource_endSingleTimeCommands(device->transfer_cmd_buffer);
+	Resource_endSingleTimeCommands(command);
 }
 
 
@@ -398,9 +400,10 @@ void Resource_CreateTexture(
 		IMAGE_TEXTURE_PROPS,
 		&out->image
 	);
-	Resource_beginSingleTimeCommands(device->transfer_cmd_buffer);
+	VkCommandBuffer command = Resource_beginSingleTimeCommands();
+	
 	Resource_transitionImageLayout(
-		device->transfer_cmd_buffer,
+		command,
 		&out->image.handle, 
 		VK_IMAGE_LAYOUT_UNDEFINED,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
@@ -412,15 +415,23 @@ void Resource_CreateTexture(
 		out->image.mip_levels
 	);
 
-	Resource_endSingleTimeCommands(device->transfer_cmd_buffer);
-	copyBufferToImage(&staging.handle, &out->image.handle, w,h);
-	Resource_FreeBuffer(&staging);
+
+	copyBufferToImage(
+		command,
+		&staging.handle, 
+		&out->image.handle, w,h
+	);
 	generateMipmaps(
+		command,
 		&out->image.handle, 
 		format, 
-		w, h, out->image.mip_levels
+		w, h, 
+		out->image.mip_levels
 	);
 
+	Resource_endSingleTimeCommands(command);
+	
+	Resource_FreeBuffer(&staging);
  	Resource_CreateImageView(
   		&out->image,
 		VK_IMAGE_ASPECT_COLOR_BIT
@@ -428,40 +439,42 @@ void Resource_CreateTexture(
   
 	createTextureSampler(&out->sampler);
 	
-	
 }
-static void copyBufferToImage (
+static void copyBufferToImage(
+	VkCommandBuffer command,
 	VkBuffer *buffer, 
 	VkImage *image, 
 	uint32_t width,
 	uint32_t height
 ) {
-  PRINT_FNAME;
+	PRINT_FNAME;
 
-  struct Device * device = Device_Get();
 
-  Resource_beginSingleTimeCommands(device->transfer_cmd_buffer);
+	VkBufferImageCopy bufferImageCopy = {
+		.bufferOffset = 0,
+		.bufferRowLength = 0,
+		.bufferImageHeight = 0,
+		.imageSubresource =
+		{
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			0,
+			0,
+			1,
+		},
+		.imageOffset = {0, 0, 0},
+		.imageExtent = {width, height, 1},
+	};
 
-  VkBufferImageCopy bufferImageCopy = {
-      .bufferOffset = 0,
-      .bufferRowLength = 0,
-      .bufferImageHeight = 0,
-      .imageSubresource =
-          {
-              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-              0,
-              0,
-              1,
-          },
-      .imageOffset = {0, 0, 0},
-      .imageExtent = {width, height, 1},
-  };
+	vkCmdCopyBufferToImage(
+		command, 
+		*buffer, 
+		*image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1,
+		&bufferImageCopy
+	);
 
-  vkCmdCopyBufferToImage(device->transfer_cmd_buffer, *buffer, *image,
-                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                         &bufferImageCopy);
-
-  Resource_endSingleTimeCommands(device->transfer_cmd_buffer);
+  // Resource_endSingleTimeCommands(device->transfer_cmd_buffer);
 }
 void Resource_transitionImageLayout(
 	VkCommandBuffer cmdBuffer, 
@@ -506,47 +519,49 @@ void Resource_transitionImageLayout(
 	//                     (VkBufferMemoryBarrier *)NULL, 1, &imageMemoryBarriers);
 
 	{
-	 VkImageMemoryBarrier2 beginBarrier= {
+		VkImageMemoryBarrier2 beginBarrier= {
 
-   
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = srcStageMask,
+			.dstStageMask = dstStageMask,
+			.srcAccessMask = srcAccessMask,
+			.dstAccessMask = dstAccessMask,
+			.oldLayout = oldLayout,
+			.newLayout = newLayout,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = *image,
+			.subresourceRange = {
+				
+				.aspectMask = aspectFlags,
+				.baseMipLevel = 0,
+				.levelCount = mipLevels,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+			
+			
+		};
 
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-            .srcStageMask = srcStageMask,
-            .dstStageMask = dstStageMask,
-            .srcAccessMask = srcAccessMask,
-            .dstAccessMask = dstAccessMask,
-            .oldLayout = oldLayout,
-            .newLayout = newLayout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = *image,
-            .subresourceRange =
-                {
-                    .aspectMask = aspectFlags,
-                    .baseMipLevel = 0,
-                    .levelCount = mipLevels,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-                },
-    
-
-    };
-
-    VkDependencyInfo beginDepInfo = {
-
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &beginBarrier,
-    };
-
-    vkCmdPipelineBarrier2(cmdBuffer, &beginDepInfo);
+		VkDependencyInfo beginDepInfo = {
+		
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.imageMemoryBarrierCount = 1,
+			.pImageMemoryBarriers = &beginBarrier,
+		};
+		
+		vkCmdPipelineBarrier2(cmdBuffer, &beginDepInfo);
 	}
 	// endSingleTimeCommands(cmdBuffer);
 }
 
-void Resource_beginSingleTimeCommands(VkCommandBuffer commandBuffer) {
+VkCommandBuffer Resource_beginSingleTimeCommands() {
 
-  vkResetCommandBuffer(commandBuffer, 0);
+	VkCommandBuffer commandBuffer = Device_createTransferCommandBuffer();
+	
+
+	
+  // vkResetCommandBuffer(commandBuffer, 0);
 
   VkCommandBufferBeginInfo beginInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -554,6 +569,8 @@ void Resource_beginSingleTimeCommands(VkCommandBuffer commandBuffer) {
   };
 
   vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+  return commandBuffer;
 }
 void Resource_endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 
@@ -562,17 +579,17 @@ void Resource_endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 	
 	vkEndCommandBuffer(commandBuffer);
 	
-	VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-	
+	// VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+
+	VkCommandBufferSubmitInfo buffersubmitInfo={
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+		.commandBuffer = commandBuffer
+	};
+
 	VkSubmitInfo2 submitInfo2 = {
-	    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-	    .commandBufferInfoCount = 1,
-	    .pCommandBufferInfos =
-	        &(VkCommandBufferSubmitInfo){
-	            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-	            .commandBuffer = commandBuffer,
-	
-	        },
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+		.commandBufferInfoCount = 1,
+		.pCommandBufferInfos = &buffersubmitInfo
 	
 	};
 	
@@ -581,11 +598,20 @@ void Resource_endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 	vkQueueSubmit2(device->transfer_queue, 1, &submitInfo2, device->transfer_fence);
 	
 	vkWaitForFences(device->logical_device, 1, &device->transfer_fence, VK_TRUE, UINT64_MAX);
+
+
+	vkFreeCommandBuffers(
+        Device_Get()->logical_device,
+        Device_Get()->transfer_pool,
+        1,
+        &commandBuffer
+    );
 }
 
 
 	
 static void generateMipmaps(
+	VkCommandBuffer command,
 	VkImage *image, 
 	VkFormat imageFormat, 
 	int32_t texWidth,
@@ -593,26 +619,12 @@ static void generateMipmaps(
 	uint32_t mipLevels
 ) {
 
-	struct Device * device = Device_Get();
+	// struct Device * device = Device_Get();
 	PRINT_FNAME;
 	
 	
-	Resource_beginSingleTimeCommands(device->transfer_cmd_buffer);
-	
-	VkFormatProperties2 formatProperties = {
-		.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
-	};
-	vkGetPhysicalDeviceFormatProperties2(
-		device->physical_device, 
-		imageFormat,
-		&formatProperties
-	);
-	
-	if (!(formatProperties.formatProperties.optimalTilingFeatures &
-	    VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) 
-	{
-		EXIT_CLEAN("texture image format does not support linear blitting!");
-	}
+	// Resource_beginSingleTimeCommands(device->transfer_cmd_buffer);
+
 	
 	int32_t mipWidth = texWidth;
 	int32_t mipHeight = texHeight;
@@ -644,31 +656,31 @@ static void generateMipmaps(
 	    .pImageMemoryBarriers = &barrier,
 	};
 	
-	vkCmdPipelineBarrier2(device->transfer_cmd_buffer, &dependencyInfo);
+	vkCmdPipelineBarrier2(command, &dependencyInfo);
 	
 	for (uint32_t i = 1; i < mipLevels; i++) {
-	
-	VkImageBlit2 blit = {
-	    .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
-	    .srcOffsets = {{0, 0, 0}, {mipWidth, mipHeight, 1}},
-	    .dstOffsets = {{0, 0, 0},
-	                    {mipWidth > 1 ? mipWidth / 2 : 1,
-	                    mipHeight > 1 ? mipHeight / 2 : 1, 1}},
-	    .srcSubresource =
-	        {
-	            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-	            .mipLevel = i - 1,
-	            .baseArrayLayer = 0,
-	            .layerCount = 1,
-	        },
-	    .dstSubresource =
-	        {
-	            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-	            .mipLevel = i,
-	            .baseArrayLayer = 0,
-	            .layerCount = 1,
-	        },
-	};
+		
+		VkImageBlit2 blit = {
+		    .sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
+		    .srcOffsets = {{0, 0, 0}, {mipWidth, mipHeight, 1}},
+		    .dstOffsets = {{0, 0, 0},
+		                    {mipWidth > 1 ? mipWidth / 2 : 1,
+		                    mipHeight > 1 ? mipHeight / 2 : 1, 1}},
+		    .srcSubresource =
+		        {
+		            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		            .mipLevel = i - 1,
+		            .baseArrayLayer = 0,
+		            .layerCount = 1,
+		        },
+		    .dstSubresource =
+		        {
+		            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		            .mipLevel = i,
+		            .baseArrayLayer = 0,
+		            .layerCount = 1,
+		        },
+		};
 	
 	VkBlitImageInfo2 blitInfo = {
 	    .sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
@@ -681,7 +693,7 @@ static void generateMipmaps(
 	    .pRegions = &blit,
 	};
 	
-	vkCmdBlitImage2(device->transfer_cmd_buffer, &blitInfo);
+	vkCmdBlitImage2(command, &blitInfo);
 	
 	barrier.subresourceRange.baseMipLevel = i - 1;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -691,7 +703,7 @@ static void generateMipmaps(
 	barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 	barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 	
-	vkCmdPipelineBarrier2(device->transfer_cmd_buffer, &dependencyInfo);
+	vkCmdPipelineBarrier2(command, &dependencyInfo);
 	
 	if (i < mipLevels - 1) {
 	    barrier.subresourceRange.baseMipLevel = i;
@@ -702,7 +714,7 @@ static void generateMipmaps(
 	    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 	    barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 	
-	    vkCmdPipelineBarrier2(device->transfer_cmd_buffer, &dependencyInfo);
+	    vkCmdPipelineBarrier2(command, &dependencyInfo);
 	}
 	
 	if (mipWidth > 1)
@@ -719,7 +731,7 @@ static void generateMipmaps(
 	barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
 	barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
 	
-	vkCmdPipelineBarrier2(device->transfer_cmd_buffer, &dependencyInfo);
+	vkCmdPipelineBarrier2(command, &dependencyInfo);
 	
-	Resource_endSingleTimeCommands(device->transfer_cmd_buffer);
+	// Resource_endSingleTimeCommands(device->transfer_cmd_buffer);
 }

@@ -62,22 +62,18 @@ vec3 positions[3] = vec3[](
     );
 
 void main() {
-    mat4 view = mat4(1.0);
+    // mat4 view = mat4(1.0);
 
     // Hard-coded triangle vertices
 
     // Select vertex based on built-in ID
-    vec3 pos = positions[gl_VertexIndex];
+    // vec3 pos = positions[gl_VertexIndex];
 
     // gl_Position = vec4(pos, 0.0, 1.0);
-    gl_Position = camera.view_proj * vec4(in_position, 1.0);
-    return;
+    // gl_Position = camera.view_proj * vec4(in_position, 1.0);
+    // return;
 
-    vec3 disstorted_pos = in_position;
-
-    // disstorted_pos.x += (sin(in_position.y * 10.0 + global.time_total * 5) + 1.0) * 0.05;
-
-    vec4 world_pos = inst[gl_InstanceIndex].model * vec4(disstorted_pos, 1.0);
+    vec4 world_pos = inst[gl_InstanceIndex].model * vec4(in_position, 1.0);
 
     gl_Position = camera.view_proj * world_pos;
 

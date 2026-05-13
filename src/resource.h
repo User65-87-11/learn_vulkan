@@ -105,7 +105,7 @@ void Resource_transitionImageLayout(
 	uint32_t mipLevels
 );
 
-void Resource_beginSingleTimeCommands(VkCommandBuffer commandBuffer);
+VkCommandBuffer Resource_beginSingleTimeCommands();
 
 void Resource_endSingleTimeCommands(VkCommandBuffer commandBuffer);
 

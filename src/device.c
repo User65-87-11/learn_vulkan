@@ -25,16 +25,11 @@ static void createPhysicalDevice();
 static void createLogicalDevice() ;
 static void physicalDeviceExtensionCheck();
 static void physicalDeviceFeatureCheck();
-static void createTransferCommandBuffer();
+
 static void createQueue();
 static void createTransferFence();
 
-static VkFormat findSupportedFormat(
-	VkFormat *formats,
-	uint32_t len,
-	VkImageTiling tiling,
-	VkFormatFeatureFlags features
-);
+
 
 static void createCommandPool();
 
@@ -52,7 +47,7 @@ void Device_Create(){
 
 	createCommandPool();
 
-	createTransferCommandBuffer();
+	
 
 	createTransferFence();
 
@@ -77,12 +72,29 @@ static void createTransferFence(){
 
 }
 
-static void createTransferCommandBuffer(){
-	
-	Device_AllocateCommandBuffer(device.transfer_pool,&device.transfer_cmd_buffer);
-	
+VkCommandBuffer Device_createTransferCommandBuffer(){
+
+	VkCommandBuffer command; 
+	Device_AllocateCommandBuffer(device.transfer_pool,&command);
+	return command;
 }
 
+bool Device_formatSupported(VkFormat format){
+	VkFormatProperties2 formatProperties = {
+		.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
+	};
+	vkGetPhysicalDeviceFormatProperties2(
+		device.physical_device, 
+		format,
+		&formatProperties
+	);
+	
+	if (!(formatProperties.formatProperties.optimalTilingFeatures &
+	    VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) 
+	{
+		EXIT_CLEAN("texture image format does not support linear blitting!");
+	}
+}
 
 void Device_WaitIdle(){
 	vkDeviceWaitIdle(device.logical_device);
@@ -92,34 +104,38 @@ struct Device * Device_Get(void){
 	return &device;
 }
 VkFormat Device_findSupportedFormat(
-	VkFormat *formats, 
-	uint32_t len,
-	VkImageTiling tiling,
-	VkFormatFeatureFlags features
+    const VkFormat *formats,
+    uint32_t len,
+    VkImageTiling tiling,
+    VkFormatFeatureFlags2 features 
 ) 
 {
 	// VkPhysicalDevice physicalDevice = getPhysicalDevice();
 
+	for (uint32_t i = 0; i < len; i++) {
 
-                             
-  for (int i = 0; i < len; i++) {
+        VkFormatProperties2 props = {
+            .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2
+        };
 
-    VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties2(
+            device.physical_device,
+            formats[i],
+            &props
+        );
 
-    vkGetPhysicalDeviceFormatProperties(device.physical_device, formats[i], &props);
+        VkFormatFeatureFlags2 supported =
+            (tiling == VK_IMAGE_TILING_LINEAR)
+            ? props.formatProperties.linearTilingFeatures
+            : props.formatProperties.optimalTilingFeatures;
 
-    if (tiling == VK_IMAGE_TILING_LINEAR &&
-        (props.linearTilingFeatures & features) == features) {
-
-      return formats[i];
+        if ((supported & features) == features) {
+            return formats[i];
+        }
     }
-    if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-        (props.optimalTilingFeatures & features) == features) {
 
-      return formats[i];
-    }
-  }
-  EXIT_CLEAN("failed to find supported format!");
+    EXIT_CLEAN("failed to find supported format!");
+    return VK_FORMAT_UNDEFINED;
 }
 
 VkFormat Device_findDepthFormat() {
@@ -130,38 +146,14 @@ VkFormat Device_findDepthFormat() {
 		VK_FORMAT_D24_UNORM_S8_UINT
 	};
 	
-	return findSupportedFormat(
+	return Device_findSupportedFormat(
 		formats, 
 		ARR_LEN(formats), 
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
 	);
 }
-static VkFormat findSupportedFormat(
-	VkFormat *formats, uint32_t len,
-	VkImageTiling tiling,
-	VkFormatFeatureFlags features
-) 
-{
-	for (int i = 0; i < len; i++) {
 
-		VkFormatProperties props;
-		
-		vkGetPhysicalDeviceFormatProperties(device.physical_device, formats[i], &props);
-		
-		if (tiling == VK_IMAGE_TILING_LINEAR &&
-		(props.linearTilingFeatures & features) == features) {
-		
-			return formats[i];
-		}
-		if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-		(props.optimalTilingFeatures & features) == features) {
-		
-			return formats[i];
-		}
-	}
-	EXIT_CLEAN("failed to find supported format!");
-}
 
 static void physicalDeviceExtensionCheck() {
 

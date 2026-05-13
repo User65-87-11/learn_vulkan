@@ -38,22 +38,21 @@ layout(set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
 layout(set = DESC_SET_TEXTURES, binding = 0) uniform sampler2D tex[MAX_TEXTURES];
 
 void main() {
-    if (global.frame_cnt == 0x88)
-    {
-        out_color = vec4(1.0, 0.0, 0.0, 1.0);
-    } else
-    {
-        out_color = vec4(0.2, 0.8, 1.0, 1.0);
-    }
-    return;
+
+    // if (idx == 0 && inst[idx].tex_idx == 0)
+    // {
+    //     out_color = vec4(1.0, 0.0, 0.0, 1.0);
+    // } else
+    // {
+    //     out_color = vec4(0.2, 0.8, 1.0, 1.0);
+    // }
+    // return;
+
     uint idx = instance_id;
 
     uint tex_idx = inst[idx].tex_idx;
 
-    vec2 distorted_uv = texCoord;
-    // distorted_uv.x += sin(texCoord.y * 10.0 + global.time_total) * 0.05;
-
-    vec4 texColor = texture(tex[tex_idx], distorted_uv);
+    vec4 texColor = texture(tex[tex_idx], texCoord);
 
     vec4 inst_color = inst[idx].color;
 

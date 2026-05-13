@@ -81,7 +81,7 @@ void Descriptor_Init(){
 			
 			{
 				.binding = BINDING_GLOBAL_LIGHT,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.descriptorCount = 1,
 				.stageFlags =
 					VK_SHADER_STAGE_VERTEX_BIT |
@@ -151,20 +151,27 @@ void Descriptor_Init(){
   }
 
   {
-    VkDescriptorSetLayoutBinding samplerBindings = {
-
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = MAX_TEXTURES,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT};
+	VkDescriptorSetLayoutBinding samplerBindings = {
+	
+		.binding = 0,
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.descriptorCount = MAX_TEXTURES,
+		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+		
+	};
 
     VkDescriptorSetLayoutCreateInfo samplerLayoutInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .bindingCount = 1,
-        .pBindings = &samplerBindings};
+        .pBindings = &samplerBindings
+    };
 
-    VkResult res = vkCreateDescriptorSetLayout(device, &samplerLayoutInfo, NULL,
-                                               &context.samplerLayout);
+	VkResult res = vkCreateDescriptorSetLayout(
+		device, 
+		&samplerLayoutInfo, 
+		NULL,
+		&context.samplerLayout
+	);
 
     if (res != VK_SUCCESS) {
       EXIT_CLEAN("vkCreateDescriptorSetLayout samplerBindings");
