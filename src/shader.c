@@ -16,86 +16,76 @@
 
 #endif
 
+static uint32_t readFile(const char* path, uint8_t** buffer);
 
-
-static  uint32_t readFile(const char *path, uint8_t **buffer);
-
-
-void Shader_Destroy(
-	VkDevice device, 
-	VkShaderModule shader
-){
+void Shader_Destroy(VkDevice device, VkShaderModule shader) {
 	vkDestroyShaderModule(device, shader, NULL);
 }
-VkShaderModule Shader_CreateFromFile(
-	VkDevice device, 
-	const char* path
-){
-	
+
+VkShaderModule Shader_CreateFromFile(VkDevice device, const char* path) {
+
 	VkShaderModule retval;
-	uint8_t *data = NULL;
+	uint8_t* data = NULL;
 	uint32_t dataSize = readFile(path, &data);
-	
+
 	if (dataSize == 0) {
-	
+
 		printf("Shader path: %s\n", path);
 		EXIT_CLEAN("failed to read fragment shader file\n");
-		
 	}
 	VkShaderModuleCreateInfo createInfo = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		.pCode = (uint32_t *)data,
+		.pCode = (uint32_t*)data,
 		.codeSize = dataSize,
-		
+
 	};
-	
+
 	vkCreateShaderModule(device, &createInfo, NULL, &retval);
-	
+
 	free(data);
-	
+
 	return retval;
-	
 };
 
-static uint32_t readFile(const char *path, uint8_t **buffer) {
+static uint32_t readFile(const char* path, uint8_t** buffer) {
 
-  PRINT_FNAME;
+	PRINT_FNAME;
 
-  char cwd[256];
+	char cwd[256];
 
-  if (_getcwd(cwd, sizeof(cwd)) != NULL) {
-    printf("Current working directory:\n");
-    printf("%s\n", cwd);
-    printf("%s\n", path);
-  } else {
-    perror("_getcwd() error");
-  }
+	if (_getcwd(cwd, sizeof(cwd)) != NULL) {
+		printf("Current working directory:\n");
+		printf("%s\n", cwd);
+		printf("%s\n", path);
+	} else {
+		perror("_getcwd() error");
+	}
 
-  FILE *file = NULL;
- 
-  errno_t err = fopen_s(&file, path, "rb");
-  
-  // FILE *file = fopen_s(path, "rb");
+	FILE* file = NULL;
 
-  if(err != 0 || file == NULL) {
-    printf("Error opening file %s\n",file);
-    return 1;
-  }
+	errno_t err = fopen_s(&file, path, "rb");
 
-  fseek(file, 0, SEEK_END);
-  uint32_t size = ftell(file);
-  rewind(file);
+	// FILE *file = fopen_s(path, "rb");
 
-  *buffer = malloc(size);
-  if (*buffer == NULL) {
-    printf("Fill buffer mem alloc error\n");
-    fclose(file);
-    return 0;
-  }
+	if (err != 0 || file == NULL) {
+		printf("Error opening file %s\n", file);
+		return 1;
+	}
 
-  fread(*buffer, 1, size, file);
+	fseek(file, 0, SEEK_END);
+	uint32_t size = ftell(file);
+	rewind(file);
 
-  fclose(file);
+	*buffer = malloc(size);
+	if (*buffer == NULL) {
+		printf("Fill buffer mem alloc error\n");
+		fclose(file);
+		return 0;
+	}
 
-  return size;
+	fread(*buffer, 1, size, file);
+
+	fclose(file);
+
+	return size;
 }

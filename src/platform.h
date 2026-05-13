@@ -3,7 +3,6 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
 
-
 #ifdef _WIN32
 #include <direct.h>
 #include <stdlib.h>
@@ -13,22 +12,18 @@
 
 #include "app.h"
 
+#define WIDTH 800
 
-#define WIDTH  800
+#define HEIGHT 600
 
-#define HEIGHT  600
-
-
-
-void Platform_InitWindow(struct ApplicationContext * context);
-
+void Platform_InitWindow(struct ApplicationContext* context);
 
 void Platform_WaitForEvents();
 void Platform_Shutdown();
 // void Platform_procMouseInput(GLFWwindow *window);
 
-// void Platform_mouseCallback(GLFWwindow *window, double xposIn, double yposIn);
-
+// void Platform_mouseCallback(GLFWwindow *window, double xposIn, double
+// yposIn);
 
 void Platform_createSurface(VkInstance instance);
 void Platform_destroySurface(VkInstance instance);
@@ -49,7 +44,7 @@ float Platform_GetTime();
 
 int Platform_ShouldCloseWindow();
 
-void Platform_SetShouldCloseWindow( uint32_t value);
+void Platform_SetShouldCloseWindow(uint32_t value);
 
 bool Platform_HasFrameBufferResized();
 

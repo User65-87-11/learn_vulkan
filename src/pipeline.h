@@ -2,35 +2,27 @@
 #include <vulkan/vulkan.h>
 
 struct GraphicsPipelineCreateInfo {
-    VkDevice device;
+	VkDevice device;
 
-    VkExtent2D extent;
+	VkExtent2D extent;
 
-    VkFormat colorFormat;
-    VkFormat depthFormat;
+	VkFormat colorFormat;
+	VkFormat depthFormat;
 
-    VkShaderModule vertexShader;
-    VkShaderModule fragmentShader;
+	VkShaderModule vertexShader;
+	VkShaderModule fragmentShader;
 
-    VkDescriptorSetLayout* descriptorSetLayouts;
-    uint32_t descriptorSetLayoutCount;
-
+	VkDescriptorSetLayout* descriptorSetLayouts;
+	uint32_t descriptorSetLayoutCount;
 };
-
 
 struct GraphicsPipeline {
-    VkPipeline handle;
-    VkPipelineLayout layout;
+	VkPipeline handle;
+	VkPipelineLayout layout;
 
-    struct GraphicsPipelineCreateInfo info;
+	struct GraphicsPipelineCreateInfo info;
 };
 
+void Pipeline_CreateGraphics(struct GraphicsPipeline* pipeline);
 
-void Pipeline_CreateGraphics(
-	struct 	GraphicsPipeline * pipeline
-);
-
-void Pipeline_Destroy(
-    VkDevice device,
-    struct GraphicsPipeline* pipeline
-);
+void Pipeline_Destroy(VkDevice device, struct GraphicsPipeline* pipeline);

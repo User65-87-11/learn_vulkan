@@ -23,28 +23,4 @@ typedef struct GltfNode {
     uint32_t child_count;
 } GltfNode;
 
-Entity = Mesh instance	
-
-
-
-
-  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-
-    vkFreeCommandBuffers(device, graphicsCommnadPool, 1,
-                         &frames[i].graphicsCommandBuffers);
-  }
-
-  vkFreeCommandBuffers(device, transferCommnadPool, 1, &transferCommandBuffers);
-
-
----
-  vkDestroyCommandPool(device, graphicsCommnadPool, NULL);
-
-  vkDestroyCommandPool(device, transferCommnadPool, NULL);
-
-  cleanBuffer(&vertex_buffer);
-  cleanBuffer(&index_buffer);
-
-  cleanShaderBuffers();
-
-  vkDestroyDevice(device, NULL);
+Entity = Mesh instance

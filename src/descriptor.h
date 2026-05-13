@@ -1,22 +1,20 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include "shader_common.h"
+#include <vulkan/vulkan.h>
 
 struct DescriptorContext {
-    VkDescriptorPool pool;
+	VkDescriptorPool pool;
 
-    VkDescriptorSetLayout globalLayout;
-    VkDescriptorSetLayout instanceLayout;
-    VkDescriptorSetLayout materialLayout;
-    VkDescriptorSetLayout samplerLayout;
+	VkDescriptorSetLayout globalLayout;
+	VkDescriptorSetLayout instanceLayout;
+	VkDescriptorSetLayout materialLayout;
+	VkDescriptorSetLayout samplerLayout;
 
-    //should work on load only
-    VkDescriptorImageInfo descriptor_image_info_textures[MAX_TEXTURES];
-    uint32_t descriptor_texture_last_used ;
+	// should work on load only
+	VkDescriptorImageInfo descriptor_image_info_textures[MAX_TEXTURES];
+	uint32_t descriptor_texture_last_used;
 };
-
-
 
 // lifecycle
 void Descriptor_Init();
@@ -33,29 +31,19 @@ struct DescriptorContext* Descriptor_GetContext();
 VkDescriptorSet Descriptor_Allocate(VkDescriptorSetLayout layout);
 
 void Descriptor_SetTextureToDescriptorInfoArray(
-	VkImageView view,
-	VkSampler sampler,
-	uint32_t position
-);
-void Descriptor_UpdateTextureDescriptors(
-	VkDescriptorSet descriptor_set, 
-	VkDescriptorImageInfo * arr,
+	VkImageView view, VkSampler sampler, uint32_t position);
+
+void Descriptor_UpdateTextureDescriptors(VkDescriptorSet descriptor_set,
+	VkDescriptorImageInfo* arr,
 	uint32_t count,
-	uint32_t offset
-);
+	uint32_t offset);
+
 // updates
-void Descriptor_UpdateBuffer(
-    VkDescriptorSet set,
-    uint32_t binding,
-    VkDescriptorType type,
-    VkBuffer buffer,
-    VkDeviceSize size
-);
+void Descriptor_UpdateBuffer(VkDescriptorSet set,
+	uint32_t binding,
+	VkDescriptorType type,
+	VkBuffer buffer,
+	VkDeviceSize size);
 
 void Descriptor_UpdateImage(
-    VkDescriptorSet set,
-    uint32_t binding,
-    VkDescriptorImageInfo* imageInfo
-);
-
-
+	VkDescriptorSet set, uint32_t binding, VkDescriptorImageInfo* imageInfo);
