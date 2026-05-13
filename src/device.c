@@ -88,23 +88,6 @@ VkCommandBuffer Device_createTransferCommandBuffer(){
 	return command;
 }
 
-bool Device_formatSupported(VkFormat format){
-	VkFormatProperties2 formatProperties = {
-		.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
-	};
-	vkGetPhysicalDeviceFormatProperties2(
-		device.physical_device, 
-		format,
-		&formatProperties
-	);
-	
-	if (!(formatProperties.formatProperties.optimalTilingFeatures &
-	    VK_FORMAT_FEATURE_2_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) 
-	{
-		EXIT_CLEAN("texture image format does not support linear blitting!");
-	}
-}
-
 void Device_WaitIdle(){
 	vkDeviceWaitIdle(device.logical_device);
 }
