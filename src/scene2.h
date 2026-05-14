@@ -15,23 +15,24 @@ So scene has SSBO UBO and renderer has their buffers?
  */
 
 
-
 struct SceneNode{
-   	uint32_t parent;
+	uint32_t parent;
 	uint32_t* children;
 	uint32_t child_count;
 	uint32_t next_sibling;
-   
+
 	//---
 	vec3 translation;
 	vec4 rotation;
 	vec3 scale;
-   
+
 	mat4 matrix;
 	uint8_t has_matrix;
-   
+
 	uint32_t mesh;
 };
+
+
 struct Mesh {
 	uint32_t vertex_offset;
 	uint32_t index_offset;
@@ -39,6 +40,7 @@ struct Mesh {
 	uint32_t vertex_count;
 	uint32_t index_count;
 
+	uint32_t material_index;
 	uint32_t instance_index;
 };
 

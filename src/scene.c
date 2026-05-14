@@ -38,6 +38,7 @@ void Scene_Init(struct Scene* scene, float aspect_ratio) {
 	PRINT_FNAME;
 	memset(scene, 0, sizeof(struct Scene));
 
+
 	// scene_ref = scene;
 
 	scene->camera_data.fov = 45.0f;
@@ -67,6 +68,8 @@ void Scene_Init(struct Scene* scene, float aspect_ratio) {
 
 struct Entity* Scene_NewEntity(struct Scene* scene) {
 	assert(scene->entities_count < MAX_ENTITIES);
+	scene->entities[scene->entities_count].material_index = UNSET_VALUE;
+	scene->entities[scene->entities_count].mesh_index = UNSET_VALUE;
 	return &scene->entities[scene->entities_count++];
 }
 
@@ -78,6 +81,8 @@ struct Entity* Scene_GetEntity(struct Scene* scene, uint32_t position) {
 
 struct Mesh* Scene_NewMesh(struct Scene* scene) {
 	assert(scene->mesh_count < MAX_MESHES);
+	scene->meshes[scene->mesh_count].instance_index =  UNSET_VALUE;
+	
 	return &scene->meshes[scene->mesh_count++];
 }
 
@@ -89,7 +94,8 @@ struct Mesh* Scene_GetMesh(struct Scene* scene, uint32_t position) {
 
 struct MaterialData* Scene_NewMaterial(struct Scene* scene) {
 	assert(scene->material_count < MAX_MATERIALS);
-
+	scene->material_data[scene->material_count].base_color_texture_idx = UNSET_VALUE;
+	scene->material_data[scene->material_count].metallic_roughness_texture_idx = UNSET_VALUE;	
 	return &scene->material_data[scene->material_count++];
 }
 
@@ -101,6 +107,7 @@ struct MaterialData* Scene_GetMaterial(struct Scene* scene, uint32_t position) {
 
 struct InstanceData* Scene_NewInstanceData(struct Scene* scene) {
 	assert(scene->instance_count < MAX_INSTANCES);
+	scene->instance_data[scene->instance_count].material_idx = UNSET_VALUE;
 	return &scene->instance_data[scene->instance_count++];
 }
 

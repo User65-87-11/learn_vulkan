@@ -12,6 +12,12 @@ typedef uint32_t uint;
 
 #endif
 
+#define UNSET_VALUE 0xffffffff 
+#define UNSET_BYTE  0xff
+
+
+
+
 #define DESC_SET_GLOBALS 0
 #define DESC_SET_INSTANCES 1
 #define DESC_SET_MATERIALS 2
@@ -69,22 +75,31 @@ struct InstanceData
     #else
     vec4 model[4];
     #endif
-    vec4 color;
-    float color_factor;
-    uint tex_idx;
+
+    uint material_idx;
 
     
 }
-
 #ifndef __SHADERS__
 	__attribute__((aligned(32)))
 #endif
-
 ;
 
-struct 
+struct MaterialData {
 
-CameraData {
+	// w = factor
+	vec4 base_color_factor;
+
+	uint base_color_texture_idx;
+
+	float metallic_factor;
+
+	float roughness_factor;
+
+	uint metallic_roughness_texture_idx;
+};
+
+struct CameraData {
 	#ifdef __SHADERS__
     mat4 view;
     mat4 proj;
@@ -122,11 +137,6 @@ struct LightData {
     float color_factor;
 };
 
-struct MaterialData {
-    vec4 color;
-    float color_factor;
-    uint texture_idx;
-};
 
 struct GlobalData {
 

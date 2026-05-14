@@ -1,26 +1,7 @@
-GLTF
-GltfAsset Imported from GLTF
-
-for GltfAsset.nodes
-	An Entity is created
-
-
-typedef struct GltfScene {
-    uint32_t root_nodes[32];
-    uint32_t root_count;
-} GltfScene;
-
-
-typedef struct GltfNode {
-    float local_matrix[16];   // or T/R/S if you prefer split form
-
-    int mesh;                 // index into meshes[] (-1 if none)
-    int camera;               // optional (-1 if none)
-
-    int parent;               // optional, -1 for root
-
-    uint32_t children[16];
-    uint32_t child_count;
-} GltfNode;
-
-Entity = Mesh instance
+Entity
+	uint32_t * meshes;
+	uint32_t mesh_count;
+	
+Equals to scene
+	mesh
+		primitives

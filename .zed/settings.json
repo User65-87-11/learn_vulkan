@@ -1,0 +1,10 @@
+{// Folder-specific settings
+//
+// For a full list of overridable settings, and general information on folder-specific settings,//zed.dev/docs/configuring-zed#settings-files
+    // "languages": {
+    //     "C": {
+    //         "continue_comments_on_newline": false,
+    //     },
+    // },
+  "extend_comment_on_newline": false
+}

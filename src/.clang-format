@@ -1,0 +1,10 @@
+PointerAlignment: Left
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+AlignAfterOpenBracket: DontAlign
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: false
+ContinuationIndentWidth: 4
+SeparateDefinitionBlocks: Always
+SortIncludes: false

@@ -35,7 +35,7 @@ layout(location = 0) out vec2 out_texCoord;
 
 layout(location = 1) out vec3 out_norm;
 
-layout(location = 2) out flat uint out_instance_id;
+layout(location = 2) out flat uint out_instance_idx;
 
 mat4 get_proj() {
     float fov = radians(45.0);
@@ -81,5 +81,5 @@ void main() {
 
     out_norm = in_norm;
 
-    out_instance_id = gl_InstanceIndex;
+    out_instance_idx = gl_InstanceIndex;
 }

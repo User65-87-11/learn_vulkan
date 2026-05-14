@@ -6,7 +6,7 @@
 
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 normal;
-layout(location = 2) in flat uint instance_id;
+layout(location = 2) in flat uint instance_idx;
 
 //to the first color attachment
 layout(location = 0) out vec4 out_color;
@@ -32,7 +32,7 @@ layout(set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
 
 layout(set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
 {
-    MaterialData material[];
+    MaterialData materials[];
 };
 
 layout(set = DESC_SET_TEXTURES, binding = 0) uniform sampler2D tex[MAX_TEXTURES];
@@ -48,15 +48,29 @@ void main() {
     // }
     // return;
 
-    uint idx = instance_id;
+    // uint idx = instance_id;
 
-    uint tex_idx = inst[idx].tex_idx;
+    // uint material_idx = inst[idx].material_id;
 
-    vec4 texColor = texture(tex[tex_idx], texCoord);
+    InstanceData inst = inst[instance_idx];
 
-    vec4 inst_color = inst[idx].color;
+    uint material_idx = inst.material_idx;
+    if (material_idx == UNSET_VALUE) {
+        material_idx = 0;
+    }
+    MaterialData mat = materials[material_idx];
+    // mat.base_color_factor = vec4(0.0, 0.0, 1.0, 0.5);
 
-    float color_factor = inst[idx].color_factor;
+    vec4 texColor = vec4(1.0, 0.0, 0.0, 1.0);
+
+    if (mat.base_color_texture_idx != UNSET_VALUE)
+    {
+        texColor = texture(tex[mat.base_color_texture_idx], texCoord);
+    }
+
+    vec4 inst_color = vec4(mat.base_color_factor.xyz, 1.0);
+
+    float color_factor = mat.base_color_factor.w;
 
     vec4 finalColor = mix(texColor, inst_color, color_factor);
 

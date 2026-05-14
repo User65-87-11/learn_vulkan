@@ -249,6 +249,7 @@ struct Texture* Renderer_NewTexture(
 	Resource_CreateTexture(imageData.data, imageData.width, imageData.height,
 		VK_FORMAT_R8G8B8A8_SRGB, texture);
 	Loader_FreeImageData(&imageData);
+	
 	return texture;
 }
 

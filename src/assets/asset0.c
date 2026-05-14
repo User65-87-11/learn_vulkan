@@ -103,12 +103,10 @@ void Asset0_init(struct ApplicationContext * app){
 
 	struct MaterialData * material0 = Scene_NewMaterial(&app->scene);
 	uint32_t material_idx = app->scene.material_count - 1;
-	mesh0->material_index = material_idx;
-
 
 	
+	GLM_VEC4_SET(material0->base_color_factor, 0.0, 0.0, 1.0, 0.5);
 
-	
 	
 	struct Texture * texture0 = Renderer_NewTexture(
 		&app->renderer, 
@@ -116,11 +114,7 @@ void Asset0_init(struct ApplicationContext * app){
 		sizeof(image_png0)
 	);
 	uint32_t texture_idx = app->renderer.texture_cnt - 1;
-	material0->texture_idx = texture_idx;
-
-	
-	GLM_VEC4_SET(material0->color, 1.0, 1.0, 2.0, 1.0);
-	material0->color_factor = 1.0f;
+	material0->base_color_texture_idx = texture_idx;
 
 	
 	struct InstanceData *inst = Scene_NewInstanceData(&app->scene);
@@ -128,9 +122,8 @@ void Asset0_init(struct ApplicationContext * app){
 	mesh0->instance_index = instance_index;
 	
 	glm_mat4_identity(inst->model);
-	GLM_VEC4_SET(inst->color, 0.0f, 0.0f, 1.0f, 1.0f);
-	inst->color_factor = 0.2f;
-	inst->tex_idx = texture_idx;
+	// inst->material_idx = material_idx;
+	
 	
 
 	
