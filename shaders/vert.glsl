@@ -14,7 +14,7 @@ layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_GLOBAL) uniform Global
 
 layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_CAMERA) uniform Global_Camera
 {
-    CameraData camera;
+    CameraData camera[2];
 };
 layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_LIGHT) uniform Global_Lights
 {
@@ -23,7 +23,7 @@ layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_LIGHT) uniform Global_Li
 
 layout(set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
 {
-    InstanceData inst[];
+    InstanceData instance[];
 };
 
 layout(set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
@@ -73,9 +73,12 @@ void main() {
     // gl_Position = camera.view_proj * vec4(in_position, 1.0);
     // return;
 
-    vec4 world_pos = inst[gl_InstanceIndex].model * vec4(in_position, 1.0);
+    InstanceData inst = instance[gl_InstanceIndex];
+    vec4 world_pos = inst.model * vec4(in_position, 1.0);
 
-    gl_Position = camera.view_proj * world_pos;
+ 
+    gl_Position = camera[inst.camera_idx].view_proj * world_pos;
+  
 
     out_texCoord = in_texCoord;
 

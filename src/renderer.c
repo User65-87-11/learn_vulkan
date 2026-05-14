@@ -150,7 +150,7 @@ void Renderer_Init(struct Renderer* renderer) {
 			BINDING_GLOBAL_GLOBAL, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			f->buffer_global.handle, f->buffer_global.size);
 
-		Resource_CreateBuffer(sizeof(struct CameraData), BUFFER_UBO_USAGE,
+		Resource_CreateBuffer(sizeof(struct CameraData)*2, BUFFER_UBO_USAGE,
 			BUFFER_UBO_PROPS, &f->buffer_global_camera);
 		Resource_mapBufferMemory(&f->buffer_global_camera);
 
@@ -509,28 +509,41 @@ static void renderMainPass(struct Renderer* renderer,
 
 	vkCmdBindDescriptorSets(frame->commandBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline.layout, 0,
-		ARR_LEN(dset), dset, 0, NULL);
+		ARR_LEN(dset), dset, 0, NULL
+	);
 
+
+
+	
 	for (int i = 0; i < scene->entities_count; i++) {
 
 		struct Entity* entity = &scene->entities[i];
 
 		struct Mesh* mesh = &scene->meshes[entity->mesh_index];
 
-		/*
-
-		Parameters:
-
-		VkCommandBuffer commandBuffer (aka struct VkCommandBuffer_T *)
-		uint32_t indexCount (aka unsigned int)
-		uint32_t instanceCount (aka unsigned int)
-		uint32_t firstIndex (aka unsigned int)
-		int32_t vertexOffset (aka int)
-		uint32_t firstInstance (aka unsigned int)
-		*/
-		vkCmdDrawIndexed(frame->commandBuffer, mesh->index_count, 1,
-			mesh->index_offset, mesh->vertex_offset, 0);
+		vkCmdDrawIndexed(
+			frame->commandBuffer, 
+			mesh->index_count, 1,
+			mesh->index_offset, 
+			mesh->vertex_offset, 0
+		);
 	}
+	
+	// for(int i=0;i<scene->mesh_count;i++)
+	// {
+	// 	struct Mesh* mesh = &scene->meshes[i];
+	// 		printf("  mesh->index_count %d\n",  mesh->index_count)	;
+
+			
+	// 	vkCmdDrawIndexed(
+	// 	    frame->commandBuffer,
+	// 	    mesh->index_count,
+	// 	    scene->instance_count,
+	// 	    mesh->f,
+	// 	    mesh->vertex_offset,
+	// 	    0
+	// 	);
+	// }
 
 	vkCmdEndRendering(frame->commandBuffer);
 }

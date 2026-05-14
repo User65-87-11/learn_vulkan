@@ -36,7 +36,7 @@ struct Mesh {
 	uint32_t vertex_offset;
 	uint32_t index_offset;
 
-	uint32_t vertex_count;
+	// uint32_t vertex_count;
 	uint32_t index_count;
 
 	uint32_t instance_index;
@@ -46,7 +46,7 @@ struct Entity {
 	char name[64];
 	uint32_t mesh_index;
 	uint32_t material_index;
-	bool is_visible;
+	uint32_t is_visible;
 };
 
 struct Scene {
@@ -65,7 +65,7 @@ struct Scene {
 	uint32_t instance_count;
 
 	struct GlobalData global_data;
-	struct CameraData camera_data;
+	struct CameraData camera_data[2];
 	struct LightData light_data;
 };
 

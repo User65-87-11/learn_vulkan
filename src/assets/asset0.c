@@ -62,6 +62,18 @@ static uint32_t cube0_indices[] = {
     20,21,22,22,23,20
 };
 
+static void create_Instance0(
+	struct ApplicationContext * app,
+	uint32_t indices_count,
+	uint32_t indices_offset,
+	uint32_t vertices_offset
+);
+static void create_Instance1(
+	struct ApplicationContext * app,
+	uint32_t indices_count,
+	uint32_t indices_offset,
+	uint32_t vertices_offset
+);
 
 void Asset0_init(struct ApplicationContext * app){
 	PRINT_FNAME;
@@ -81,6 +93,20 @@ void Asset0_init(struct ApplicationContext * app){
 		vertices_count
 	);
 
+	create_Instance0(app,indices_count,indices_offset,vertices_offset);
+
+	create_Instance1(app,indices_count,indices_offset,vertices_offset);
+
+	
+}
+
+static void create_Instance0(
+	struct ApplicationContext * app,
+	uint32_t indices_count,
+	uint32_t indices_offset,
+	uint32_t vertices_offset
+){
+	
 	struct Entity * entity0 = Scene_NewEntity(&app->scene);
 	uint32_t entity_idx = app->scene.entities_count - 1;
 	
@@ -98,7 +124,7 @@ void Asset0_init(struct ApplicationContext * app){
 	mesh0->index_offset = indices_offset;
 	mesh0->index_count = indices_count;
 	mesh0->vertex_offset = vertices_offset;
-	mesh0->vertex_count = vertices_count;
+	// mesh0->vertex_count = vertices_count;
 
 
 	struct MaterialData * material0 = Scene_NewMaterial(&app->scene);
@@ -122,9 +148,8 @@ void Asset0_init(struct ApplicationContext * app){
 	mesh0->instance_index = instance_index;
 	
 	glm_mat4_identity(inst->model);
-	// inst->material_idx = material_idx;
-	
-	
+	inst->camera_idx= 0;
+	 inst->material_idx = material_idx;
 
 	
 	for(int i=0; i<MAX_TEXTURES ;i++)
@@ -142,7 +167,75 @@ void Asset0_init(struct ApplicationContext * app){
 
 	
 	app->scene.global_data.instance_cnt = app->scene.instance_count;
+}
 
+
+static void create_Instance1(
+	struct ApplicationContext * app,
+	uint32_t indices_count,
+	uint32_t indices_offset,
+	uint32_t vertices_offset
+){
+	
+	struct Entity * entity0 = Scene_NewEntity(&app->scene);
+	uint32_t entity_idx = app->scene.entities_count - 1;
+	
+	entity0->is_visible = true;
+
+	memcpy(entity0->name, "entity1", sizeof("entity1"));
+	
+	
+	
+	struct Mesh * mesh0 = Scene_NewMesh(&app->scene);
+	uint32_t mesh_index = app->scene.mesh_count - 1;
+	
+	entity0->mesh_index = mesh_index;
+	
+	mesh0->index_offset = indices_offset;
+	mesh0->index_count = indices_count;
+	mesh0->vertex_offset = vertices_offset;
+	// mesh0->vertex_count = vertices_count;
+
+
+	struct MaterialData * material0 = Scene_GetMaterial(&app->scene,app->scene.material_count - 1);
+	uint32_t material_idx = app->scene.material_count - 1;
 
 	
+//	GLM_VEC4_SET(material0->base_color_factor, 0.0, 0.0, 1.0, 0.5);
+
+	
+	// struct Texture * texture0 = Renderer_NewTexture(
+	// 	&app->renderer, 
+	// 	image_png0, 
+	// 	sizeof(image_png0)
+	// );
+	// uint32_t texture_idx = app->renderer.texture_cnt - 1;
+	// material0->base_color_texture_idx = texture_idx;
+
+	
+	struct InstanceData *inst = Scene_NewInstanceData(&app->scene);
+	uint32_t instance_index = app->scene.instance_count - 1;
+	mesh0->instance_index = instance_index;
+	
+	glm_mat4_identity(inst->model);
+	glm_translate(inst->model, (vec3){-5, 5, 0.0f});
+	inst->camera_idx= 1;
+	inst->material_idx = material_idx;
+
+	
+	// for(int i=0; i<MAX_TEXTURES ;i++)
+	// {
+	// 	Descriptor_SetTextureToDescriptorInfoArray(texture0->image.view, texture0->sampler,i);
+	// }
+
+	// struct DescriptorContext * context = Descriptor_GetContext();
+	// Descriptor_UpdateTextureDescriptors(
+	// 	app->renderer.desc_set_samplers, 
+	// 	context->descriptor_image_info_textures, 
+	// 	MAX_TEXTURES,
+	// 	0
+	// );
+
+	
+	app->scene.global_data.instance_cnt = app->scene.instance_count;
 }

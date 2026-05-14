@@ -12,7 +12,7 @@ bootstrap_gen.text
 /assets
 /.vscode
 /zig-out
-/.zig-cache
+.zig-cache/
 
 gltf_viewer.exe
 gltf_viewer.pdb

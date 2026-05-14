@@ -270,6 +270,7 @@ static uint32_t find_graphics_family(VkPhysicalDevice physical_device) {
 	VkQueueFamilyProperties* families =
 		malloc(sizeof(VkQueueFamilyProperties) * count);
 
+	
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, families);
 
 	for (uint32_t i = 0; i < count; i++) {

@@ -33,39 +33,6 @@ typedef uint32_t uint;
 #define MAX_LIGHTS 1
 
 
-/*
-
-st140 (max)16
-float = 4
-float[1] = 16
-float[4]
-	== [flaot + 12]+[flaot + 12]+[flaot + 12]+[flaot + 12]
-
-vec4 =16 
-	== float + float + float  + float
-	!= flaot[4]
-mat4 = 16
-	== vec4[4]
-	== 16*float
-
-
-
-std430
-float = 4
-float[1] = 4
-vec2 = 8
-vec3-4 = 16
-mat4 = 16
-
- */
-
-/*
-	vec3 positions[3] = vec3[](
-            vec3(-0.6, -0.4, -4.0),
-            vec3(0.6, -0.4, -4.0),
-            vec3(0.0, 0.6, -4.0)
-        );
- */
 
 
 struct InstanceData
@@ -77,6 +44,7 @@ struct InstanceData
     #endif
 
     uint material_idx;
+    uint camera_idx;
 
     
 }
@@ -98,6 +66,8 @@ struct MaterialData {
 
 	uint metallic_roughness_texture_idx;
 };
+
+
 
 struct CameraData {
 	#ifdef __SHADERS__
@@ -121,13 +91,15 @@ struct CameraData {
     float near_plane;
     float far_plane;
     float aspect_ratio;
-}
 
+    float ortho_size;
+}
 #ifndef __SHADERS__
 	__attribute__((aligned(32)))
 #endif
-
 ;
+
+
 
 struct LightData {
     vec3 pos;
@@ -136,6 +108,9 @@ struct LightData {
     vec3 color;
     float color_factor;
 };
+
+
+
 
 
 struct GlobalData {
@@ -149,5 +124,3 @@ struct GlobalData {
     uint instance_cnt; 
 
 } ;
-
-///generate usign Clang AST
