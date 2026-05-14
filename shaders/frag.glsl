@@ -2,8 +2,8 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "shader_common.h"
 #include "debug.glsl"
+#include "shader_common.h"
 
 layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 normal;
@@ -74,8 +74,7 @@ void main() {
     }
     vec2 fb_size = global.framebuffer_size;
 
-    if (draw_9999(9999, gl_FragCoord.xy, fb_size / 2)) {
-        // if (check_coords(gl_FragCoord.xy, fb_size.x / 2, fb_size.y / 2)) {
+    if (draw_9999(99, gl_FragCoord.xy, fb_size / 2)) {
         texColor = vec4(0.0, 2.0, 0.0, 1.0);
     }
 
