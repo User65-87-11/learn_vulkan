@@ -45,7 +45,9 @@ static void mainLoop() {
 
 	Renderer_Init(&app_context.renderer);
 
-	Scene_Init(&app_context.scene, Platform_GetAspectRatio());
+	uint32_t width,height;
+ 	Platform_GetFramebufferSize(&width,&height);
+	Scene_Init(&app_context.scene,width,height);
 
 	Asset0_init(&app_context);
 

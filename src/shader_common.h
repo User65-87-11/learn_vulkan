@@ -139,6 +139,8 @@ struct LightData {
 
 
 struct GlobalData {
+	
+    vec2 framebuffer_size;
 
 	float time_total;
     float time_delta;

@@ -34,9 +34,11 @@ static void update_entities(
 static void update_keys(
 	struct Scene* scene, struct InputState* input, float dt);
 
-void Scene_Init(struct Scene* scene, float aspect_ratio) {
+void Scene_Init(struct Scene* scene, uint32_t width,uint32_t height) {
 	PRINT_FNAME;
 	memset(scene, 0, sizeof(struct Scene));
+
+
 
 
 	// scene_ref = scene;
@@ -44,7 +46,7 @@ void Scene_Init(struct Scene* scene, float aspect_ratio) {
 	scene->camera_data.fov = 45.0f;
 	scene->camera_data.near_plane = 0.1f;
 	scene->camera_data.far_plane = 100.0f;
-	scene->camera_data.aspect_ratio = aspect_ratio;
+	scene->camera_data.aspect_ratio = (float)width/height;
 
 	scene->camera_data.yaw = yaw;
 	scene->camera_data.pitch = 0.0f;
@@ -62,6 +64,8 @@ void Scene_Init(struct Scene* scene, float aspect_ratio) {
 
 	scene->camera_data.proj[1][1] *= -1;
 	scene->global_data.frame_cnt = 0x88;
+	scene->global_data.framebuffer_size[0] = width;	
+	scene->global_data.framebuffer_size[1] = height;
 
 	glm_mat4_identity(scene->camera_data.view);
 }

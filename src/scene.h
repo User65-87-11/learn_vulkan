@@ -71,7 +71,7 @@ struct Scene {
 
 // struct Scene * Scene_Get();
 
-void Scene_Init(struct Scene* scene, float aspect_ratio);
+void Scene_Init(struct Scene* scene, uint32_t width, uint32_t height);
 
 void Scene_Update(struct Scene* scene, float dt);
 

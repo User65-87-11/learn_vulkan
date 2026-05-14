@@ -76,8 +76,15 @@ void Platform_InitWindow(struct ApplicationContext* app) {
 }
 
 static void frameResizeCallback(GLFWwindow* window, int width, int height) {
+	PRINT_FNAME;
 	struct ApplicationContext* app = glfwGetWindowUserPointer(window);
 
+	uint32_t w,h;
+	Platform_GetFramebufferSize(&w, &h);
+	app->scene.global_data.framebuffer_size[0] = w;	
+	app->scene.global_data.framebuffer_size[1] = h;
+
+	
 	app->renderer.framebuffer_resized = true;
 	app->scene.camera_data.aspect_ratio = Platform_GetAspectRatio();
 	glm_perspective(glm_rad(app->scene.camera_data.fov),
