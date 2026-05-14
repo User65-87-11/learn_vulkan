@@ -5,7 +5,7 @@ to run: .\zig-out\bin\main.exe
 
 
 
-added debug.glsl with 8 segment display that can print 0000-9999 number
+added debug.glsl with 7 segment display that can print 0000-9999 number
 
 located in shaders/debug.glsl
 
