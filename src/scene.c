@@ -4,6 +4,7 @@
 #include "scene.h"
 #include "cglm/cam.h"
 #include "cglm/clipspace/persp_rh_no.h"
+#include "cglm/vec3.h"
 #include "input.h"
 #include "platform.h"
 #include "src/shader_common.h"
@@ -25,7 +26,9 @@
 
 // static struct GmArray array_meshes;
 
-static const float yaw = -90.0f;
+
+static const float yaw = -230.0f;
+static const float pitch = 30.0f;
 
 static void update_camera(
 	struct Scene* scene, struct InputState* input, float dt);
@@ -43,42 +46,27 @@ static void camera_perspective_init(
 	float aspect_ratio,
 	float yaw,
 	float pitch,
-	vec3 front,
-	vec3 pos,
-	vec3 up
-);
-static void camera_ortho_init(
-	struct CameraData* cam,
-	float aspect_ratio,
-	float ortho_size
+	vec3 pos
+
 );
 
 void Scene_Init(struct Scene* scene, uint32_t width,uint32_t height) {
 	PRINT_FNAME;
 	memset(scene, 0, sizeof(struct Scene));
 
-	// cam->fov = 45.0f;
-	// cam->near_plane = 0.1f;
-	// cam->far_plane = 100.0f;
-	// cam->aspect_ratio = (float)width/height;
 
-	// cam->yaw = yaw;
-	// cam->pitch = 0.0f;
+	vec3 pos0 = {2.0, -2.0f, -2.0f};
 
-	// GLM_VEC3_SET(cam->front, -0.7f, 0.0f, 0.7f);
-	// GLM_VEC3_SET(cam->pos, 0.5f, 0.5f, 2.6f);
-	// GLM_VEC3_SET(cam->up, 0.0f, 1.0f, 0.0f);
 
-	vec3 pos0 = {-0.7f, 0.0f, 0.7f};
-	vec3 front0 = { 0.5f, 0.5f, 2.6f};
-	vec3 up0 = { 0.0f, 1.0f, 0.0f};
 	camera_perspective_init(
-		&scene->camera_data[0], 45.0, 0.1f, 100.0f,
-		(float)width / height, yaw, 0.0f, pos0, front0, up0
+		&scene->camera_data[CAMERA_MAIN], 
+		45.0, 0.1f, 100.0f,
+		(float)width / height, 
+		yaw, pitch, 
+		pos0
 	);
 
 
-	camera_ortho_init(&scene->camera_data[1],(float)width / height,10.0);
 
 	
 	// scene_ref = scene;
@@ -98,36 +86,9 @@ static void camera_perspective_init(
 	float aspect_ratio,
 	float yaw,
 	float pitch,
-	vec3 front,
-	vec3 pos,
-	vec3 up
+	vec3 pos
 ){
 
-	
-	// cam->fov = 45.0f;
-	// cam->near_plane = 0.1f;
-	// cam->far_plane = 100.0f;
-	// cam->aspect_ratio = (float)width/height;
-
-	// cam->yaw = yaw;
-	// cam->pitch = 0.0f;
-
-	// GLM_VEC3_SET(cam->front, -0.7f, 0.0f, 0.7f);
-	// GLM_VEC3_SET(cam->pos, 0.5f, 0.5f, 2.6f);
-	// GLM_VEC3_SET(cam->up, 0.0f, 1.0f, 0.0f);
-
-	// // gmArrayInit(&array_meshes, sizeof(struct Mesh), MAX_INSTANCES,
-	// // sizeof(struct Mesh));
-
-	// glm_perspective(
-	// 	glm_rad(cam->fov),
-	// 	cam->aspect_ratio, 
-	// 	cam->near_plane,
-	// 	cam->far_plane, 
-	// 	cam->proj
-	// );
-
-	// cam->proj[1][1] *= -1;
 
 	
 	cam->fov = fov;
@@ -136,14 +97,18 @@ static void camera_perspective_init(
 	cam->aspect_ratio = aspect_ratio;
 
 	cam->yaw = yaw;
-	cam->pitch = 0.0f;
+	cam->pitch = pitch;
 	cam->ortho_size = 0.0f;
 
-	GLM_VEC3_COPY(cam->front, front);
-	GLM_VEC3_COPY(cam->pos, pos);
-	GLM_VEC3_COPY(cam->up, up);
+
 
 	
+
+	GLM_VEC3_COPY(cam->pos, pos);
+	GLM_VEC3_SET(cam->up,0.0,1.0,0.0);
+
+	printf("CAM: %f,%f,%f\n",cam->pos);
+
 
 	glm_perspective_rh_no(
 		glm_rad(cam->fov),
@@ -152,39 +117,38 @@ static void camera_perspective_init(
 		cam->far_plane, 
 		cam->proj
 	);
-	// glm_perspective_rh_no(float fovy, float aspect, float nearZ, float farZ, vec4 *dest)
-	glm_mat4_identity(	cam->view);
-	// cam->proj[1][1] *= -1;
-}
-static void camera_ortho_init(
-	struct CameraData* cam,
-	float aspect_ratio,
-	float ortho_size
-){
-
-	cam->ortho_size = ortho_size;
-	cam->aspect_ratio = aspect_ratio;
 	
-	float top    = ortho_size;
-	float bottom = -ortho_size;
+	// glm_mat4_identity(	cam->view);
+
+	vec3 front_;
+
+	front_[0] = cos(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch));
+	front_[1] = sin(glm_rad(cam->pitch));
+	front_[2] = sin(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch));
+
+	GLM_VEC3_COPY(cam->front, front_);
+
+	vec3 cameraCenter;
 	
-	float right = ortho_size * aspect_ratio;
-	float left  = -right;
-
-
-	glm_ortho_rh_no(left,right, bottom, top, -10.0, 10.0, cam->proj);
-
-	glm_lookat_rh(
-  		(vec3){1, 1, -1},
-	    (vec3){0, 0, 0},
-	    (vec3){0, 1, 0},
-	    cam->view
+	glm_vec3_add(
+		cam->pos, 
+		cam->front, 
+		cameraCenter
 	);
+	
+	glm_lookat_rh(
+		cam->pos, 
+		cameraCenter, 
+		cam->up,
+		cam->view
+	);
+
 	glm_mat4_mul(
 		cam->proj, 
 		cam->view,
 		cam->view_proj
 	);
+	
 }
 
 
@@ -240,7 +204,7 @@ static void update_keys(
 	struct InputState* input, 
 	float dt
 ) {
-	struct CameraData* cam = &scene->camera_data[0];
+	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
 	
 	if (input->keys[GLFW_KEY_ESCAPE] == GLFW_PRESS) {
 		Platform_SetShouldCloseWindow(true);
@@ -250,7 +214,10 @@ static void update_keys(
 	if (input->keys[GLFW_KEY_W] == GLFW_PRESS) {
 
 		glm_vec3_muladds(
-			cam->front, cameraSpeed, cam->pos);
+			cam->front, 
+			cameraSpeed, 
+			cam->pos
+		);
 	}
 
 	if (input->keys[GLFW_KEY_S] == GLFW_PRESS) {
@@ -278,7 +245,7 @@ static void update_keys(
 static void update_camera(
 	struct Scene* scene, struct InputState* input, float dt
 ) {
-	struct CameraData* cam = &scene->camera_data[0];
+	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
 	
 	cam->yaw += input->mouseDeltaX;
 
@@ -291,6 +258,7 @@ static void update_camera(
 		cam->pitch = -89.0f;
 	}
 
+	printf("y:%f, p:%f\n", cam->yaw, cam->pitch);
 	vec3 front;
 
 	front[0] = cos(glm_rad(cam->yaw)) *
@@ -302,11 +270,23 @@ static void update_camera(
 	GLM_VEC3_COPY(cam->front, front);
 
 	vec3 cameraCenter;
+	
 	glm_vec3_add(
-		cam->pos, cam->front, cameraCenter);
-	glm_lookat_rh(cam->pos, cameraCenter, cam->up,
-		cam->view);
+		cam->pos, 
+		cam->front, 
+		cameraCenter
+	);
+	
+	glm_lookat_rh(
+		cam->pos, 
+		cameraCenter, 
+		cam->up,
+		cam->view
+	);
 
-	glm_mat4_mul(cam->proj, cam->view,
-		cam->view_proj);
+	glm_mat4_mul(
+		cam->proj, 
+		cam->view,
+		cam->view_proj
+	);
 }

@@ -60,7 +60,7 @@ struct Scene {
 	uint32_t instance_count;
 
 	struct GlobalData global_data;
-	struct CameraData camera_data[2];
+	struct CameraData camera_data[MAX_CAMERAS];
 	struct LightData light_data;
 };
 

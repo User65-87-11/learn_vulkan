@@ -19,7 +19,7 @@ layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_GLOBAL) uniform Global
 
 layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_CAMERA) uniform Global_Camera
 {
-    CameraData camera[2];
+    CameraData camera[MAX_CAMERAS];
 };
 layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_LIGHT) uniform Global_Lights
 {
@@ -74,19 +74,25 @@ void main() {
     }
     vec2 fb_size = global.framebuffer_size;
 
-    uint cam_debug =  uint(camera[1].ortho_size);
+    ivec3 cam_pos = ivec3(camera[CAMERA_MAIN].pos);
+     
+   	vec2 hpos = fb_size/2;
+
+	if ( draw_value(cam_pos.x, gl_FragCoord.xy, hpos, 0.4,16) ) {
 	
-	if ( draw_value(instance_idx, gl_FragCoord.xy, fb_size/2, 0.4,10) ) {
-	
-		texColor = vec4(0.0, 2.0, 0.0, 1.0);
+		texColor = vec4(2.0, 0.0, 0.0, 1.0);
 	}
-	vec2 hpos = fb_size/2;
+
 	hpos.y +=50;
-	if ( draw_value(0xfabf, gl_FragCoord.xy,hpos , 0.4,16) ) {
+	if ( draw_value(cam_pos.y, gl_FragCoord.xy,hpos , 0.4,16) ) {
 	
-		texColor = vec4(1.0, 0.0, 0.0, 1.0);
+		texColor = vec4(2.0, 0.0, 0.0, 1.0);
 	}
+	hpos.y +=50;
+	if ( draw_value(cam_pos.z, gl_FragCoord.xy,hpos , 0.4,16) ) {
 	
+		texColor = vec4(2.0, 0.0, 0.0, 1.0);
+	}
 	
 	vec4 inst_color = vec4(mat.base_color_factor.xyz, 1.0);
 	

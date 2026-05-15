@@ -104,7 +104,9 @@ static void create_Instance0(
 	uint32_t indices_offset,
 	uint32_t vertices_offset
 );
-
+/*
+ createMesh
+	*/
 void Asset0_init(struct ApplicationContext * app){
 	PRINT_FNAME;
 	uint32_t indices_offset = app->renderer.buffer_index_used;
@@ -171,7 +173,6 @@ static void create_Instance0(
 	mesh0->instance_offset = instance_index;
 	
 	glm_mat4_identity(inst->model);
-	inst->camera_idx= 0;
 	inst->material_idx = material_idx;
 
 	

@@ -79,33 +79,7 @@ void Platform_InitWindow(struct ApplicationContext* app) {
 
 	glfwSetFramebufferSizeCallback(window, frameResizeCallback);
 }
-static void update_camera_ortho(struct CameraData * cam, float aspect){
 
-	cam->aspect_ratio = aspect;
-	
-	float right = cam->ortho_size * aspect;
-	float left = -right;
-
-	float top    = cam->ortho_size;
-	float bottom = -cam->ortho_size;
-
-	// glm_ortho_rh_no(float left, float right, float bottom, float top, float nearZ, float farZ, vec4 *dest)
-	
-	glm_ortho_rh_no(left , right, bottom, top, -10.0, 10.0,cam->proj);
-	glm_lookat_rh(
-	// glm_lookat(
-	    (vec3){1, 1, 1},
-	    (vec3){0, 0, 0},
-	    (vec3){0, 1, 0},
-	    cam->view
-	);
-	glm_mat4_mul(
-		cam->proj, 
-		cam->view,
-		cam->view_proj
-	);
-	
-}
 static void update_camera_perspective(struct CameraData * cam, float aspect){
 
 	cam->aspect_ratio = aspect;
@@ -121,8 +95,11 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 	);
 	// cam->proj[1][1] *= -1.f;
 
-	glm_mat4_mul(cam->proj, cam->view,
-		cam->view_proj);
+	glm_mat4_mul(
+		cam->proj, 
+		cam->view,
+		cam->view_proj
+	);
 }
 static void frameResizeCallback(GLFWwindow* window, int width, int height) {
 	PRINT_FNAME;
@@ -133,9 +110,9 @@ static void frameResizeCallback(GLFWwindow* window, int width, int height) {
 	app->scene.global_data.framebuffer_size[0] = w;	
 	app->scene.global_data.framebuffer_size[1] = h;
 
-	update_camera_perspective(&app->scene.camera_data[0],(float)w/h);
+	update_camera_perspective(&app->scene.camera_data[CAMERA_MAIN],(float)w/h);
 
-	update_camera_ortho(&app->scene.camera_data[1],(float)w/h);
+	
 	app->renderer.framebuffer_resized = true;
 	
 

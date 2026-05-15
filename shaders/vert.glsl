@@ -38,7 +38,7 @@ layout(location = 1) out vec3 out_norm;
 layout(location = 2) out flat uint out_instance_idx;
 
 mat4 get_proj() {
-    float fov = radians(45.0);
+	float fov = radians(45.0);
     float aspect = 16.0 / 9.0;
     float near = 0.1;
     float far = 10.0;
@@ -77,7 +77,7 @@ void main() {
     vec4 world_pos = inst.model * vec4(in_position, 1.0);
 
  
-    gl_Position = camera[0].view_proj * world_pos;
+    gl_Position = camera[CAMERA_MAIN].view_proj * world_pos;
   
 
     out_texCoord = in_texCoord;
