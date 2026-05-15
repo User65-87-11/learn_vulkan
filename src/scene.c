@@ -258,7 +258,7 @@ static void update_camera(
 		cam->pitch = -89.0f;
 	}
 
-	printf("y:%f, p:%f\n", cam->yaw, cam->pitch);
+	// printf("y:%f, p:%f\n", cam->yaw, cam->pitch);
 	vec3 front;
 
 	front[0] = cos(glm_rad(cam->yaw)) *

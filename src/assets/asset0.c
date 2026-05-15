@@ -131,6 +131,8 @@ void Asset0_init(struct ApplicationContext * app){
 	
 }
 
+
+
 static void create_Instance0(
 	struct ApplicationContext * app,
 	uint32_t indices_count,
@@ -142,9 +144,7 @@ static void create_Instance0(
 	
 	
 	struct Mesh * mesh0 = Scene_NewMesh(&app->scene);
-	uint32_t mesh_index = app->scene.mesh_count - 1;
 
-	
 	mesh0->index_offset = indices_offset;
 	mesh0->index_count = indices_count;
 	mesh0->vertex_offset = vertices_offset;

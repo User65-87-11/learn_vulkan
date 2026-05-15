@@ -7,6 +7,9 @@
 #include "pipeline.h"
 #include "scene.h"
 
+
+
+
 struct FrameData {
 	VkCommandPool commandPool;
 	VkCommandBuffer commandBuffer;
@@ -24,6 +27,9 @@ struct FrameData {
 
 	struct Buffer buffer_instances;
 	struct Image depth_image;
+
+	struct Mesh meshes[MAX_MESHES];
+	uint32_t mesh_count;
 };
 
 struct Renderer {

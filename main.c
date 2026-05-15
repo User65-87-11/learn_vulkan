@@ -534,7 +534,7 @@ void procMouseInput(GLFWwindow *window) {
   dx = xpos - prevX;
   dy = ypos - prevY;
 
-  printf("dx:%f, dy:%f\n", dx, dy);
+ 
 
   prevX = xpos;
   prevY = ypos;

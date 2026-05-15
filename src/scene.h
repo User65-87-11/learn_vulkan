@@ -32,6 +32,7 @@ struct SceneNode{
    
 	uint32_t mesh;
 };
+
 struct Mesh {
 	uint32_t vertex_offset;
 	uint32_t index_offset;
