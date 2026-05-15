@@ -77,7 +77,7 @@ void main() {
     vec4 world_pos = inst.model * vec4(in_position, 1.0);
 
  
-    gl_Position = camera[inst.camera_idx].view_proj * world_pos;
+    gl_Position = camera[0].view_proj * world_pos;
   
 
     out_texCoord = in_texCoord;

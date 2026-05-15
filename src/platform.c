@@ -1,4 +1,7 @@
 #include "cglm/cam.h"
+#include "cglm/clipspace/ortho_rh_no.h"
+#include "cglm/clipspace/persp_rh_no.h"
+#include "cglm/clipspace/view_rh_no.h"
 #include "src/app.h"
 #include "src/shader_common.h"
 #include "vulkan/vk_platform.h"
@@ -86,10 +89,11 @@ static void update_camera_ortho(struct CameraData * cam, float aspect){
 	float top    = cam->ortho_size;
 	float bottom = -cam->ortho_size;
 
-
-	glm_ortho(left , right, bottom, top, -10.0, 10.0,cam->proj);
-
-	glm_lookat(
+	// glm_ortho_rh_no(float left, float right, float bottom, float top, float nearZ, float farZ, vec4 *dest)
+	
+	glm_ortho_rh_no(left , right, bottom, top, -10.0, 10.0,cam->proj);
+	glm_lookat_rh(
+	// glm_lookat(
 	    (vec3){1, 1, 1},
 	    (vec3){0, 0, 0},
 	    (vec3){0, 1, 0},
@@ -108,14 +112,14 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 
 
 	
-	glm_perspective(
+	glm_perspective_rh_no(
 		glm_rad(cam->fov),
 		cam->aspect_ratio, 
 		cam->near_plane,
 		cam->far_plane, 
 		cam->proj
 	);
-	cam->proj[1][1] *= -1.f;
+	// cam->proj[1][1] *= -1.f;
 
 	glm_mat4_mul(cam->proj, cam->view,
 		cam->view_proj);

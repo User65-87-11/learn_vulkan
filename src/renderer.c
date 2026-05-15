@@ -515,17 +515,28 @@ static void renderMainPass(struct Renderer* renderer,
 
 
 	
-	for (int i = 0; i < scene->entities_count; i++) {
+	for (int i = 0; i < scene->mesh_count; i++) {
 
-		struct Entity* entity = &scene->entities[i];
+	
 
-		struct Mesh* mesh = &scene->meshes[entity->mesh_index];
+		struct Mesh* mesh = &scene->meshes[i];
 
-		vkCmdDrawIndexed(
+		/*
 			frame->commandBuffer, 
-			mesh->index_count, 1,
+			mesh->index_count, 
+			,
 			mesh->index_offset, 
-			mesh->vertex_offset, 0
+			mesh->vertex_offset, 
+			0
+		 */
+		
+		vkCmdDrawIndexed(
+			frame->commandBuffer,
+			mesh->index_count, 
+			mesh->instance_cnt, 
+			mesh->index_offset, 
+			mesh->vertex_offset,
+			mesh->instance_offset
 		);
 	}
 	

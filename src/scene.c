@@ -3,13 +3,12 @@
 #include <string.h>
 #include "scene.h"
 #include "cglm/cam.h"
+#include "cglm/clipspace/persp_rh_no.h"
 #include "input.h"
 #include "platform.h"
 #include "src/shader_common.h"
 #include "src/util/common.h"
-#include "util/gm_array.h"
-#include "util/gm_list.h"
-#include "app.h"
+
 
 // static struct Camera camera;
 
@@ -31,8 +30,7 @@ static const float yaw = -90.0f;
 static void update_camera(
 	struct Scene* scene, struct InputState* input, float dt);
 
-static void update_entities(
-	struct Scene* scene, struct InputState* input, float dt);
+
 
 static void update_keys(
 	struct Scene* scene, struct InputState* input, float dt);
@@ -147,15 +145,16 @@ static void camera_perspective_init(
 
 	
 
-	glm_perspective(
+	glm_perspective_rh_no(
 		glm_rad(cam->fov),
 		cam->aspect_ratio, 
 		cam->near_plane,
 		cam->far_plane, 
 		cam->proj
 	);
+	// glm_perspective_rh_no(float fovy, float aspect, float nearZ, float farZ, vec4 *dest)
 	glm_mat4_identity(	cam->view);
-	cam->proj[1][1] *= -1;
+	// cam->proj[1][1] *= -1;
 }
 static void camera_ortho_init(
 	struct CameraData* cam,
@@ -173,9 +172,9 @@ static void camera_ortho_init(
 	float left  = -right;
 
 
-	glm_ortho(left,right, bottom, top, -10.0, 10.0, cam->proj);
+	glm_ortho_rh_no(left,right, bottom, top, -10.0, 10.0, cam->proj);
 
-	glm_lookat(
+	glm_lookat_rh(
   		(vec3){1, 1, -1},
 	    (vec3){0, 0, 0},
 	    (vec3){0, 1, 0},
@@ -187,23 +186,13 @@ static void camera_ortho_init(
 		cam->view_proj
 	);
 }
-struct Entity* Scene_NewEntity(struct Scene* scene) {
-	assert(scene->entities_count < MAX_ENTITIES);
-	scene->entities[scene->entities_count].material_index = UNSET_VALUE;
-	scene->entities[scene->entities_count].mesh_index = UNSET_VALUE;
-	return &scene->entities[scene->entities_count++];
-}
 
-struct Entity* Scene_GetEntity(struct Scene* scene, uint32_t position) {
-	assert(scene->entities_count > position);
 
-	return &scene->entities[position];
-}
 
 struct Mesh* Scene_NewMesh(struct Scene* scene) {
 	assert(scene->mesh_count < MAX_MESHES);
-	scene->meshes[scene->mesh_count].instance_index =  UNSET_VALUE;
-	
+	scene->meshes[scene->mesh_count].instance_cnt =  UNSET_VALUE;
+	scene->meshes[scene->mesh_count].instance_offset =  UNSET_VALUE;
 	return &scene->meshes[scene->mesh_count++];
 }
 
@@ -281,7 +270,7 @@ static void update_keys(
 
 	if (input->keys[GLFW_KEY_SPACE] == GLFW_PRESS) {
 
-		glm_vec3_muladds(
+		glm_vec3_mulsubs(
 			cam->up, cameraSpeed, cam->pos);
 	}
 }
@@ -293,7 +282,7 @@ static void update_camera(
 	
 	cam->yaw += input->mouseDeltaX;
 
-	cam->pitch += input->mouseDeltaY;
+	cam->pitch -= input->mouseDeltaY;
 
 	if (cam->pitch > 89.0f) {
 		cam->pitch = 89.0f;
@@ -315,16 +304,9 @@ static void update_camera(
 	vec3 cameraCenter;
 	glm_vec3_add(
 		cam->pos, cam->front, cameraCenter);
-	glm_lookat(cam->pos, cameraCenter, cam->up,
+	glm_lookat_rh(cam->pos, cameraCenter, cam->up,
 		cam->view);
 
 	glm_mat4_mul(cam->proj, cam->view,
 		cam->view_proj);
-}
-
-static void update_entities(
-	struct Scene* scene, struct InputState* input, float dt) {
-	for (int i = 0; i < scene->entities_count; i++) {
-		struct Entity* entity = &scene->entities[i];
-	}
 }

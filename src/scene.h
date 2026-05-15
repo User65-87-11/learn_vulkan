@@ -39,19 +39,14 @@ struct Mesh {
 	// uint32_t vertex_count;
 	uint32_t index_count;
 
-	uint32_t instance_index;
+	uint32_t instance_cnt;
+	uint32_t instance_offset;
 };
 
-struct Entity {
-	char name[64];
-	uint32_t mesh_index;
-	uint32_t material_index;
-	uint32_t is_visible;
-};
+
 
 struct Scene {
-	struct Entity entities[MAX_ENTITIES];
-	uint32_t entities_count;
+
 
 	struct Mesh meshes[MAX_MESHES];
 	uint32_t mesh_count;
@@ -75,9 +70,6 @@ void Scene_Init(struct Scene* scene, uint32_t width, uint32_t height);
 
 void Scene_Update(struct Scene* scene, float dt);
 
-struct Entity* Scene_NewEntity(struct Scene* scene);
-
-struct Entity* Scene_GetEntity(struct Scene* scene, uint32_t position);
 
 struct Mesh* Scene_NewMesh(struct Scene* scene);
 
