@@ -76,10 +76,17 @@ void main() {
 
     uint cam_debug =  uint(camera[1].ortho_size);
 	
-	if ( draw_9999(instance_idx, gl_FragCoord.xy, fb_size/2, 0.4) ) {
+	if ( draw_value(instance_idx, gl_FragCoord.xy, fb_size/2, 0.4,10) ) {
 	
 		texColor = vec4(0.0, 2.0, 0.0, 1.0);
 	}
+	vec2 hpos = fb_size/2;
+	hpos.y +=50;
+	if ( draw_value(0xfabf, gl_FragCoord.xy,hpos , 0.4,16) ) {
+	
+		texColor = vec4(1.0, 0.0, 0.0, 1.0);
+	}
+	
 	
 	vec4 inst_color = vec4(mat.base_color_factor.xyz, 1.0);
 	
