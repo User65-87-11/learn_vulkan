@@ -10,7 +10,7 @@
 #include "swapchain.h"
 #include "vertex.h"
 #include "shader.h"
-#include "device.h"
+#include "device2.h"
 #include "util/common.h"
 #include "resource.h"
 #include "descriptor.h"
@@ -37,9 +37,9 @@ static void renderMainPass(struct Renderer* renderer,
 
 void Renderer_Destroy(struct Renderer* renderer) {
 	PRINT_FNAME;
-	VkDevice device = Device_Get()->logical_device;
+	VkDevice device  = renderer->ref_device->logical_device;
 
-	Pipeline_Destroy(device, &renderer->pipeline);
+	Pipeline_Destroy(&renderer->pipeline);
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
@@ -48,20 +48,20 @@ void Renderer_Destroy(struct Renderer* renderer) {
 		vkDestroySemaphore(device, renderer->frames[i].imageAvailable, NULL);
 		vkDestroySemaphore(device, renderer->frames[i].renderFinished, NULL);
 
-		Resource_FreeBuffer(&renderer->frames[i].buffer_global);
-		Resource_FreeBuffer(&renderer->frames[i].buffer_global_camera);
-		Resource_FreeBuffer(&renderer->frames[i].buffer_global_light);
-		Resource_FreeBuffer(&renderer->frames[i].buffer_instances);
-		Resource_FreeImage(&renderer->frames[i].depth_image);
+		Resource_FreeBuffer(renderer->ref_device,&renderer->frames[i].buffer_global);
+		Resource_FreeBuffer(renderer->ref_device,&renderer->frames[i].buffer_global_camera);
+		Resource_FreeBuffer(renderer->ref_device,&renderer->frames[i].buffer_global_light);
+		Resource_FreeBuffer(renderer->ref_device,&renderer->frames[i].buffer_instances);
+		Resource_FreeImage(renderer->ref_device,&renderer->frames[i].depth_image);
 	}
 	for (int i = 0; i < renderer->texture_cnt; i++) {
 		struct Texture texture = renderer->textures[i];
-		Resource_FreeTexture(&texture);
+		Resource_FreeTexture(renderer->ref_device,&texture);
 	}
 	renderer->texture_cnt = 0;
-	Resource_FreeBuffer(&renderer->buffer_index);
-	Resource_FreeBuffer(&renderer->buffer_vertex);
-	Resource_FreeBuffer(&renderer->buffer_materials);
+	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_index);
+	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_vertex);
+	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_materials);
 
 	// vkFreeDescriptorSets(device, Descriptor_GetContext()->pool, 1,
 	// &renderer->desc_set_materials); vkFreeDescriptorSets(device,
@@ -72,144 +72,148 @@ void Renderer_Destroy(struct Renderer* renderer) {
 	// MAX_FRAMES_IN_FLIGHT, renderer->desc_set_instances);
 }
 
-void Renderer_Init(struct Renderer* renderer) {
-
+void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 	memset(renderer, 0, sizeof(struct Renderer));
-
+	renderer->ref_device = info->ref_device;
+	renderer->ref_platform = info->ref_platform;
+	renderer->ref_scene = info->ref_scene;
+	
 	createSyncObjects(renderer);
 
-	VkInstance instance = Instance_Get();
-	VkSurfaceKHR surface = Platform_GetSurface();
-	struct Device* device = Device_Get();
+	// VkInstance instance = Instance_Get();
+	// VkSurfaceKHR surface = Platform_GetSurface();
+	// struct Device* device = Device_Get();
 
 	VkExtent2D extent;
-	Platform_GetFramebufferSize(&extent.width, &extent.height);
+	Platform_GetFramebufferSize(info->ref_platform,&extent.width, &extent.height);
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		struct FrameData* data = &renderer->frames[i];
 		Device_AllocateCommandBuffer(
-			device->graphics_pool, &data->commandBuffer);
+			renderer->ref_device,
+			renderer->ref_device->command_pool_graphics, 
+			&data->commandBuffer
+		);
 	}
 
-	Swapchain_Create(&renderer->swapchain, device->logical_device,
-		device->physical_device, surface, extent);
+	struct Swapchain_info swapchain_info={
+		.extent = extent,
+		.ref_device = renderer->ref_device,
+		.ref_platform = renderer->ref_platform,
+	};
+	
+	Swapchain_Create(
+		&swapchain_info,
+		&renderer->swapchain
+	);
 
-	memset(&renderer->pipeline.info, 0, sizeof(renderer->pipeline.info));
 
-	renderer->pipeline.info.vertexShader =
-		Shader_CreateFromFile(device->logical_device, DEFAULT_SHADER_VERT);
-	renderer->pipeline.info.fragmentShader =
-		Shader_CreateFromFile(device->logical_device, DEFAULT_SHADER_FRAG);
+	struct GraphicsPipelineCreateInfo pipe_info;
+	memset(&pipe_info, 0, sizeof(pipe_info));
+	
+	pipe_info.ref_device = renderer->ref_device;
+	pipe_info.extent = extent;
+	
+	pipe_info.vertexShader =
+		Shader_CreateFromFile(renderer->ref_device->logical_device, DEFAULT_SHADER_VERT);
+	pipe_info.fragmentShader =
+		Shader_CreateFromFile(renderer->ref_device->logical_device, DEFAULT_SHADER_FRAG);
 
-	struct DescriptorContext* ctx = Descriptor_GetContext();
+	struct DescriptorContext* ctx = info->ref_descriptor;
 
 	VkDescriptorSetLayout layouts[] = {ctx->globalLayout, ctx->instanceLayout,
 		ctx->materialLayout, ctx->samplerLayout};
 
-	renderer->pipeline.info.descriptorSetLayouts = layouts;
-	renderer->pipeline.info.descriptorSetLayoutCount = ARR_LEN(layouts);
+	pipe_info.descriptorSetLayouts = layouts;
+	pipe_info.descriptorSetLayoutCount = ARR_LEN(layouts);
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
-		renderer->desc_set_globals[i] = Descriptor_Allocate(ctx->globalLayout);
+		renderer->desc_set_globals[i] = Descriptor_Allocate(ctx,ctx->globalLayout);
 
 		renderer->desc_set_instances[i] =
-			Descriptor_Allocate(ctx->instanceLayout);
+			Descriptor_Allocate(ctx,ctx->instanceLayout);
 	}
-	renderer->desc_set_materials = Descriptor_Allocate(ctx->materialLayout);
-	renderer->desc_set_samplers = Descriptor_Allocate(ctx->samplerLayout);
+	renderer->desc_set_materials = Descriptor_Allocate(ctx,ctx->materialLayout);
+	renderer->desc_set_samplers = Descriptor_Allocate(ctx,ctx->samplerLayout);
 
-	renderer->pipeline.info.depthFormat = renderer->swapchain.depthFormat;
-	renderer->pipeline.info.colorFormat = renderer->swapchain.surfaceFormat;
+	pipe_info.depthFormat = renderer->swapchain.depthFormat;
+	pipe_info.colorFormat = renderer->swapchain.surfaceFormat;
 
-	Pipeline_CreateGraphics(&renderer->pipeline);
+	Pipeline_CreateGraphics(&pipe_info,&renderer->pipeline);
 
-	/*
-
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-		VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-		VK_BUFFER_USAGE_TRANSFER_DST_BIT
-
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-		VK_MEMORY_PROPERTY_HOST_CACHED_BIT
-	 */
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		struct FrameData* f = &renderer->frames[i];
 
-		Resource_CreateBuffer(sizeof(struct GlobalData), BUFFER_UBO_USAGE,
+		Resource_CreateBuffer(renderer->ref_device,sizeof(struct GlobalData), BUFFER_UBO_USAGE,
 			BUFFER_UBO_PROPS, &f->buffer_global);
-		Resource_mapBufferMemory(&f->buffer_global);
+		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global);
 
-		Descriptor_UpdateBuffer(renderer->desc_set_globals[i],
+		Descriptor_UpdateBuffer(ctx,renderer->desc_set_globals[i],
 			BINDING_GLOBAL_GLOBAL, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			f->buffer_global.handle, f->buffer_global.size);
 
-		Resource_CreateBuffer(sizeof(struct CameraData)*MAX_CAMERAS, BUFFER_UBO_USAGE,
+		Resource_CreateBuffer(renderer->ref_device,sizeof(struct CameraData)*MAX_CAMERAS, BUFFER_UBO_USAGE,
 			BUFFER_UBO_PROPS, &f->buffer_global_camera);
-		Resource_mapBufferMemory(&f->buffer_global_camera);
+		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global_camera);
 
-		Descriptor_UpdateBuffer(renderer->desc_set_globals[i],
+		Descriptor_UpdateBuffer(ctx,renderer->desc_set_globals[i],
 			BINDING_GLOBAL_CAMERA, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			f->buffer_global_camera.handle, f->buffer_global_camera.size);
 
-		Resource_CreateBuffer(sizeof(struct LightData), BUFFER_UBO_USAGE,
+		Resource_CreateBuffer(renderer->ref_device,sizeof(struct LightData), BUFFER_UBO_USAGE,
 			BUFFER_UBO_PROPS, &f->buffer_global_light);
-		Resource_mapBufferMemory(&f->buffer_global_light);
+		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global_light);
 
-		Descriptor_UpdateBuffer(renderer->desc_set_globals[i],
+		Descriptor_UpdateBuffer(ctx,renderer->desc_set_globals[i],
 			BINDING_GLOBAL_LIGHT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			f->buffer_global_light.handle, f->buffer_global_light.size);
 
-		Resource_CreateBuffer(sizeof(struct InstanceData) * MAX_INSTANCES,
+		Resource_CreateBuffer(renderer->ref_device,sizeof(struct InstanceData) * MAX_INSTANCES,
 			BUFFER_SSBO_USAGE, BUFFER_SSBO_PROPS, &f->buffer_instances);
-		Resource_mapBufferMemory(&f->buffer_instances);
+		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_instances);
 
-		Descriptor_UpdateBuffer(renderer->desc_set_instances[i], 0,
+		Descriptor_UpdateBuffer(ctx,renderer->desc_set_instances[i], 0,
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, f->buffer_instances.handle,
 			f->buffer_instances.size);
 
-		Resource_CreateImage(extent.width, extent.height,
+		Resource_CreateImage(renderer->ref_device,extent.width, extent.height,
 			1, // mip levels
 			renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
 			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &f->depth_image);
 
-		Resource_CreateImageView(&f->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
+		Resource_CreateImageView(renderer->ref_device,&f->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
 		// Resource_transitionImageLayout(VkCommandBuffer cmdBuffer, VkImage
 		// *image, VkImageLayout oldLayout, VkImageLayout newLayout,
 		// VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
 		// VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
 		// VkImageAspectFlagBits aspectFlags, uint32_t mipLevels)
 
-		VkCommandBuffer command = Resource_beginSingleTimeCommands();
+		VkCommandBuffer command = Device_beginSingleTimeCommands(renderer->ref_device);
 
-		Resource_transitionImageLayout(command, &f->depth_image.handle,
+		Resource_transitionImageLayout(renderer->ref_device,command, &f->depth_image.handle,
 			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			0, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 			VK_PIPELINE_STAGE_2_NONE,
 			VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-		Resource_endSingleTimeCommands(command);
+		Device_endSingleTimeCommands(renderer->ref_device, command);
 	}
 
-	Resource_CreateBuffer(sizeof(struct MaterialData) * MAX_MATERIALS,
+	Resource_CreateBuffer(renderer->ref_device,sizeof(struct MaterialData) * MAX_MATERIALS,
 		BUFFER_SSBO_USAGE, BUFFER_SSBO_PROPS, &renderer->buffer_materials);
-	Resource_mapBufferMemory(&renderer->buffer_materials);
+	Resource_mapBufferMemory(renderer->ref_device,&renderer->buffer_materials);
 
-	Descriptor_UpdateBuffer(renderer->desc_set_materials, 0,
+	Descriptor_UpdateBuffer(ctx,renderer->desc_set_materials, 0,
 		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, renderer->buffer_materials.handle,
 		renderer->buffer_materials.size);
 
-	Resource_CreateBuffer(MAX_VERTICES * sizeof(struct Vertex),
+	Resource_CreateBuffer(renderer->ref_device,MAX_VERTICES * sizeof(struct Vertex),
 		BUFFER_VERTEX_USAGE, BUFFER_VERTEX_PROPS, &renderer->buffer_vertex);
 
-	Resource_CreateBuffer(MAX_INDICES * sizeof(uint32_t), BUFFER_INDEX_USAGE,
+	Resource_CreateBuffer(renderer->ref_device,MAX_INDICES * sizeof(uint32_t), BUFFER_INDEX_USAGE,
 		BUFFER_INDEX_PROPS, &renderer->buffer_index);
 }
 
@@ -220,7 +224,7 @@ void Renderer_AppendToVertexBuffer(
 
 	printf("vetex_used:%d, vertex_cnt:%d vsize:%d\n",
 		renderer->buffer_vertex_used, vertex_cnt, sizeof(struct Vertex));
-	Resource_AppendToBuffer(&renderer->buffer_vertex,
+	Resource_AppendToBuffer(renderer->ref_device,&renderer->buffer_vertex,
 		sizeof(struct Vertex) * renderer->buffer_vertex_used, vertices,
 		sizeof(struct Vertex) * vertex_cnt);
 	renderer->buffer_vertex_used += vertex_cnt;
@@ -232,7 +236,7 @@ void Renderer_AppendToIndexBuffer(
 	assert(renderer->buffer_index_used + indices_cnt <= MAX_INDICES);
 	printf("index_used:%d, index_cnt:%d\n", renderer->buffer_index_used,
 		indices_cnt);
-	Resource_AppendToBuffer(&renderer->buffer_index,
+	Resource_AppendToBuffer(renderer->ref_device, &renderer->buffer_index,
 		sizeof(uint32_t) * renderer->buffer_index_used, indices,
 		sizeof(uint32_t) * indices_cnt);
 	renderer->buffer_index_used += indices_cnt;
@@ -246,7 +250,7 @@ struct Texture* Renderer_NewTexture(
 
 	struct Texture* texture = &renderer->textures[renderer->texture_cnt++];
 	Loader_LoadImageDataFromMemory(data, size, &imageData);
-	Resource_CreateTexture(imageData.data, imageData.width, imageData.height,
+	Resource_CreateTexture(renderer->ref_device,imageData.data, imageData.width, imageData.height,
 		VK_FORMAT_R8G8B8A8_SRGB, texture);
 	Loader_FreeImageData(&imageData);
 	
@@ -260,18 +264,20 @@ struct Texture* Renderer_GetTexture(
 	return &renderer->textures[position];
 }
 
-void Renderer_Render(struct Renderer* renderer,
-	struct Scene* scene,
+void Renderer_Render(
+	struct Renderer* renderer,
+	// struct Scene* scene,
 	float time,
-	float delta_time) {
+	float delta_time
+) {
 
 	uint32_t frame_index = renderer->current_frame;
 	struct FrameData* frame = &renderer->frames[frame_index];
 
-	struct Device* device = Device_Get();
+	// struct Device* device = Device_Get();
 
 	VkResult result = vkWaitForFences(
-		device->logical_device, 1, &frame->inFlightFence, VK_TRUE, UINT64_MAX);
+		renderer->ref_device->logical_device, 1, &frame->inFlightFence, VK_TRUE, UINT64_MAX);
 
 	if (result != VK_SUCCESS) {
 		EXIT_CLEAN("failed to wait for fence!");
@@ -279,25 +285,24 @@ void Renderer_Render(struct Renderer* renderer,
 
 	uint32_t imageIndex = -1;
 
-	result = vkAcquireNextImageKHR(device->logical_device,
+	result = vkAcquireNextImageKHR(renderer->ref_device->logical_device,
 		renderer->swapchain.handle, UINT64_MAX, frame->imageAvailable, NULL,
 		&imageIndex);
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 
-		Swapchain_Recreate(&renderer->swapchain, device->logical_device,
-			device->physical_device, Platform_GetSurface());
+		Swapchain_Recreate(&renderer->swapchain);
 
 		return;
 	}
 
 	// updateGameObjects(frame_index);
 
-	updateBuffers(renderer, scene, time, delta_time);
+	updateBuffers(renderer, renderer->ref_scene, time, delta_time);
 
-	vkResetFences(device->logical_device, 1, &frame->inFlightFence);
+	vkResetFences(renderer->ref_device->logical_device, 1, &frame->inFlightFence);
 
-	recordCommandBuffer(renderer, scene, imageIndex, frame_index);
+	recordCommandBuffer(renderer, renderer->ref_scene, imageIndex, frame_index);
 
 	VkPipelineStageFlags2 stageMask =
 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -334,7 +339,7 @@ void Renderer_Render(struct Renderer* renderer,
 	};
 
 	vkQueueSubmit2(
-		device->graphics_queue, 1, &submitInfo2, frame->inFlightFence);
+		renderer->ref_device->queue_graphics.queue, 1, &submitInfo2, frame->inFlightFence);
 
 	VkPresentInfoKHR presentInfo = {
 
@@ -347,14 +352,16 @@ void Renderer_Render(struct Renderer* renderer,
 
 	};
 
-	result = vkQueuePresentKHR(device->graphics_queue, &presentInfo);
+	result = vkQueuePresentKHR(renderer->ref_device->queue_graphics.queue, &presentInfo);
 
 	if ((result == VK_SUBOPTIMAL_KHR) || (result == VK_ERROR_OUT_OF_DATE_KHR) ||
 		renderer->framebuffer_resized) {
 		renderer->framebuffer_resized = false;
 
-		Swapchain_Recreate(&renderer->swapchain, device->logical_device,
-			device->physical_device, Platform_GetSurface());
+
+
+		
+		Swapchain_Recreate(&renderer->swapchain);
 
 		// Swapchain_Recreate(struct Swapchain *sc, VkDevice device,
 		// VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
@@ -369,7 +376,7 @@ void Renderer_Render(struct Renderer* renderer,
 static void createSyncObjects(struct Renderer* renderer) {
 
 	PRINT_FNAME;
-	struct Device* device = Device_Get();
+	struct Device_State* device = renderer->ref_device;
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
@@ -411,7 +418,7 @@ static void recordCommandBuffer(struct Renderer* renderer,
 	};
 	vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-	Resource_transitionImageLayout(commandBuffer,
+	Resource_transitionImageLayout(renderer->ref_device,commandBuffer,
 		&renderer->swapchain.images[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED,
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0,
 		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -421,7 +428,7 @@ static void recordCommandBuffer(struct Renderer* renderer,
 
 	renderMainPass(renderer, scene, frameIndex, imageIndex);
 
-	Resource_transitionImageLayout(commandBuffer,
+	Resource_transitionImageLayout(renderer->ref_device,commandBuffer,
 		&renderer->swapchain.images[imageIndex],
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,

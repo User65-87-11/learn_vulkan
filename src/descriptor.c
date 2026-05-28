@@ -1,17 +1,27 @@
-#include "descriptor.h"
-#include "device.h"
-#include "shader_common.h"
-#include "util/common.h"
-#include "vulkan/vulkan_core.h"
+#include <string.h>
+#include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan.h>
 
-static struct DescriptorContext context;
+#include "descriptor.h"
+#include "device2.h"
+#include "shader_common.h"
+#include "util/common.h"
+
+
+
+// // layouts access
+// struct DescriptorContext* Descriptor_GetContext(
+// 	struct Device_State* device_ref) {
+// 	return &context;
+// }
 
 // static void createDescriptors(VkDevice device);
 
 // lifecycle
-void Descriptor_Init() {
+void Descriptor_Init(struct Descriptor_InitInfo *info, struct DescriptorContext * context) {
 	PRINT_FNAME;
+	memset(context, 0, sizeof(*context));
+	context->device_ref = info->device_ref;
 
 	uint32_t cnt_glob = MAX_FRAMES_IN_FLIGHT * 3;
 	uint32_t cnt_inst = MAX_FRAMES_IN_FLIGHT;
@@ -19,7 +29,7 @@ void Descriptor_Init() {
 	uint32_t cnt_textures = MAX_TEXTURES;
 	uint32_t max_sets = cnt_inst + cnt_glob + cnt_material + cnt_textures;
 
-	VkDevice device = Device_Get()->logical_device;
+	VkDevice device = context->device_ref->logical_device;
 
 	VkDescriptorPoolSize poolSizes[] = {
 
@@ -44,7 +54,7 @@ void Descriptor_Init() {
 		.pPoolSizes = poolSizes};
 
 	VkResult result =
-		vkCreateDescriptorPool(device, &poolInfo, NULL, &context.pool);
+		vkCreateDescriptorPool(device, &poolInfo, NULL, &context->pool);
 	{
 		// VkDescriptorSetLayoutBinding globalBinding = {
 		// 	.binding = 0,
@@ -79,7 +89,7 @@ void Descriptor_Init() {
 			.pBindings = bindings};
 
 		VkResult res = vkCreateDescriptorSetLayout(
-			device, &globalLayoutInfo, NULL, &context.globalLayout);
+			device, &globalLayoutInfo, NULL, &context->globalLayout);
 
 		if (res != VK_SUCCESS) {
 			EXIT_CLEAN("vkCreateDescriptorSetLayout4 failed");
@@ -99,7 +109,7 @@ void Descriptor_Init() {
 			.pBindings = &materialBinding};
 
 		VkResult res = vkCreateDescriptorSetLayout(
-			device, &materialLayoutInfo, NULL, &context.materialLayout);
+			device, &materialLayoutInfo, NULL, &context->materialLayout);
 
 		if (res != VK_SUCCESS) {
 			EXIT_CLEAN(
@@ -122,7 +132,7 @@ void Descriptor_Init() {
 			.pBindings = &instanceBindings};
 
 		VkResult res = vkCreateDescriptorSetLayout(
-			device, &instanceLayoutInfo, NULL, &context.instanceLayout);
+			device, &instanceLayoutInfo, NULL, &context->instanceLayout);
 
 		if (res != VK_SUCCESS) {
 			EXIT_CLEAN(
@@ -146,7 +156,7 @@ void Descriptor_Init() {
 			.pBindings = &samplerBindings};
 
 		VkResult res = vkCreateDescriptorSetLayout(
-			device, &samplerLayoutInfo, NULL, &context.samplerLayout);
+			device, &samplerLayoutInfo, NULL, &context->samplerLayout);
 
 		if (res != VK_SUCCESS) {
 			EXIT_CLEAN("vkCreateDescriptorSetLayout samplerBindings");
@@ -154,7 +164,8 @@ void Descriptor_Init() {
 	}
 }
 
-void Descriptor_UpdateBuffer(VkDescriptorSet set,
+void Descriptor_UpdateBuffer(struct DescriptorContext * context,
+	VkDescriptorSet set,
 	uint32_t binding,
 	VkDescriptorType type,
 	VkBuffer buffer,
@@ -172,24 +183,29 @@ void Descriptor_UpdateBuffer(VkDescriptorSet set,
 		.descriptorCount = 1,
 		.pBufferInfo = &globalBufferInfo};
 
-	vkUpdateDescriptorSets(Device_Get()->logical_device, 1, &wite, 0, NULL);
+	vkUpdateDescriptorSets(context->device_ref->logical_device, 1, &wite, 0, NULL);
 }
 
 void Descriptor_SetTextureToDescriptorInfoArray(
-	VkImageView view, VkSampler sampler, uint32_t position) {
+	struct DescriptorContext* context,
+	VkImageView view,
+	VkSampler sampler,
+	uint32_t position) {
 
 	PRINT_FNAME;
 	VkDescriptorImageInfo info = {.imageView = view,
 		.sampler = sampler,
 		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-	context.descriptor_image_info_textures[position] = info;
+	context->descriptor_image_info_textures[position] = info;
 }
-void Descriptor_UpdateTextureDescriptors(VkDescriptorSet descriptor_set,
+
+void Descriptor_UpdateTextureDescriptors(struct DescriptorContext* context,
+	VkDescriptorSet descriptor_set,
 	VkDescriptorImageInfo* arr,
 	uint32_t count,
 	uint32_t offset) {
 	PRINT_FNAME;
-	struct Device* device = Device_Get();
+
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstSet = descriptor_set;
@@ -200,50 +216,50 @@ void Descriptor_UpdateTextureDescriptors(VkDescriptorSet descriptor_set,
 
 	write.pImageInfo = arr;
 
-	vkUpdateDescriptorSets(device->logical_device, 1, &write, 0, NULL);
+	vkUpdateDescriptorSets(
+		context->device_ref->logical_device, 1, &write, 0, NULL);
 }
-void Descriptor_Destroy() {
-	VkDevice device = Device_Get()->logical_device;
 
-	vkDestroyDescriptorPool(device, context.pool, NULL);
+void Descriptor_Destroy(struct DescriptorContext* context) {
+	VkDevice device = context->device_ref->logical_device;
 
-	vkDestroyDescriptorSetLayout(device, context.globalLayout, NULL);
-	vkDestroyDescriptorSetLayout(device, context.instanceLayout, NULL);
-	vkDestroyDescriptorSetLayout(device, context.materialLayout, NULL);
-	vkDestroyDescriptorSetLayout(device, context.samplerLayout, NULL);
+	vkDestroyDescriptorPool(device, context->pool, NULL);
+
+	vkDestroyDescriptorSetLayout(device, context->globalLayout, NULL);
+	vkDestroyDescriptorSetLayout(device, context->instanceLayout, NULL);
+	vkDestroyDescriptorSetLayout(device, context->materialLayout, NULL);
+	vkDestroyDescriptorSetLayout(device, context->samplerLayout, NULL);
 }
 
 // pool control
-void Descriptor_ResetPool() {
+void Descriptor_ResetPool(struct DescriptorContext* context) {
 
-	vkResetDescriptorPool(Device_Get()->logical_device, context.pool, 0);
+	vkResetDescriptorPool(context->device_ref->logical_device, context->pool, 0);
 }
 
-// layouts access
-struct DescriptorContext* Descriptor_GetContext() { return &context; }
-
-VkDescriptorSet Descriptor_Allocate(VkDescriptorSetLayout layout) {
+VkDescriptorSet Descriptor_Allocate(
+	struct DescriptorContext* context, VkDescriptorSetLayout layout) {
 
 	VkDescriptorSetAllocateInfo allocInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = context.pool,
+		.descriptorPool = context->pool,
 		.descriptorSetCount = 1,
 		.pSetLayouts = &layout};
 
 	VkDescriptorSet set;
-	vkAllocateDescriptorSets(Device_Get()->logical_device, &allocInfo, &set);
+	vkAllocateDescriptorSets(context->device_ref->logical_device, &allocInfo, &set);
 	return set;
 }
 
 // updates
-void Descriptor_UpdateBuffer(
+// void Descriptor_UpdateBuffer(struct DescriptorContext* context,
+// 	VkDescriptorSet set,
+// 	uint32_t binding,
+// 	VkDescriptorType type,
+// 	VkBuffer buffer,
+// 	VkDeviceSize size);
 
-	VkDescriptorSet set,
-	uint32_t binding,
-	VkDescriptorType type,
-	VkBuffer buffer,
-	VkDeviceSize size);
-
-void Descriptor_UpdateImage(
-
-	VkDescriptorSet set, uint32_t binding, VkDescriptorImageInfo* imageInfo);
+// void Descriptor_UpdateImage(struct DescriptorContext* context,
+// 	VkDescriptorSet set,
+// 	uint32_t binding,
+// 	VkDescriptorImageInfo* imageInfo);

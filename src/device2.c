@@ -1,81 +1,150 @@
-#include "device.h"
-#include "instance.h"
-#include "platform.h"
-#include "util/common.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
-static struct Device device;
+#include "device2.h"
+#include "instance.h"
+#include "platform.h"
+#include "util/common.h"
 
-// static VkCommandBuffer transferCommandBuffer;
-// static VkFence transferFence;
 
-static uint32_t requiredDeviceExtensionCnt = 1;
+static void createPhysicalDevice(
+	struct Device_CreateInfo* info,
+	struct Device_State* device
+);
+static void createLogicalDevice(
+	struct Device_CreateInfo* info,
+	struct Device_State* device
+);
+static void physicalDeviceExtensionCheck(
+	struct Device_CreateInfo* info,
+	struct Device_State* device
+);
+static void physicalDeviceFeatureCheck(
+	struct Device_CreateInfo* info,
+	struct Device_State* device
+);
+static VkCommandBuffer createTransferCommandBuffer(struct Device_State* device);
 
-static const char* requiredDeviceExtensions[] = {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-};
+static void createQueues(struct Device_State* device);
 
-static void createPhysicalDevice();
-static void createLogicalDevice();
-static void physicalDeviceExtensionCheck();
-static void physicalDeviceFeatureCheck();
+static void createTransferFence(struct Device_State* device, VkFence* fence);
 
-static void createQueue();
-static void createTransferFence();
+// static void createCommandPool();
 
-static void createCommandPool();
 
-void Device_Create() {
 
-	createPhysicalDevice();
+void Device_Create(struct Device_CreateInfo * info, struct Device_State * device) {
+	PRINT_FNAME;
+	createPhysicalDevice(info,device);
 
-	physicalDeviceExtensionCheck();
+	physicalDeviceExtensionCheck(info,device);
 
-	physicalDeviceFeatureCheck();
+	physicalDeviceFeatureCheck(info,device);
 
-	createLogicalDevice();
+	createLogicalDevice(info,device);
 
-	createQueue();
+	// device->depth_format = Device_findDepthFormat(device);
+	
+	createQueues(device);
 
-	createCommandPool();
+	Device_createCommandPool(device, device->queue_graphics,&device->command_pool_graphics);
+	
+	Device_createCommandPool(device, device->queue_tranfser,&device->command_pool_transfer);
 
-	createTransferFence();
+	createTransferFence(device,&device->transfer_fence);
 }
 
-void Device_Destroy(void) {
+void Device_Destroy(struct Device_State * device) {
 	PRINT_FNAME;
 
-	vkDestroyCommandPool(device.logical_device, device.transfer_pool, NULL);
-	vkDestroyCommandPool(device.logical_device, device.graphics_pool, NULL);
-	vkDestroyFence(device.logical_device, device.transfer_fence, NULL);
+	vkDestroyCommandPool(device->logical_device, device->command_pool_transfer, NULL);
+	
+	vkDestroyCommandPool(device->logical_device, device->command_pool_graphics, NULL);
 
-	if (device.logical_device != NULL) {
-		vkDestroyDevice(device.logical_device, NULL);
-		device.logical_device = NULL;
-	}
+	vkDestroyFence(device->logical_device, device->transfer_fence, NULL);
+
+	vkDestroyDevice(device->logical_device, NULL);
+
 }
 
-static void createTransferFence() {
+static void createTransferFence(struct Device_State *device, VkFence *fence) {
 	VkFenceCreateInfo fenceInfo = {
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-	vkCreateFence(
-		device.logical_device, &fenceInfo, NULL, &device.transfer_fence);
+	vkCreateFence(device->logical_device, &fenceInfo, NULL, fence);
 }
 
-VkCommandBuffer Device_createTransferCommandBuffer() {
+VkCommandBuffer Device_beginSingleTimeCommands(struct Device_State* device) {
+
+	VkCommandBuffer commandBuffer = createTransferCommandBuffer(device);
+
+	// vkResetCommandBuffer(commandBuffer, 0);
+
+	VkCommandBufferBeginInfo beginInfo = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+	};
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	return commandBuffer;
+}
+
+void Device_endSingleTimeCommands(
+	struct Device_State* device,
+	VkCommandBuffer commandBuffer
+)
+{
+
+	// VkDevice device = Device_Get()->device;
+
+	vkEndCommandBuffer(commandBuffer);
+
+	// VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+
+	VkCommandBufferSubmitInfo buffersubmitInfo = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+		.commandBuffer = commandBuffer
+	};
+
+	VkSubmitInfo2 submitInfo2 = {
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+		.commandBufferInfoCount = 1,
+		.pCommandBufferInfos = &buffersubmitInfo
+
+	};
+
+	vkResetFences(device->logical_device, 1, &device->transfer_fence);
+
+	vkQueueSubmit2(
+		device->queue_tranfser.queue, 1, &submitInfo2, device->transfer_fence
+	);
+
+	vkWaitForFences(
+		device->logical_device, 1, &device->transfer_fence, VK_TRUE, UINT64_MAX
+	);
+
+	vkFreeCommandBuffers(
+		device->logical_device, device->command_pool_transfer, 1, &commandBuffer
+	);
+}
+
+static VkCommandBuffer createTransferCommandBuffer(struct Device_State * device) {
 
 	VkCommandBuffer command;
-	Device_AllocateCommandBuffer(device.transfer_pool, &command);
+	Device_AllocateCommandBuffer(device, device->command_pool_transfer, &command);
 	return command;
 }
 
-void Device_WaitIdle() { vkDeviceWaitIdle(device.logical_device); }
+void Device_WaitIdleDevice(struct Device_State *device) {
+	vkDeviceWaitIdle(device->logical_device);
+}
 
-struct Device* Device_Get(void) { return &device; }
+// struct Device* Device_Get(void) { return &device; }
 
-VkFormat Device_findSupportedFormat(const VkFormat* formats,
+VkFormat Device_findSupportedFormat(
+	struct Device_State * device,
+	const VkFormat* formats,
 	uint32_t len,
 	VkImageTiling tiling,
 	VkFormatFeatureFlags2 features) {
@@ -87,7 +156,7 @@ VkFormat Device_findSupportedFormat(const VkFormat* formats,
 			.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
 
 		vkGetPhysicalDeviceFormatProperties2(
-			device.physical_device, formats[i], &props);
+			device->physical_device, formats[i], &props);
 
 		VkFormatFeatureFlags2 supported =
 			(tiling == VK_IMAGE_TILING_LINEAR)
@@ -99,66 +168,68 @@ VkFormat Device_findSupportedFormat(const VkFormat* formats,
 		}
 	}
 
-	EXIT_CLEAN("failed to find supported format!");
+	EXIT_PRINT("failed to find supported format!");
 	return VK_FORMAT_UNDEFINED;
 }
 
-VkFormat Device_findDepthFormat() {
+VkFormat Device_findDepthFormat(
+	struct Device_State * device
+) {
 
 	VkFormat formats[] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
 		VK_FORMAT_D24_UNORM_S8_UINT};
 
-	return Device_findSupportedFormat(formats, ARR_LEN(formats),
+	return Device_findSupportedFormat(
+		device,formats, ARR_LEN(formats),
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-static void physicalDeviceExtensionCheck() {
-
+static void physicalDeviceExtensionCheck(struct Device_CreateInfo * info,struct Device_State * device) {
 	PRINT_FNAME;
 
 	uint32_t deviceExtensionPropertieCount;
 	vkEnumerateDeviceExtensionProperties(
-		device.physical_device, NULL, &deviceExtensionPropertieCount, NULL);
+		device->physical_device, NULL, &deviceExtensionPropertieCount, NULL);
 
 	VkExtensionProperties exp_props[deviceExtensionPropertieCount];
 
-	vkEnumerateDeviceExtensionProperties(device.physical_device, NULL,
+	vkEnumerateDeviceExtensionProperties(device->physical_device, NULL,
 		&deviceExtensionPropertieCount, exp_props);
 
 	int supportedCnt = 0;
 
 	for (int i = 0; i < deviceExtensionPropertieCount; i++) {
 
-		for (int k = 0; k < requiredDeviceExtensionCnt; k++) {
+		for (int k = 0; k < info->requiredDeviceExtensions_cnt; k++) {
 			if (strcmp(exp_props[i].extensionName,
-					requiredDeviceExtensions[k]) == 0) {
-				printf("\tExtension found %s\n", requiredDeviceExtensions[k]);
+					info->requiredDeviceExtensions[k]) == 0) {
+				printf("\tExtension found %s\n", info->requiredDeviceExtensions[k]);
 				supportedCnt++;
 				break;
 			}
 		}
 	}
 
-	if (!(supportedCnt == requiredDeviceExtensionCnt)) {
+	if (!(supportedCnt == info->requiredDeviceExtensions_cnt)) {
 		printf("No suported extensions\n");
 		printf("supportedCnt: %d of %d\n", supportedCnt,
-			requiredDeviceExtensionCnt);
+			info->requiredDeviceExtensions_cnt);
 
 		for (int i = 0; i < deviceExtensionPropertieCount; i++) {
 
 			printf("\tfound: %s\n", exp_props[i].extensionName);
 		}
-		for (int i = 0; i < requiredDeviceExtensionCnt; i++) {
+		for (int i = 0; i < info->requiredDeviceExtensions_cnt; i++) {
 
-			printf("\trequired: %s\n", requiredDeviceExtensions[i]);
+			printf("\trequired: %s\n", info->requiredDeviceExtensions[i]);
 		}
 
-		EXIT_CLEAN("\n");
+		EXIT_PRINT("\n");
 	}
 }
 
-static void physicalDeviceFeatureCheck() {
+static void physicalDeviceFeatureCheck(struct Device_CreateInfo * info ,struct Device_State * device) {
 
 	PRINT_FNAME;
 
@@ -188,7 +259,7 @@ static void physicalDeviceFeatureCheck() {
 	physicalDeviceFeatures2.pNext = &features12;
 
 	vkGetPhysicalDeviceFeatures2(
-		device.physical_device, &physicalDeviceFeatures2);
+		device->physical_device, &physicalDeviceFeatures2);
 
 	VkPhysicalDeviceFeatures2* next = &physicalDeviceFeatures2;
 
@@ -259,7 +330,7 @@ static void physicalDeviceFeatureCheck() {
 
 		printf("supported :%d \n", all_ok);
 
-		EXIT_CLEAN("Some Device features not supported");
+		EXIT_PRINT("Some Device features not supported");
 	}
 }
 
@@ -282,13 +353,15 @@ static uint32_t find_graphics_family(VkPhysicalDevice physical_device) {
 
 	free(families);
 
-	EXIT_CLEAN("find_graphics_family cant find index ");
+	EXIT_PRINT("find_graphics_family cant find index ");
 
 	return UINT32_MAX; // or invalid sentinel
 }
 
 static uint32_t find_presentation_family(
-	VkPhysicalDevice physical_device, VkSurfaceKHR surface) {
+	VkPhysicalDevice physical_device, 
+	VkSurfaceKHR surface
+) {
 	uint32_t count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &count, NULL);
 
@@ -302,7 +375,7 @@ static uint32_t find_presentation_family(
 			return i;
 	}
 
-	EXIT_CLEAN("find_presentation_family cant find index ");
+	EXIT_PRINT("find_presentation_family cant find index ");
 	return UINT32_MAX;
 }
 
@@ -319,18 +392,18 @@ static uint32_t find_transfer_family(VkPhysicalDevice physical_device) {
 		}
 	}
 
-	EXIT_CLEAN("find_transfer_family cant find index ");
+	EXIT_PRINT("find_transfer_family cant find index ");
 	return UINT32_MAX;
 }
 
-static void createLogicalDevice() {
+static void createLogicalDevice(struct Device_CreateInfo *into ,struct Device_State * device) {
 
 	PRINT_FNAME;
 
-	device.graphics_family = find_graphics_family(device.physical_device);
-	device.transfer_family = find_transfer_family(device.physical_device);
-	device.present_family =
-		find_presentation_family(device.physical_device, Platform_GetSurface());
+	device->queue_graphics.index = find_graphics_family(device->physical_device);
+	device->queue_tranfser.index = find_transfer_family(device->physical_device);
+	device->queue_present.index =
+		find_presentation_family(device->physical_device,into->ref_platform->surface);
 
 	float queuePriority = 1.0f;
 
@@ -339,23 +412,23 @@ static void createLogicalDevice() {
 
 	queueInfos[queueCount++] = (VkDeviceQueueCreateInfo){
 		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-		.queueFamilyIndex = device.graphics_family,
+		.queueFamilyIndex = device->queue_graphics.index,
 		.queueCount = 1,
 		.pQueuePriorities = &queuePriority};
 
-	if (device.transfer_family != device.graphics_family) {
+	if (device->queue_tranfser.index != device->queue_graphics.index) {
 		queueInfos[queueCount++] = (VkDeviceQueueCreateInfo){
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = device.transfer_family,
+			.queueFamilyIndex = device->queue_tranfser.index,
 			.queueCount = 1,
 			.pQueuePriorities = &queuePriority};
 	}
 
-	if (device.present_family != device.graphics_family &&
-		device.present_family != device.transfer_family) {
+	if (device->queue_present.index != device->queue_graphics.index &&
+		device->queue_present.index != device->queue_tranfser.index) {
 		queueInfos[queueCount++] = (VkDeviceQueueCreateInfo){
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = device.present_family,
+			.queueFamilyIndex = device->queue_present.index,
 			.queueCount = 1,
 			.pQueuePriorities = &queuePriority};
 	}
@@ -401,30 +474,30 @@ static void createLogicalDevice() {
 		.pQueueCreateInfos = queueInfos,
 		.queueCreateInfoCount = queueCount,
 		.pNext = &physicalDeviceFeatures2,
-		.ppEnabledExtensionNames = requiredDeviceExtensions,
-		.enabledExtensionCount = requiredDeviceExtensionCnt,
+		.ppEnabledExtensionNames = into->requiredDeviceExtensions,
+		.enabledExtensionCount = into->requiredDeviceExtensions_cnt,
 	};
 
-	VkResult res = vkCreateDevice(device.physical_device, &deviceCreateInfo,
-		NULL, &device.logical_device);
+	VkResult res = vkCreateDevice(device->physical_device, &deviceCreateInfo,
+		NULL, &device->logical_device);
 
 	if (res != VK_SUCCESS) {
-		EXIT_CLEAN("failed to create logical device");
+		EXIT_PRINT("failed to create logical device");
 	}
 }
 
-static void createPhysicalDevice() {
+static void createPhysicalDevice(struct Device_CreateInfo* info, struct Device_State * device) {
 	PRINT_FNAME;
 
-	VkInstance instance = Instance_Get();
+	// VkInstance instance = Instance_Get();
 
 	uint32_t physicalDeviceCount = 0;
 
-	vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, NULL);
+	vkEnumeratePhysicalDevices(info->ref_instance->instance, &physicalDeviceCount, NULL);
 
 	VkPhysicalDevice physicalDevices[physicalDeviceCount];
 
-	vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, physicalDevices);
+	vkEnumeratePhysicalDevices(info->ref_instance->instance, &physicalDeviceCount, physicalDevices);
 
 	VkPhysicalDeviceFeatures features;
 
@@ -473,13 +546,13 @@ static void createPhysicalDevice() {
 
 	if (max_id == 1000) {
 
-		EXIT_CLEAN("failed to find a suitable GPU!");
+		EXIT_PRINT("failed to find a suitable GPU!");
 	}
-	device.physical_device = physicalDevices[max_id];
+	device->physical_device = physicalDevices[max_id];
 
-	vkGetPhysicalDeviceFeatures(device.physical_device, &features);
+	vkGetPhysicalDeviceFeatures(device->physical_device, &features);
 
-	vkGetPhysicalDeviceProperties(device.physical_device, &properties);
+	vkGetPhysicalDeviceProperties(device->physical_device, &properties);
 
 	printf("\nSELECTED device name: %s\n", properties.deviceName);
 	printf("device rating: %d\n", ratings[max_id]);
@@ -490,55 +563,58 @@ static void createPhysicalDevice() {
 	printf("\n");
 }
 
-VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+VkBool32 debugCallback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData) {
+	void* pUserData
+) {
 
-	printf("[validation layer]: %d %d %s\n", messageSeverity, messageTypes,
-		pCallbackData->pMessage);
+	printf(
+		"[validation layer]: %d %d %s\n", 
+		messageSeverity, 
+		messageTypes,
+		pCallbackData->pMessage
+	);
 	return VK_FALSE;
 }
 
-static void createQueue() {
+static void createQueues(struct Device_State * device) {
 
-	vkGetDeviceQueue(device.logical_device, device.graphics_family, 0,
-		&device.graphics_queue);
+	vkGetDeviceQueue(
+		device->logical_device, 
+		device->queue_graphics.index, 0,
+		&device->queue_graphics.queue
+	);
 
-	vkGetDeviceQueue(device.logical_device, device.transfer_family, 0,
-		&device.transfer_queue);
+	vkGetDeviceQueue(
+		device->logical_device, 
+		device->queue_tranfser.index, 0,
+		&device->queue_tranfser.queue
+	);
 }
 
-// static void createCommandPool(VkDevice device,
-//                               uint32_t graphicsFamily,
-//                               uint32_t transferFamily)
+void  Device_createCommandPool(
+	struct 	Device_State * device,
+	struct Device_Queue queue,
+	VkCommandPool *pool
+)
+{
 
-static void createCommandPool() {
+	
 	PRINT_FNAME;
 
 	VkCommandPoolCreateInfo commandPoolCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		.queueFamilyIndex = device.graphics_family,
-		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-	};
-	VkResult result = vkCreateCommandPool(device.logical_device,
-		&commandPoolCreateInfo, NULL, &device.graphics_pool);
-
-	if (result != VK_SUCCESS) {
-		EXIT_CLEAN("Failed to create graphics command pool");
-	}
-
-	VkCommandPoolCreateInfo commandPoolCreateInfo2 = (VkCommandPoolCreateInfo){
-		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		.queueFamilyIndex = device.transfer_family,
+		.queueFamilyIndex = queue.index,
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 	};
 
-	result = vkCreateCommandPool(device.logical_device, &commandPoolCreateInfo2,
-		NULL, &device.transfer_pool);
-	if (result != VK_SUCCESS) {
-		EXIT_CLEAN("Failed to create graphics command pool");
-	}
+	VK_CHECK(vkCreateCommandPool(
+		device->logical_device,
+		&commandPoolCreateInfo, NULL, pool));
+
+
 	// fix
 	//  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	//  {
@@ -569,7 +645,11 @@ static void createCommandPool() {
 	// vkAllocateCommandBuffers(device, &allocInfo, &transferCommandBuffers);
 }
 
-void Device_AllocateCommandBuffer(VkCommandPool pool, VkCommandBuffer* out) {
+void  Device_AllocateCommandBuffer(
+	struct Device_State * device,
+	VkCommandPool pool, 
+	VkCommandBuffer* out
+) {
 	VkCommandBufferAllocateInfo allocInfo = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		.commandPool = pool,
@@ -578,21 +658,23 @@ void Device_AllocateCommandBuffer(VkCommandPool pool, VkCommandBuffer* out) {
 
 	VkCommandBuffer cmd;
 	VkResult res =
-		vkAllocateCommandBuffers(device.logical_device, &allocInfo, out);
+		vkAllocateCommandBuffers(device->logical_device, &allocInfo, out);
 
 	if (res != VK_SUCCESS) {
-		EXIT_CLEAN("Failed to allocate command buffer");
+		EXIT_PRINT("Failed to allocate command buffer");
 	}
 }
 
 uint32_t Device_findMemoryType(
-	uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+	struct Device_State * device,
+	uint32_t typeFilter, 
+	VkMemoryPropertyFlags properties
+) {
 	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(
-		device.physical_device, &physicalDeviceMemoryProperties);
+		device->physical_device, &physicalDeviceMemoryProperties);
 
-	for (uint32_t i = 0; i < physicalDeviceMemoryProperties.memoryTypeCount;
-		i++) {
+	for (uint32_t i = 0; i < physicalDeviceMemoryProperties.memoryTypeCount; i++) {
 		if ((typeFilter & (1 << i)) &&
 			(physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags &
 				properties) == properties) {
@@ -600,5 +682,21 @@ uint32_t Device_findMemoryType(
 		}
 	}
 
-	EXIT_CLEAN("failed to find suitable memory type!");
+	EXIT_PRINT("failed to find suitable memory type!");
+}
+
+void Device_CreateFence(struct Device_State * device,VkFence *fence)
+{
+	VkFenceCreateInfo fenceInfo = {
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
+	};
+	vkCreateFence(
+		device->logical_device, 
+		&fenceInfo, 
+		NULL, 
+		fence
+	);
+}
+void Device_DestroyFence(struct Device_State * device,VkFence fence){
+	vkDestroyFence(device->logical_device, fence, NULL);
 }

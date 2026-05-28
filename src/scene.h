@@ -1,5 +1,7 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
+#include "src/device2.h"
+#include "src/input.h"
 #include "src/resource.h"
 #include "util/common.h"
 #include "shader_common.h"
@@ -47,7 +49,10 @@ struct Mesh {
 
 
 struct Scene {
-
+	struct Device_State * ref_device;
+	struct Input_State * ref_input;
+	struct Platform_State * ref_platform;
+	
 
 	struct Mesh meshes[MAX_MESHES];
 	uint32_t mesh_count;
@@ -65,9 +70,20 @@ struct Scene {
 	struct LightData light_data;
 };
 
+struct Scene_Info{
+	struct Device_State * ref_device;
+	struct Input_State * ref_input;
+	struct Platform_State * ref_platform;
+
+		
+	
+	uint32_t width;
+	uint32_t height;
+};
+
 // struct Scene * Scene_Get();
 
-void Scene_Init(struct Scene* scene, uint32_t width, uint32_t height);
+void Scene_Init(struct Scene_Info * info, struct Scene* scene);
 
 void Scene_Update(struct Scene* scene, float dt);
 

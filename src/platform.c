@@ -1,13 +1,16 @@
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#include <vulkan/vulkan_core.h>
+
 #include "cglm/cam.h"
 #include "cglm/clipspace/ortho_rh_no.h"
 #include "cglm/clipspace/persp_rh_no.h"
 #include "cglm/clipspace/view_rh_no.h"
-#include "src/app.h"
-#include "src/shader_common.h"
 #include "vulkan/vk_platform.h"
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <vulkan/vulkan_core.h>
+
+
+#include "app.h"
+#include "shader_common.h"
 #include "util/common.h"
 #include "platform.h"
 #include "renderer.h"
@@ -21,7 +24,7 @@
 
 #endif
 
-static GLFWwindow* window = NULL;
+// static GLFWwindow* window = NULL;
 
 // static bool leftPressed = false;
 // static bool firstMouse = true;
@@ -32,27 +35,31 @@ static GLFWwindow* window = NULL;
 
 // static double mouseX, mouseY;
 
-static float posX, posY;
 
-static VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+// static VkSurfaceKHR surface = VK_NULL_HANDLE;
 
 // static VkInstance instance = VK_NULL_HANDLE;
 
-static VkSurfaceCapabilitiesKHR surfaceCapabilities;
+// static VkSurfaceCapabilitiesKHR surfaceCapabilities;
 
-static void mouseCallback(GLFWwindow* window, double xposIn, double yposIn);
+static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn);
 
-static void frameResizeCallback(GLFWwindow* window, int width, int height);
+// static void frameResizeCallback(GLFWwindow* window, int width, int height);
 
-void Platform_createSurface(VkInstance instance) {
-	VkResult result = glfwCreateWindowSurface(instance, window, NULL, &surface);
+void Platform_createSurface(
+	struct Platform_State* plaftorm, VkSurfaceKHR *surface) {
+
+	VK_CHECK(glfwCreateWindowSurface(
+		plaftorm->ref_inst->instance, plaftorm->window, NULL, surface));
 }
 
-void Platform_destroySurface(VkInstance instance) {
-	vkDestroySurfaceKHR(instance, surface, NULL);
+void Platform_destroySurface(	struct Platform_State * plaftorm, VkSurfaceKHR  surface) {
+	
+	vkDestroySurfaceKHR(plaftorm->ref_inst->instance, surface, NULL);
 }
 
-void Platform_InitWindow(struct ApplicationContext* app) {
+void Platform_Init(struct Plaftorm_info * info ,struct Platform_State * state) {
 	PRINT_FNAME;
 
 	// instance = Instance_getInstance();
@@ -66,85 +73,52 @@ void Platform_InitWindow(struct ApplicationContext* app) {
 
 	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 
-	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", NULL, NULL);
+	state->window = glfwCreateWindow(info->width, info->height, "Vulkan", NULL, NULL);
+	state->ref_inst = info->ref_inst;
+	
+	state->posX = info->width >> 1;
+	state->posY = info->height >> 1;
 
-	posX = WIDTH >> 1;
-	posY = HEIGHT >> 1;
-
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(state->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// glfwSetCursorPosCallback(window, mouseCallback);
 
-	glfwSetWindowUserPointer(window, app);
+	// glfwSetWindowUserPointer(state->window, info->ref_app);
 
-	glfwSetFramebufferSizeCallback(window, frameResizeCallback);
+	glfwSetFramebufferSizeCallback(state->window, info->callback_resize);
 }
 
-static void update_camera_perspective(struct CameraData * cam, float aspect){
-
-	cam->aspect_ratio = aspect;
 
 
+void Platform_WaitForEvents(struct Platform_State * platform) { glfwWaitEvents(); }
+
+void Platform_GetFramebufferSize(struct Platform_State * platform, uint32_t* width, uint32_t* height) {
+
+	glfwGetFramebufferSize(platform->window, width, height);
+}
+
+// float Platform_GetAspectRatio() {
 	
-	glm_perspective_rh_no(
-		glm_rad(cam->fov),
-		cam->aspect_ratio, 
-		cam->near_plane,
-		cam->far_plane, 
-		cam->proj
-	);
-	// cam->proj[1][1] *= -1.f;
+// 	VkExtent2D extent;
+// 	glfwGetFramebufferSize(window, (int*)&extent.width, (int*)&extent.height);
 
-	glm_mat4_mul(
-		cam->proj, 
-		cam->view,
-		cam->view_proj
-	);
-}
-static void frameResizeCallback(GLFWwindow* window, int width, int height) {
-	PRINT_FNAME;
-	struct ApplicationContext* app = glfwGetWindowUserPointer(window);
+// 	float aspect_ratio = (float)extent.width / (float)extent.height;
 
-	uint32_t w,h;
-	Platform_GetFramebufferSize(&w, &h);
-	app->scene.global_data.framebuffer_size[0] = w;	
-	app->scene.global_data.framebuffer_size[1] = h;
+// 	return aspect_ratio;
+// }
 
-	update_camera_perspective(&app->scene.camera_data[CAMERA_MAIN],(float)w/h);
-
-	
-	app->renderer.framebuffer_resized = true;
-	
-
+void Platform_Shutdown(struct Platform_State * plaftorm) { glfwDestroyWindow(plaftorm->window);
 }
 
-void Platform_WaitForEvents() { glfwWaitEvents(); }
+void Platform_PollEvents(struct Platform_State* plaftorm) { glfwPollEvents(); }
 
-void Platform_GetFramebufferSize(uint32_t* width, uint32_t* height) {
-
-	glfwGetFramebufferSize(window, width, height);
+int Platform_ShouldCloseWindow(struct Platform_State* plaftorm) {
+	return glfwWindowShouldClose(plaftorm->window);
 }
 
-float Platform_GetAspectRatio() {
-	VkExtent2D extent;
-	Platform_GetFramebufferSize(&extent.width, &extent.height);
-
-	float aspect_ratio = (float)extent.width / (float)extent.height;
-
-	return aspect_ratio;
+float Platform_GetTime(struct Platform_State* plaftorm) {
+	return glfwGetTime();
 }
-
-void Platform_Shutdown() { glfwDestroyWindow(window); }
-
-VkSurfaceKHR Platform_GetSurface() { return surface; }
-
-static void initWindow() {}
-
-void Platform_PollEvents() { glfwPollEvents(); }
-
-int Platform_ShouldCloseWindow() { return glfwWindowShouldClose(window); }
-
-float Platform_GetTime() { return glfwGetTime(); }
 
 // void createSurface(VkInstance instance,VkSurfaceKHR * surface) {
 //   PRINT_FNAME;
@@ -152,16 +126,16 @@ float Platform_GetTime() { return glfwGetTime(); }
 //   glfwCreateWindowSurface(instance, window, NULL, surface);
 // }
 
-void Platform_GetCursorPos(double* x, double* y) {
-	glfwGetCursorPos(window, x, y);
+void Platform_GetCursorPos(struct Platform_State * plaftorm, double* x, double* y) {
+	glfwGetCursorPos(plaftorm->window, x, y);
 	// *x = posX;
 	// *y = posY;
 }
 
-static void mouseCallback(GLFWwindow* window, double xposIn, double yposIn) {
+static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn) {
 
-	posX = xposIn;
-	posY = yposIn;
+	plaftorm->posX = xposIn;
+	plaftorm->posY = yposIn;
 	// float xpos = xposIn;
 	// float ypos = yposIn;
 
@@ -181,14 +155,27 @@ static void mouseCallback(GLFWwindow* window, double xposIn, double yposIn) {
 	// yoffset *= sensitivity;
 }
 
-int Platform_GetMouseButtonState(int button) {
+int Platform_GetMouseButtonState(struct Platform_State * plaftorm,int button) {
 
-	return glfwGetMouseButton(window, button);
+	return glfwGetMouseButton(plaftorm->window, button);
 }
 
-int Platform_GetKeyState(int key) { return glfwGetKey(window, key); }
+int Platform_GetKeyState(struct Platform_State * plaftorm,int key) { return glfwGetKey(plaftorm->window, key); }
 
-void Platform_SetShouldCloseWindow(uint32_t value) {
+void Platform_SetShouldCloseWindow(struct Platform_State * plaftorm,uint32_t value) {
 
-	glfwSetWindowShouldClose(window, value);
+	glfwSetWindowShouldClose(plaftorm->window, value);
+}
+
+
+
+void Platform_GetMousePosition(void* window, double* x, double* y){
+
+	glfwGetCursorPos((GLFWwindow*)window, x, y);
+}
+int Platform_GetMouseButton(void* window, int button){
+	return glfwGetMouseButton((GLFWwindow*)window, button);
+}
+int Platform_GetKey(void* window, int key){
+	 return glfwGetKey((GLFWwindow*)window, key);
 }

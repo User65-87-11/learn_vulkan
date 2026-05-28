@@ -11,59 +11,99 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .link_libc = true,
             .root_source_file = null,
+            
         }),
     });
 
 	exe.root_module.addCSourceFile(.{
-        .file = b.path("src/assets/asset0.c"),
+        .file = b.path("src/assets/asset0.c"),.flags = &.{
+                    "-std=c23",
+                },
+        
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/util/gm_array.c"),
+        .file = b.path("src/util/gm_array.c"),.flags = &.{
+                    "-std=c23",
+                },
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/util/gm_list.c"),
+        .file = b.path("src/util/gm_list.c"),.flags = &.{
+                    "-std=c23",
+                },
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/app.c"),
+        .file = b.path("src/app.c"),.flags = &.{
+                    "-std=c23",
+                },
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/descriptor.c"),
+        .file = b.path("src/descriptor.c"),.flags = &.{
+                    "-std=c23",
+                },
     });
+
+
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/device.c"),
+		.file = b.path("src/device2.c"),.flags = &.{
+            "-std=c23",
+        },
+	});
+	
+	exe.root_module.addCSourceFile(.{
+		.file = b.path("src/input.c"),.flags = &.{
+            "-std=c23",
+        },
 	});
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/input.c"),
-	});
-	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/instance.c"),
+		.file = b.path("src/instance.c"),.flags = &.{
+            "-std=c23",
+        },
 	});	
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/loader/loader.c"),
+		.file = b.path("src/loader/loader.c"),.flags = &.{
+            "-std=c23",
+        },
 	});
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/main2.c"),
+		.file = b.path("src/main2.c"),.flags = &.{
+            "-std=c23",
+        },
 	});
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/pipeline.c"),
+		.file = b.path("src/pipeline.c"),.flags = &.{
+            "-std=c23",
+        },
 	});
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/platform.c"),
+		.file = b.path("src/platform.c"),.flags = &.{
+            "-std=c23",
+        },
 	});
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/renderer.c"),
+        .file = b.path("src/renderer.c"),.flags = &.{
+                    "-std=c23",
+                },
     });
     exe.root_module.addCSourceFile(.{
-        .file = b.path("src/resource.c"),
+        .file = b.path("src/resource.c"),.flags = &.{
+                    "-std=c23",
+                },
     });
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/scene.c"),
+		.file = b.path("src/scene.c"),.flags = &.{
+            "-std=c23",
+        },
 	});
 	exe.root_module.addCSourceFile(.{
-		.file = b.path("src/shader.c"),
+		.file = b.path("src/shader.c"),.flags = &.{
+            "-std=c23",
+        },
 	});
 	exe.root_module.addCSourceFile(.{
 		.file = b.path("src/swapchain.c"),
+		.flags = &.{
+            "-std=c23",
+        },
 	});
 	
 	

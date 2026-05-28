@@ -1,9 +1,17 @@
 #pragma once
 
-#include "shader_common.h"
 #include <vulkan/vulkan.h>
 
+#include "shader_common.h"
+#include "device2.h"
+
+struct Descriptor_InitInfo{
+	struct Device_State* device_ref;
+};
 struct DescriptorContext {
+
+	struct Device_State* device_ref;
+	
 	VkDescriptorPool pool;
 
 	VkDescriptorSetLayout globalLayout;
@@ -17,33 +25,45 @@ struct DescriptorContext {
 };
 
 // lifecycle
-void Descriptor_Init();
+void Descriptor_Init(struct Descriptor_InitInfo *info, struct DescriptorContext * context);
 
-void Descriptor_Destroy();
+void Descriptor_Destroy(struct DescriptorContext * context);
 
 // pool control
-void Descriptor_ResetPool();
+void Descriptor_ResetPool(struct DescriptorContext * context);
 
-// layouts access
-struct DescriptorContext* Descriptor_GetContext();
+// // layouts access
+// struct DescriptorContext* Descriptor_GetContext(
+// 	);
 
 // allocation
-VkDescriptorSet Descriptor_Allocate(VkDescriptorSetLayout layout);
+VkDescriptorSet Descriptor_Allocate(
+	struct DescriptorContext * context
+	
+	, VkDescriptorSetLayout layout);
 
 void Descriptor_SetTextureToDescriptorInfoArray(
-	VkImageView view, VkSampler sampler, uint32_t position);
+	struct DescriptorContext * context,
+	VkImageView view,
+	VkSampler sampler,
+	uint32_t position);
 
-void Descriptor_UpdateTextureDescriptors(VkDescriptorSet descriptor_set,
+void Descriptor_UpdateTextureDescriptors(
+	struct DescriptorContext * context,
+	VkDescriptorSet descriptor_set,
 	VkDescriptorImageInfo* arr,
 	uint32_t count,
 	uint32_t offset);
 
 // updates
-void Descriptor_UpdateBuffer(VkDescriptorSet set,
+void Descriptor_UpdateBuffer(struct DescriptorContext * context,
+	VkDescriptorSet set,
 	uint32_t binding,
 	VkDescriptorType type,
 	VkBuffer buffer,
 	VkDeviceSize size);
 
-void Descriptor_UpdateImage(
-	VkDescriptorSet set, uint32_t binding, VkDescriptorImageInfo* imageInfo);
+void Descriptor_UpdateImage(struct DescriptorContext * context,
+	VkDescriptorSet set,
+	uint32_t binding,
+	VkDescriptorImageInfo* imageInfo);

@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "device.h"
+#include "device2.h"
 #include "util/common.h"
 
 #ifdef _WIN32

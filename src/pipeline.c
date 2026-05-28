@@ -1,23 +1,25 @@
+#include <vulkan/vulkan_core.h>
+
 #include "pipeline.h"
-#include "device.h"
-#include "shader_common.h"
+#include "device2.h"
 #include "util/common.h"
 #include "vertex.h"
-#include "vulkan/vulkan_core.h"
 
 // static VkFormat findDepthFormat();
 
-void Pipeline_CreateGraphics(struct GraphicsPipeline* pipeline
-
-) {
+void Pipeline_CreateGraphics( struct GraphicsPipelineCreateInfo *info, struct GraphicsPipeline* pipeline) {
 
 	PRINT_FNAME;
-	VkDevice device = Device_Get()->logical_device;
+	VkDevice device = info->ref_device->logical_device;
+	pipeline->ref_device = info->ref_device;
+	pipeline->vertexShader = info->vertexShader;
+	pipeline->fragmentShader = info->fragmentShader;
+	
 
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
-		.module = pipeline->info.vertexShader,
+		.module = info->vertexShader,
 		.pName = "main",
 
 	};
@@ -25,7 +27,7 @@ void Pipeline_CreateGraphics(struct GraphicsPipeline* pipeline
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-		.module = pipeline->info.fragmentShader,
+		.module = info->fragmentShader,
 		.pName = "main",
 
 	};
@@ -156,8 +158,8 @@ void Pipeline_CreateGraphics(struct GraphicsPipeline* pipeline
 
 	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		.setLayoutCount = pipeline->info.descriptorSetLayoutCount,
-		.pSetLayouts = pipeline->info.descriptorSetLayouts,
+		.setLayoutCount = info->descriptorSetLayoutCount,
+		.pSetLayouts = info->descriptorSetLayouts,
 		.pushConstantRangeCount = 0,
 		.pPushConstantRanges = NULL};
 
@@ -165,14 +167,14 @@ void Pipeline_CreateGraphics(struct GraphicsPipeline* pipeline
 		device, &pipelineLayoutCreateInfo, NULL, &pipeline->layout);
 
 	VkFormat formats[] = {
-		pipeline->info.colorFormat,
+		info->colorFormat,
 	};
 
 	VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
 		.colorAttachmentCount = ARR_LEN(formats),
 		.pColorAttachmentFormats = formats,
-		.depthAttachmentFormat = pipeline->info.depthFormat,
+		.depthAttachmentFormat = info->depthFormat,
 	};
 
 	VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = {
@@ -199,9 +201,10 @@ void Pipeline_CreateGraphics(struct GraphicsPipeline* pipeline
 		device, NULL, 1, &graphicsPipelineCreateInfo, NULL, &pipeline->handle);
 }
 
-void Pipeline_Destroy(VkDevice device, struct GraphicsPipeline* pipeline) {
-	vkDestroyShaderModule(device, pipeline->info.fragmentShader, NULL);
-	vkDestroyShaderModule(device, pipeline->info.vertexShader, NULL);
+void Pipeline_Destroy( struct GraphicsPipeline* pipeline) {
+	VkDevice device = pipeline->ref_device->logical_device;
+	vkDestroyShaderModule(device, pipeline->fragmentShader, NULL);
+	vkDestroyShaderModule(device, pipeline->vertexShader, NULL);
 	vkDestroyPipelineLayout(device, pipeline->layout, NULL);
 	vkDestroyPipeline(device, pipeline->handle, NULL);
 }

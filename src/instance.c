@@ -1,24 +1,25 @@
-#include "instance.h"
-#include "platform.h"
-#include "util/common.h"
 #include <GLFW/glfw3.h>
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
-static VkInstance instance = NULL;
+#include "instance.h"
+// #include "platform.h"
+#include "util/common.h"
 
-static VkDebugUtilsMessengerEXT debugUtilsMessengerEXT = NULL;
+// static VkInstance instance = NULL;
 
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
-#endif
+// static VkDebugUtilsMessengerEXT debugUtilsMessengerEXT = NULL;
 
-static uint32_t validationLayerCnt = 1;
-static const char* validationLayers[] = {
-	"VK_LAYER_KHRONOS_validation",
-};
+// #ifdef NDEBUG
+// const bool enableValidationLayers = false;
+// #else
+// const bool enableValidationLayers = true;
+// #endif
+
+// static uint32_t validationLayerCnt = 1;
+// static const char* validationLayers[] = {
+// 	"VK_LAYER_KHRONOS_validation",
+// };
 
 static VkBool32 debugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -31,10 +32,10 @@ static VkBool32 debugCallback(
 	return VK_FALSE;
 }
 
-static void setupDebugMessenger() {
+static void setupDebugMessenger(struct Instance_State * instance ) {
 	PRINT_FNAME;
 
-	if (!enableValidationLayers)
+	if (!instance->enableValidationLayers)
 		return;
 
 	VkDebugUtilsMessageSeverityFlagsEXT severityFlags =
@@ -56,11 +57,11 @@ static void setupDebugMessenger() {
 
 	PFN_vkCreateDebugUtilsMessengerEXT func =
 		(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-			instance, "vkCreateDebugUtilsMessengerEXT");
+			instance->instance, "vkCreateDebugUtilsMessengerEXT");
 
 	if (func != NULL) {
-		if (func(instance, &debugUtilsMessengerCreateInfoEXT, NULL,
-				&debugUtilsMessengerEXT) != VK_SUCCESS) {
+		if (func(instance->instance, &debugUtilsMessengerCreateInfoEXT, NULL,
+				&instance->debugUtilsMessengerEXT) != VK_SUCCESS) {
 			printf("%s\n", "cannot setup debug messenger");
 		}
 
@@ -70,9 +71,11 @@ static void setupDebugMessenger() {
 	}
 }
 
-void Instance_Create() {
+void Instance_Create(struct Instance_Into *info, struct Instance_State * instance) {
 	PRINT_FNAME;
 
+	instance->enableValidationLayers = info->enableValidationLayers;
+	
 	VkApplicationInfo applicationInfo = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = "Hello Triangle",
@@ -95,7 +98,7 @@ void Instance_Create() {
 		glfwExtensionsExtra[i] = glfwExtensions[i];
 	}
 
-	if (enableValidationLayers) {
+	if (instance->enableValidationLayers) {
 
 		glfwExtensionsExtra[glfwExtensionCount] =
 			VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
@@ -105,7 +108,7 @@ void Instance_Create() {
 
 	for (int i = 0; i < glfwExtensionCountExtra; i++) {
 
-		printf("\tglfw required extensions: %s\n", glfwExtensionsExtra[i]);
+		printf("\tglfw required extensions + extra: %s\n", glfwExtensionsExtra[i]);
 	}
 
 	{
@@ -146,13 +149,13 @@ void Instance_Create() {
 				}
 			}
 
-			if (strcmp(layers[i].layerName, validationLayers[0]) == 0) {
+			if (strcmp(layers[i].layerName, info->validationLayers[0]) == 0) {
 				validationLayerSupported = true;
 			}
 		}
 		if (validationLayerSupported == false) {
 			printf("Required layer is not supported \n\t%s\n",
-				validationLayers[0]);
+				info->validationLayers[0]);
 			return;
 		}
 	}
@@ -165,31 +168,34 @@ void Instance_Create() {
 
 	};
 
-	if (enableValidationLayers) {
-		instanceCreateInfo.enabledLayerCount = validationLayerCnt;
-		instanceCreateInfo.ppEnabledLayerNames = validationLayers;
+	if (instance->enableValidationLayers) {
+		instanceCreateInfo.enabledLayerCount = info->validationLayer_cnt;
+		instanceCreateInfo.ppEnabledLayerNames = info->validationLayers;
 	}
 
-	if (vkCreateInstance(&instanceCreateInfo, NULL, &instance) != VK_SUCCESS) {
+	// if (vkCreateInstance(&instanceCreateInfo, NULL, &instance->instance) != VK_SUCCESS) {
 
-		EXIT_CLEAN("vkCreateInstance failed");
-	} else {
-		printf("vkCreateInstance CREATED\n");
-	}
+	// 	EXIT_CLEAN("vkCreateInstance failed");
+	// } else {
+	// 	printf("vkCreateInstance CREATED\n");
+	// }
 
-	setupDebugMessenger();
+	VK_CHECK(vkCreateInstance(&instanceCreateInfo, NULL, &instance->instance));
+	
+
+	setupDebugMessenger(instance);
 }
 
-void Instance_DestroyInstance() {
+void Instance_DestroyInstance(struct Instance_State * instance) {
 
-	if (enableValidationLayers) {
+	if (instance->enableValidationLayers) {
 		PFN_vkDestroyDebugUtilsMessengerEXT func =
 			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-				instance, "vkDestroyDebugUtilsMessengerEXT");
+				instance->instance, "vkDestroyDebugUtilsMessengerEXT");
 		if (func != NULL) {
-			func(instance, debugUtilsMessengerEXT, NULL);
+			func(instance->instance, instance->debugUtilsMessengerEXT, NULL);
 		}
 	}
 }
 
-VkInstance Instance_Get() { return instance; }
+// VkInstance Instance_Get() { return instance; }

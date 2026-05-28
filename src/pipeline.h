@@ -1,8 +1,11 @@
 #pragma once
+#include "src/device2.h"
 #include <vulkan/vulkan.h>
 
 struct GraphicsPipelineCreateInfo {
-	VkDevice device;
+
+	struct Device_State * ref_device;
+	// VkDevice device;
 
 	VkExtent2D extent;
 
@@ -17,12 +20,15 @@ struct GraphicsPipelineCreateInfo {
 };
 
 struct GraphicsPipeline {
+	struct Device_State * ref_device;
+	
 	VkPipeline handle;
 	VkPipelineLayout layout;
 
-	struct GraphicsPipelineCreateInfo info;
+	VkShaderModule vertexShader;
+	VkShaderModule fragmentShader;
 };
 
-void Pipeline_CreateGraphics(struct GraphicsPipeline* pipeline);
+void Pipeline_CreateGraphics( struct GraphicsPipelineCreateInfo *info, struct GraphicsPipeline* pipeline) ;
 
-void Pipeline_Destroy(VkDevice device, struct GraphicsPipeline* pipeline);
+void Pipeline_Destroy( struct GraphicsPipeline* pipeline);

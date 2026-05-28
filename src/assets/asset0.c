@@ -175,14 +175,16 @@ static void create_Instance0(
 	glm_mat4_identity(inst->model);
 	inst->material_idx = material_idx;
 
-	
+
+		struct DescriptorContext * context = &app->descriptor;
+		
 	for(int i=0; i<MAX_TEXTURES ;i++)
 	{
-		Descriptor_SetTextureToDescriptorInfoArray(texture0->image.view, texture0->sampler,i);
+		Descriptor_SetTextureToDescriptorInfoArray(context,texture0->image.view, texture0->sampler,i);
 	}
 
-	struct DescriptorContext * context = Descriptor_GetContext();
-	Descriptor_UpdateTextureDescriptors(
+
+	Descriptor_UpdateTextureDescriptors(context,
 		app->renderer.desc_set_samplers, 
 		context->descriptor_image_info_textures, 
 		MAX_TEXTURES,

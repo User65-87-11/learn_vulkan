@@ -1,14 +1,18 @@
 #include <GLFW/glfw3.h>
 #include <assert.h>
+#include <stdio.h>
 #include <string.h>
-#include "scene.h"
+
 #include "cglm/cam.h"
 #include "cglm/clipspace/persp_rh_no.h"
 #include "cglm/vec3.h"
+
+
+#include "scene.h"
 #include "input.h"
 #include "platform.h"
-#include "src/shader_common.h"
-#include "src/util/common.h"
+#include "shader_common.h"
+#include "util/common.h"
 
 
 // static struct Camera camera;
@@ -31,12 +35,12 @@ static const float yaw = -230.0f;
 static const float pitch = 30.0f;
 
 static void update_camera(
-	struct Scene* scene, struct InputState* input, float dt);
+	struct Scene* scene, float dt);
 
 
 
 static void update_keys(
-	struct Scene* scene, struct InputState* input, float dt);
+	struct Scene* scene,  float dt);
 
 static void camera_perspective_init(
 	struct CameraData* cam,
@@ -50,18 +54,22 @@ static void camera_perspective_init(
 
 );
 
-void Scene_Init(struct Scene* scene, uint32_t width,uint32_t height) {
+void Scene_Init(struct Scene_Info * info, struct Scene* scene) {
 	PRINT_FNAME;
 	memset(scene, 0, sizeof(struct Scene));
 
+	scene->ref_device = info->ref_device;
+	scene->ref_input = info->ref_input;
+	scene->ref_platform = info->ref_platform;
 
+	
 	vec3 pos0 = {2.0, -2.0f, -2.0f};
 
 
 	camera_perspective_init(
 		&scene->camera_data[CAMERA_MAIN], 
 		45.0, 0.1f, 100.0f,
-		(float)width / height, 
+		(float)info->width / info->height, 
 		yaw, pitch, 
 		pos0
 	);
@@ -72,8 +80,8 @@ void Scene_Init(struct Scene* scene, uint32_t width,uint32_t height) {
 	// scene_ref = scene;
 
 	scene->global_data.frame_cnt = 0x88;
-	scene->global_data.framebuffer_size[0] = width;	
-	scene->global_data.framebuffer_size[1] = height;
+	scene->global_data.framebuffer_size[0] = info->width;	
+	scene->global_data.framebuffer_size[1] = info->height;
 
 	
 }
@@ -194,24 +202,28 @@ struct InstanceData* Scene_GeInstanceData(
 
 void Scene_Update(struct Scene* scene, float dt) {
 
-	struct InputState* input = Input_Get();
-	update_keys(scene, input, dt);
-	update_camera(scene, input, dt);
+	
+	// struct Input_State* input = scene->ref_input;
+	update_keys(scene,  dt);
+	update_camera(scene,  dt);
 }
 
 static void update_keys(
-	struct Scene* scene, 
-	struct InputState* input, 
+	struct Scene* scene,
 	float dt
 ) {
 	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
+
 	
-	if (input->keys[GLFW_KEY_ESCAPE] == GLFW_PRESS) {
-		Platform_SetShouldCloseWindow(true);
+	
+	if (scene->ref_input->keys[GLFW_KEY_ESCAPE] == GLFW_PRESS) {
+
+	
+		Platform_SetShouldCloseWindow(scene->ref_platform,true);
 	}
 
 	float cameraSpeed = 2.5 * dt;
-	if (input->keys[GLFW_KEY_W] == GLFW_PRESS) {
+	if (scene->ref_input->keys[GLFW_KEY_W] == GLFW_PRESS) {
 
 		glm_vec3_muladds(
 			cam->front, 
@@ -220,22 +232,22 @@ static void update_keys(
 		);
 	}
 
-	if (input->keys[GLFW_KEY_S] == GLFW_PRESS) {
+	if (scene->ref_input->keys[GLFW_KEY_S] == GLFW_PRESS) {
 		glm_vec3_mulsubs(
 			cam->front, cameraSpeed, cam->pos);
 	}
-	if (input->keys[GLFW_KEY_A] == GLFW_PRESS) {
+	if (scene->ref_input->keys[GLFW_KEY_A] == GLFW_PRESS) {
 		vec3 temp;
 		glm_vec3_crossn(cam->front, cam->up, temp);
 		glm_vec3_mulsubs(temp, cameraSpeed, cam->pos);
 	}
-	if (input->keys[GLFW_KEY_D] == GLFW_PRESS) {
+	if (scene->ref_input->keys[GLFW_KEY_D] == GLFW_PRESS) {
 		vec3 temp;
 		glm_vec3_crossn(cam->front, cam->up, temp);
 		glm_vec3_muladds(temp, cameraSpeed, cam->pos);
 	}
 
-	if (input->keys[GLFW_KEY_SPACE] == GLFW_PRESS) {
+	if (scene->ref_input->keys[GLFW_KEY_SPACE] == GLFW_PRESS) {
 
 		glm_vec3_mulsubs(
 			cam->up, cameraSpeed, cam->pos);
@@ -243,13 +255,13 @@ static void update_keys(
 }
 
 static void update_camera(
-	struct Scene* scene, struct InputState* input, float dt
+	struct Scene* scene,  float dt
 ) {
 	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
 	
-	cam->yaw += input->mouseDeltaX;
+	cam->yaw += scene->ref_input->mouseDeltaX;
 
-	cam->pitch -= input->mouseDeltaY;
+	cam->pitch -= scene->ref_input->mouseDeltaY;
 
 	if (cam->pitch > 89.0f) {
 		cam->pitch = 89.0f;
@@ -258,7 +270,7 @@ static void update_camera(
 		cam->pitch = -89.0f;
 	}
 
-	// printf("y:%f, p:%f\n", cam->yaw, cam->pitch);
+
 	vec3 front;
 
 	front[0] = cos(glm_rad(cam->yaw)) *

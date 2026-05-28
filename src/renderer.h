@@ -2,7 +2,11 @@
 #include <vulkan/vulkan_core.h>
 #include <GLFW/glfw3.h>
 #include "resource.h"
-#include "src/shader_common.h"
+#include "descriptor.h"
+#include "device2.h"
+#include "instance.h"
+#include "platform.h"
+#include "shader_common.h"
 #include "swapchain.h"
 #include "pipeline.h"
 #include "scene.h"
@@ -31,9 +35,23 @@ struct FrameData {
 	struct Mesh meshes[MAX_MESHES];
 	uint32_t mesh_count;
 };
+struct Renderer_info{
 
+	struct Device_State * ref_device;
+	struct Instance_State * ref_instance;
+	struct Platform_State * ref_platform;
+	struct DescriptorContext * ref_descriptor;
+	struct Scene * ref_scene;
+};
 struct Renderer {
 
+	struct Device_State * ref_device;
+	struct Platform_State * ref_platform;
+	struct Scene * ref_scene;
+	// struct Instance_State * ref_instance;
+	// struct Platform_State * ref_platform;
+	// struct DescriptorContext * ref_descriptor;
+	
 	struct Swapchain swapchain;
 	struct GraphicsPipeline pipeline;
 
@@ -59,10 +77,10 @@ struct Renderer {
 	bool framebuffer_resized;
 };
 
-void Renderer_Init(struct Renderer* renderer);
+void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer);
 
 void Renderer_Render(struct Renderer* renderer,
-	struct Scene* scene,
+
 	float time,
 	float delta_time);
 

@@ -28,6 +28,15 @@
     exit(1);                                                                   \
   } while (0)
 
+
+  
+#define EXIT_PRINT(msg)                                                        \
+do {                                                                         \
+    printf("ERROR: %s\n", msg);                                                \
+    exit(1);                                                                   \
+} while (0)
+
+    
 #define GLM_VEC3_COPY(dst, src)                                                \
   do {                                                                         \
     dst[0] = src[0];                                                           \
@@ -66,3 +75,23 @@
     uint32_t len;
   };
 
+
+  #define VK_CHECK(api)                                                      \
+  do {                                                                        \
+      VkResult result = (api);                                                \
+      if (result != VK_SUCCESS) {                                             \
+          fprintf(stderr,                                                     \
+                  "Vulkan call failed\n"                                      \
+                  "Call : %s\n"                                               \
+                  "Error: %d\n"                                               \
+                  "File : %s\n"                                               \
+                  "Line : %d\n"                                               \
+                  "Func : %s\n",                                              \
+                  #api,                                                       \
+                  result,                                                     \
+                  __FILE__,                                                   \
+                  __LINE__,                                                   \
+                  __func__);                                                  \
+          exit(1);                                                            \
+      }                                                                       \
+  } while (0)

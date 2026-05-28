@@ -3,21 +3,28 @@
 #include "util/common.h"
 #include "swapchain.h"
 #include "platform.h"
-#include "device.h"
+#include "device2.h"
 
-static void createImageView(VkImage image,
+static void createImageView(
+		struct Swapchain * sc,VkImage image,
 	VkFormat format,
 	VkImageAspectFlagBits aspectFlags,
 	VkImageView* view);
 
-static void createImageViews(struct Swapchain* sc, VkDevice device);
+static void createImageViews(struct Swapchain* sc);
 
-void Swapchain_Create(struct Swapchain* sc,
-	VkDevice device,
-	VkPhysicalDevice physicalDevice,
-	VkSurfaceKHR surface,
-	VkExtent2D extent) {
+void Swapchain_Create(
+	struct Swapchain_info * info,
+	struct Swapchain* sc
+	// VkDevice device,
+	// VkPhysicalDevice physicalDevice,
+	// VkSurfaceKHR surface,
+	// VkExtent2D extent
+)
+{
 	PRINT_FNAME;
+	sc->ref_device = info->ref_device;
+	sc->ref_platform = info->ref_platform;
 
 	VkSurfaceCapabilitiesKHR surfaceCapabilities;
 	// VkPhysicalDevice physicalDevice = Device_GetPhysical();
@@ -25,7 +32,7 @@ void Swapchain_Create(struct Swapchain* sc,
 
 	// surface0 = surface;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-		physicalDevice, surface, &surfaceCapabilities);
+		info->ref_device->physical_device, info->ref_platform->surface, &surfaceCapabilities);
 
 	printf("Surface extent: w:%d h:%d\n",
 		surfaceCapabilities.currentExtent.width,
@@ -34,14 +41,14 @@ void Swapchain_Create(struct Swapchain* sc,
 	uint32_t physicalDeviceSurfaceFormatCount = 0;
 
 	vkGetPhysicalDeviceSurfaceFormatsKHR(
-		physicalDevice, surface, &physicalDeviceSurfaceFormatCount, NULL);
+		info->ref_device->physical_device, info->ref_platform->surface, &physicalDeviceSurfaceFormatCount, NULL);
 
 	VkSurfaceFormatKHR surfaceFormats[physicalDeviceSurfaceFormatCount];
 
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface,
+	vkGetPhysicalDeviceSurfaceFormatsKHR(info->ref_device->physical_device, info->ref_platform->surface,
 		&physicalDeviceSurfaceFormatCount, surfaceFormats);
 
-	sc->depthFormat = Device_findDepthFormat();
+	sc->depthFormat = Device_findDepthFormat(info->ref_device);
 	sc->surfaceFormat = VK_FORMAT_B8G8R8A8_SRGB;
 	printf("Surface formats:\n");
 
@@ -70,12 +77,12 @@ void Swapchain_Create(struct Swapchain* sc,
 	uint32_t presentModeCount = 0;
 
 	vkGetPhysicalDeviceSurfacePresentModesKHR(
-		physicalDevice, surface, &presentModeCount, NULL);
+	info->ref_device->physical_device, info->ref_platform->surface, &presentModeCount, NULL);
 
 	VkPresentModeKHR presentModes[presentModeCount];
 
 	vkGetPhysicalDeviceSurfacePresentModesKHR(
-		physicalDevice, surface, &presentModeCount, presentModes);
+	info->ref_device->physical_device, info->ref_platform->surface, &presentModeCount, presentModes);
 
 	printf("Surface pPresentModes:\n");
 
@@ -99,7 +106,7 @@ void Swapchain_Create(struct Swapchain* sc,
 	}
 
 	uint32_t width, height;
-	Platform_GetFramebufferSize(&width, &height);
+	Platform_GetFramebufferSize(info->ref_platform,&width, &height);
 
 	if (width >= surfaceCapabilities.minImageExtent.width &&
 		width <= surfaceCapabilities.maxImageExtent.width &&
@@ -147,16 +154,16 @@ void Swapchain_Create(struct Swapchain* sc,
 		.preTransform = surfaceCapabilities.currentTransform,
 		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 		.presentMode = presentMode,
-		.surface = surface,
+		.surface = info->ref_platform->surface,
 		.clipped = true,
 	};
 
-	vkCreateSwapchainKHR(device, &createInfo, NULL, &sc->handle);
+	vkCreateSwapchainKHR(info->ref_device->logical_device, &createInfo, NULL, &sc->handle);
 
-	createImageViews(sc, device);
+	createImageViews(sc);
 }
 
-static void createImageViews(struct Swapchain* sc, VkDevice device) {
+static void createImageViews(struct Swapchain* sc) {
 
 	PRINT_FNAME;
 
@@ -172,11 +179,11 @@ static void createImageViews(struct Swapchain* sc, VkDevice device) {
 
 	// VkDevice device = Device_Get();
 
-	vkGetSwapchainImagesKHR(device, sc->handle, &sc->imageCount, NULL);
+	vkGetSwapchainImagesKHR(sc->ref_device->logical_device, sc->handle, &sc->imageCount, NULL);
 
 	// VkImage sc_images[image_view_cnt];
 
-	vkGetSwapchainImagesKHR(device, sc->handle, &sc->imageCount, sc->images);
+	vkGetSwapchainImagesKHR(sc->ref_device->logical_device, sc->handle, &sc->imageCount, sc->images);
 
 	printf("pSwapchainImageCount %d\n", &sc->imageCount);
 
@@ -186,12 +193,14 @@ static void createImageViews(struct Swapchain* sc, VkDevice device) {
 
 		// swapchain_images[i].handle = sc_images[i];
 		// swapchain_images[i].mipLevels = 1;
-		createImageView(sc->images[i], sc->surfaceFormat,
+		createImageView(sc,sc->images[i], sc->surfaceFormat,
 			VK_IMAGE_ASPECT_COLOR_BIT, &sc->image_views[i]);
 	}
 }
 
-static void createImageView(VkImage image,
+static void createImageView(
+	struct Swapchain * sc,
+	VkImage image,
 	VkFormat format,
 	VkImageAspectFlagBits aspectFlags,
 	VkImageView* view) {
@@ -212,31 +221,28 @@ static void createImageView(VkImage image,
 
 	};
 
-	vkCreateImageView(Device_Get()->logical_device, &viewInfo, NULL, view);
+	vkCreateImageView(sc->ref_device->logical_device, &viewInfo, NULL, view);
 }
 
 void Swapchain_Destroy(struct Swapchain* sc) {
 	PRINT_FNAME;
-	struct Device* device = Device_Get();
+	// struct Device* device = Device_Get();
 
-	vkDeviceWaitIdle(device->logical_device);
+	vkDeviceWaitIdle(sc->ref_device->logical_device);
 
 	for (int i = 0; i < sc->imageCount; i++) {
 		// cleanImageRes(&swapchain_images[i]);
-		vkDestroyImageView(device->logical_device, sc->image_views[i], NULL);
+		vkDestroyImageView(sc->ref_device->logical_device, sc->image_views[i], NULL);
 	}
 	// swapchainImageViewCount = 0;
 	sc->imageCount = 0;
 
-	vkDestroySwapchainKHR(device->logical_device, sc->handle, NULL);
+	vkDestroySwapchainKHR(sc->ref_device->logical_device, sc->handle, NULL);
 
 	sc->handle = NULL;
 }
 
-void Swapchain_Recreate(struct Swapchain* sc,
-	VkDevice device,
-	VkPhysicalDevice physicalDevice,
-	VkSurfaceKHR surface
+void Swapchain_Recreate(struct Swapchain* sc
 
 ) {
 	PRINT_FNAME;
@@ -246,17 +252,25 @@ void Swapchain_Recreate(struct Swapchain* sc,
 
 	// Wait until window is not minimized
 	do {
-		Platform_GetFramebufferSize(&width, &height);
-		Platform_WaitForEvents();
+		Platform_GetFramebufferSize(sc->ref_platform,&width, &height);
+		Platform_WaitForEvents(sc->ref_platform);
 	} while (width == 0 || height == 0);
 
 	// Ensure GPU is not using swapchain resources
-	vkDeviceWaitIdle(device);
+	vkDeviceWaitIdle(sc->ref_device->logical_device);
 
 	// Destroy old swapchain
 	Swapchain_Destroy(sc);
 
 	VkExtent2D newExtent = {.width = width, .height = height};
 
-	Swapchain_Create(sc, device, physicalDevice, surface, newExtent);
+
+	struct Swapchain_info  info={
+		.ref_device = sc->ref_device,
+		.ref_platform = sc->ref_platform,
+		.extent = newExtent
+	};
+		
+	
+	Swapchain_Create(&info,sc);
 }

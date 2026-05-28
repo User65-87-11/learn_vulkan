@@ -1,5 +1,6 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
+#include "src/device2.h"
 #include "util/common.h"
 #include "vertex.h"
 
@@ -52,17 +53,17 @@ struct Texture {
 	VkSampler sampler;
 };
 
-void Resource_CreateBuffer(VkDeviceSize size,
+void Resource_CreateBuffer(struct Device_State * device,VkDeviceSize size,
 	VkBufferUsageFlags usage,
 	VkMemoryPropertyFlags properties,
 	struct Buffer* out);
 
-void Resource_AppendToBuffer(
+void Resource_AppendToBuffer(struct Device_State * device,
 	struct Buffer* dest, uint32_t dest_offset, void* data, uint32_t size);
 
-void Resource_FreeBuffer(struct Buffer* image);
+void Resource_FreeBuffer(struct Device_State * device,struct Buffer* image);
 
-void Resource_CreateImage(uint32_t width,
+void Resource_CreateImage(struct Device_State * device,uint32_t width,
 	uint32_t height,
 	uint32_t mip_levels,
 	VkFormat format,
@@ -70,16 +71,16 @@ void Resource_CreateImage(uint32_t width,
 	VkImageUsageFlags usage,
 	VkMemoryPropertyFlags properties,
 	struct Image* out);
-void Resource_CreateImageView(
+void Resource_CreateImageView(struct Device_State * device,
 	struct Image* img, VkImageAspectFlagBits aspectFlags);
 
-void Resource_CreateTexture(void* pixel_data,
+void Resource_CreateTexture(struct Device_State * device,void* pixel_data,
 	uint32_t width,
 	uint32_t height,
 	VkFormat format,
 	struct Texture* out);
 
-void Resource_transitionImageLayout(VkCommandBuffer cmdBuffer,
+void Resource_transitionImageLayout(struct Device_State * device,VkCommandBuffer cmdBuffer,
 	VkImage* image,
 	VkImageLayout oldLayout,
 	VkImageLayout newLayout,
@@ -94,13 +95,13 @@ void Resource_transitionImageLayout(VkCommandBuffer cmdBuffer,
 
 	uint32_t mipLevels);
 
-VkCommandBuffer Resource_beginSingleTimeCommands();
+// VkCommandBuffer Resource_beginSingleTimeCommands(struct Device_State * device,);
 
-void Resource_endSingleTimeCommands(VkCommandBuffer commandBuffer);
+// void Resource_endSingleTimeCommands(struct Device_State * device,VkCommandBuffer commandBuffer);
 
-void Resource_mapBufferMemory(struct Buffer* buffer);
+void Resource_mapBufferMemory(struct Device_State * device,struct Buffer* buffer);
 
-void Resource_unmapBufferMemory(struct Buffer* buffer);
+void Resource_unmapBufferMemory(struct Device_State * device,struct Buffer* buffer);
 
-void Resource_FreeImage(struct Image* image);
-void Resource_FreeTexture(struct Texture* texture);
+void Resource_FreeImage(struct Device_State * device,struct Image* image);
+void Resource_FreeTexture(struct Device_State * device,struct Texture* texture);
