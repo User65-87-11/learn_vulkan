@@ -291,7 +291,16 @@ void Renderer_Render(
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 
-		Swapchain_Recreate(&renderer->swapchain);
+
+		struct Swapchain_info  info={
+			.ref_device = renderer->ref_device,
+			.ref_platform = renderer->ref_platform,
+			.extent = renderer->swapchain.extent,
+		};
+
+
+		
+		Swapchain_Recreate(&info,&renderer->swapchain);
 
 		return;
 	}
@@ -359,9 +368,64 @@ void Renderer_Render(
 		renderer->framebuffer_resized = false;
 
 
+		int width = 0, height = 0;
+
+		// Wait until window is not minimized
+		do {
+			Platform_GetFramebufferSize(renderer->ref_platform,&width, &height);
+			Platform_WaitForEvents(renderer->ref_platform);
+		} while (width == 0 || height == 0);
+
+		// Ensure GPU is not using swapchain resources
+		vkDeviceWaitIdle(renderer->ref_device->logical_device);
+
+		VkExtent2D new_extent={
+			.width = width,
+			.height = height,
+		};
+
+		VkCommandBuffer command = Device_beginSingleTimeCommands(renderer->ref_device);
+			
+		for(int i=0;i < MAX_FRAMES_IN_FLIGHT ; i++){
+
+			struct FrameData * frame = &renderer->frames[i];
+
+			Resource_FreeImage(renderer->ref_device, &frame->depth_image);
+
+			Resource_CreateImage(renderer->ref_device,new_extent.width, new_extent.height,
+				1, // mip levels
+				renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &frame->depth_image);
+			
+			Resource_CreateImageView(renderer->ref_device,&frame->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+
+			Resource_transitionImageLayout(renderer->ref_device, command,
+				&frame->depth_image.handle, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+				VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+				VK_PIPELINE_STAGE_2_NONE,
+				VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+				VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+		}
+		Device_endSingleTimeCommands(renderer->ref_device, command);
+		
+		
+
+		// VkExtent2D newExtent = {.width = width, .height = height};
+
+
+		struct Swapchain_info  info={
+			.ref_device = renderer->ref_device,
+			.ref_platform = renderer->ref_platform,
+			.extent = new_extent
+		};
+
+
 
 		
-		Swapchain_Recreate(&renderer->swapchain);
+		Swapchain_Recreate(&info,&renderer->swapchain);
 
 		// Swapchain_Recreate(struct Swapchain *sc, VkDevice device,
 		// VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
@@ -562,4 +626,12 @@ static void updateBuffers(struct Renderer* renderer,
 
 	memcpy(renderer->buffer_materials.mapped, scene->material_data,
 		sizeof(scene->material_data));
+}
+
+
+void  Renderer_callback_FrameBuffer_Resize(void * renderer,uint32_t w,uint32_t h){
+	PRINT_FNAME;
+
+	struct Renderer * r = renderer;
+	r->framebuffer_resized = true;
 }

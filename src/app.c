@@ -10,10 +10,14 @@
 #include "scene.h"
 #include "shader_common.h"
 #include "util/common.h"
+#include <stdlib.h>
 
 struct ApplicationContext app_info;
 
 static void mainLoop();
+
+static void callback_FrameBuffer_Resize(void * window,uint32_t width,uint32_t height);
+
 
 void App_start() { mainLoop(); }
 
@@ -32,13 +36,28 @@ static void mainLoop() {
 		exit(1);
 	}
 
+	// void (* callbacks[])(void * win,uint32_t w,uint32_t h)={
+	// 	Renderer_callback_FrameBuffer_Resize,
+	// 	Scene_callback_FrameBuffer_Resize
+	// };
+
+	// app_info.callbacks_cnt = 2;
+	// app_info.callbacks = malloc(sizeof(struct Platform_callback)* app_info.callbacks_cnt);
+	app_info.callbacks[0].callback_resize = Scene_callback_FrameBuffer_Resize;
+	app_info.callbacks[0].dst = &app_info.scene;
+
+	app_info.callbacks[1].callback_resize = Renderer_callback_FrameBuffer_Resize;
+	app_info.callbacks[1].dst = &app_info.renderer;
+	
 
 	
 	struct Plaftorm_info platform_info = {
-		&app_info.instance,
-		frameResizeCallback,
-		WIDTH,
-		HEIGHT,
+		.ref_inst = &app_info.instance,
+		.callback_resize = app_info.callbacks,
+		.collback_cnt = ARR_LEN(app_info.callbacks),
+		.width = WIDTH,
+		.height = HEIGHT,
+		.cursor_state = GLFW_CURSOR_DISABLED
 	};
 
 
@@ -160,6 +179,13 @@ static void mainLoop() {
 	Platform_Shutdown(&app_info.platform);
 
 	Instance_DestroyInstance(&app_info.instance);
+
+
+	
+}
+
+void App_destroy(struct ApplicationContext * app){
+	
 }
 
 
@@ -185,21 +211,35 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 	);
 }
 
-void frameResizeCallback(GLFWwindow * window, int width, int height) {
-	PRINT_FNAME;
+static void callback_FrameBuffer_Resize(void * window,uint32_t width,uint32_t height){
+		PRINT_FNAME;
 
+		
 
-	uint32_t w,h;
-	// Platform_GetFramebufferSize(&w, &h);
-	glfwGetFramebufferSize(window, (int*)&w, (int*)&h);
-	app_info.scene.global_data.framebuffer_size[0] = w;	
-	app_info.scene.global_data.framebuffer_size[1] = h;
+		app_info.scene.global_data.framebuffer_size[0] = width;	
+		app_info.scene.global_data.framebuffer_size[1] = height;
 
-	
-	update_camera_perspective(&app_info.scene.camera_data[CAMERA_MAIN],(float)w/h);
+		
+		update_camera_perspective(&app_info.scene.camera_data[CAMERA_MAIN],(float)width/height);
 
-	
-	app_info.renderer.framebuffer_resized = true;
-	
-
+		
+		app_info.renderer.framebuffer_resized = true;
 }
+// void frameResizeCallback(GLFWwindow * window, int width, int height) {
+// 	PRINT_FNAME;
+
+
+// 	uint32_t w,h;
+// 	// Platform_GetFramebufferSize(&w, &h);
+// 	glfwGetFramebufferSize(window, (int*)&w, (int*)&h);
+// 	app_info.scene.global_data.framebuffer_size[0] = w;	
+// 	app_info.scene.global_data.framebuffer_size[1] = h;
+
+	
+// 	update_camera_perspective(&app_info.scene.camera_data[CAMERA_MAIN],(float)w/h);
+
+	
+// 	app_info.renderer.framebuffer_resized = true;
+	
+
+// }

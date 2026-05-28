@@ -242,35 +242,15 @@ void Swapchain_Destroy(struct Swapchain* sc) {
 	sc->handle = NULL;
 }
 
-void Swapchain_Recreate(struct Swapchain* sc
+void Swapchain_Recreate(struct  Swapchain_info * info,struct Swapchain* sc
 
 ) {
 	PRINT_FNAME;
 	PRINT_FNAME;
 
-	int width = 0, height = 0;
-
-	// Wait until window is not minimized
-	do {
-		Platform_GetFramebufferSize(sc->ref_platform,&width, &height);
-		Platform_WaitForEvents(sc->ref_platform);
-	} while (width == 0 || height == 0);
-
-	// Ensure GPU is not using swapchain resources
-	vkDeviceWaitIdle(sc->ref_device->logical_device);
 
 	// Destroy old swapchain
 	Swapchain_Destroy(sc);
-
-	VkExtent2D newExtent = {.width = width, .height = height};
-
-
-	struct Swapchain_info  info={
-		.ref_device = sc->ref_device,
-		.ref_platform = sc->ref_platform,
-		.extent = newExtent
-	};
-		
 	
-	Swapchain_Create(&info,sc);
+	Swapchain_Create(info,sc);
 }

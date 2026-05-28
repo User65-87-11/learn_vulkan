@@ -102,3 +102,7 @@ struct InstanceData* Scene_GeInstanceData(
 	struct Scene* scene, uint32_t position);
 
 // struct Texture *  Scene_GetTexture(struct Scene * scene,  uint32_t position);
+
+
+
+void Scene_callback_FrameBuffer_Resize(void * window,uint32_t w,uint32_t h);

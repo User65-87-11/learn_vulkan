@@ -39,7 +39,7 @@ void Swapchain_Create(
 
 void Swapchain_Destroy(struct Swapchain* sc);
 
-void Swapchain_Recreate(struct Swapchain* sc
+void Swapchain_Recreate(struct Swapchain_info * info,struct Swapchain* sc
 
 
 );

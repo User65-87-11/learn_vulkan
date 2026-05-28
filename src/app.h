@@ -17,9 +17,14 @@ struct ApplicationContext {
 
 	struct Input_State input;
 	struct Input_Backend input_backend;
+
+
+	struct Platform_callback  callbacks[2];
+	
 	
 };
 
 void App_start();
 
-void frameResizeCallback(GLFWwindow * window, int width, int height) ;
+void App_destroy(struct ApplicationContext * app);
+// void frameResizeCallback(GLFWwindow * window, int width, int height) ;

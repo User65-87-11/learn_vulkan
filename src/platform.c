@@ -1,3 +1,4 @@
+#include <string.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
@@ -43,7 +44,9 @@
 
 // static VkSurfaceCapabilitiesKHR surfaceCapabilities;
 
-static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn);
+// static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn);
+
+static void frameResizeCallback(GLFWwindow * window, int width, int height);
 
 // static void frameResizeCallback(GLFWwindow* window, int width, int height);
 
@@ -62,6 +65,7 @@ void Platform_destroySurface(	struct Platform_State * plaftorm, VkSurfaceKHR  su
 void Platform_Init(struct Plaftorm_info * info ,struct Platform_State * state) {
 	PRINT_FNAME;
 
+	assert(info->collback_cnt <= 4);
 	// instance = Instance_getInstance();
 	printf("%s %d %d\n", __FUNCTION__, WIDTH, HEIGHT);
 
@@ -72,29 +76,52 @@ void Platform_Init(struct Plaftorm_info * info ,struct Platform_State * state) {
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+	memset(state,0, sizeof(*state));
 
+	printf("callbacks: %d\n",info->collback_cnt);
+	
+	
 	state->window = glfwCreateWindow(info->width, info->height, "Vulkan", NULL, NULL);
 	state->ref_inst = info->ref_inst;
-	
-	state->posX = info->width >> 1;
-	state->posY = info->height >> 1;
+	state->cursor_state = info->cursor_state;
 
-	glfwSetInputMode(state->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	state->callback_resize = malloc(sizeof(struct Platform_callback)*info->collback_cnt);
+	
+	for(int i=0;i<info->collback_cnt;i++)
+	{
+	
+		state->callback_resize[i] = info->callback_resize[i];
+		state->collback_cnt ++;
+	}
+	
+	
+	// state->posX = info->width >> 1;
+	// state->posY = info->height >> 1;
+
+	glfwSetInputMode(state->window, GLFW_CURSOR, state->cursor_state);
 
 	// glfwSetCursorPosCallback(window, mouseCallback);
 
-	// glfwSetWindowUserPointer(state->window, info->ref_app);
+	glfwSetWindowUserPointer(state->window, state);
 
-	glfwSetFramebufferSizeCallback(state->window, info->callback_resize);
+	glfwSetFramebufferSizeCallback(state->window,frameResizeCallback);
 }
 
+void Platform_ToggleCursor(struct Platform_State * plaftorm){
+	if(plaftorm->cursor_state == GLFW_CURSOR_DISABLED){
+		plaftorm->cursor_state = GLFW_CURSOR_NORMAL;
+	}else{
+		plaftorm->cursor_state = GLFW_CURSOR_DISABLED;
+	}
 
+	glfwSetInputMode(plaftorm->window, GLFW_CURSOR, plaftorm->cursor_state);
+}
 
 void Platform_WaitForEvents(struct Platform_State * platform) { glfwWaitEvents(); }
 
 void Platform_GetFramebufferSize(struct Platform_State * platform, uint32_t* width, uint32_t* height) {
 
-	glfwGetFramebufferSize(platform->window, width, height);
+	glfwGetFramebufferSize(platform->window, (int*)width, (int*)height);
 }
 
 // float Platform_GetAspectRatio() {
@@ -107,8 +134,11 @@ void Platform_GetFramebufferSize(struct Platform_State * platform, uint32_t* wid
 // 	return aspect_ratio;
 // }
 
-void Platform_Shutdown(struct Platform_State * plaftorm) { glfwDestroyWindow(plaftorm->window);
+void Platform_Shutdown(struct Platform_State * plaftorm) { 
+	glfwDestroyWindow(plaftorm->window);
+	free(plaftorm->callback_resize);
 }
+
 
 void Platform_PollEvents(struct Platform_State* plaftorm) { glfwPollEvents(); }
 
@@ -126,41 +156,41 @@ float Platform_GetTime(struct Platform_State* plaftorm) {
 //   glfwCreateWindowSurface(instance, window, NULL, surface);
 // }
 
-void Platform_GetCursorPos(struct Platform_State * plaftorm, double* x, double* y) {
-	glfwGetCursorPos(plaftorm->window, x, y);
-	// *x = posX;
-	// *y = posY;
-}
+// void Platform_GetCursorPos(struct Platform_State * plaftorm, double* x, double* y) {
+// 	glfwGetCursorPos(plaftorm->window, x, y);
+// 	// *x = posX;
+// 	// *y = posY;
+// }
 
-static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn) {
+// static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn) {
 
-	plaftorm->posX = xposIn;
-	plaftorm->posY = yposIn;
-	// float xpos = xposIn;
-	// float ypos = yposIn;
+// 	plaftorm->posX = xposIn;
+// 	plaftorm->posY = yposIn;
+// 	// float xpos = xposIn;
+// 	// float ypos = yposIn;
 
-	// if (firstMouse) {
-	//   lastX = xpos;
-	//   lastY = ypos;
-	//   firstMouse = false;
-	// }
+// 	// if (firstMouse) {
+// 	//   lastX = xpos;
+// 	//   lastY = ypos;
+// 	//   firstMouse = false;
+// 	// }
 
-	// float xoffset = xpos - lastX;
-	// float yoffset = lastY - ypos;
-	// lastX = xpos;
-	// lastY = ypos;
+// 	// float xoffset = xpos - lastX;
+// 	// float yoffset = lastY - ypos;
+// 	// lastX = xpos;
+// 	// lastY = ypos;
 
-	// float sensitivity = 0.1f;
-	// xoffset *= sensitivity;
-	// yoffset *= sensitivity;
-}
+// 	// float sensitivity = 0.1f;
+// 	// xoffset *= sensitivity;
+// 	// yoffset *= sensitivity;
+// }
 
-int Platform_GetMouseButtonState(struct Platform_State * plaftorm,int button) {
+// int Platform_GetMouseButtonState(struct Platform_State * plaftorm,int button) {
 
-	return glfwGetMouseButton(plaftorm->window, button);
-}
+// 	return glfwGetMouseButton(plaftorm->window, button);
+// }
 
-int Platform_GetKeyState(struct Platform_State * plaftorm,int key) { return glfwGetKey(plaftorm->window, key); }
+// int Platform_GetKeyState(struct Platform_State * plaftorm,int key) { return glfwGetKey(plaftorm->window, key); }
 
 void Platform_SetShouldCloseWindow(struct Platform_State * plaftorm,uint32_t value) {
 
@@ -174,8 +204,23 @@ void Platform_GetMousePosition(void* window, double* x, double* y){
 	glfwGetCursorPos((GLFWwindow*)window, x, y);
 }
 int Platform_GetMouseButton(void* window, int button){
+	
 	return glfwGetMouseButton((GLFWwindow*)window, button);
 }
 int Platform_GetKey(void* window, int key){
+	
 	 return glfwGetKey((GLFWwindow*)window, key);
+}
+
+static void frameResizeCallback(GLFWwindow * window, int width, int height){
+	struct Platform_State * platform = glfwGetWindowUserPointer(window);
+//void (*callback)(void * window, uint32_t w,uint32_t h) 
+	for(int i=0;i<platform->collback_cnt;i++)
+	{
+		struct Platform_callback * callback = 	&platform->callback_resize[i];
+		callback->callback_resize(callback->dst,width,height);
+		// platform->callback_resize[i](window,width,height);
+			
+	}
+
 }

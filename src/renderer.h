@@ -96,3 +96,6 @@ void Renderer_AppendToIndexBuffer(
 	struct Renderer* renderer, uint32_t* indices, uint32_t indices_cnt);
 void Renderer_AppendToVertexBuffer(
 	struct Renderer* renderer, struct Vertex* vertices, uint32_t vertex_cnt);
+
+
+void  Renderer_callback_FrameBuffer_Resize(void * renderer,uint32_t w,uint32_t h);

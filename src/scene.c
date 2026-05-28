@@ -214,6 +214,8 @@ static void update_keys(
 ) {
 	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
 
+
+
 	
 	
 	if (scene->ref_input->keys[GLFW_KEY_ESCAPE] == GLFW_PRESS) {
@@ -221,6 +223,14 @@ static void update_keys(
 	
 		Platform_SetShouldCloseWindow(scene->ref_platform,true);
 	}
+
+
+	if(Input_IsKeyPressed(scene->ref_input, GLFW_KEY_LEFT_ALT)){
+
+		Platform_ToggleCursor(scene->ref_platform);		
+	}
+
+	
 
 	float cameraSpeed = 2.5 * dt;
 	if (scene->ref_input->keys[GLFW_KEY_W] == GLFW_PRESS) {
@@ -302,4 +312,58 @@ static void update_camera(
 		cam->view,
 		cam->view_proj
 	);
+}
+
+
+
+
+static void update_camera_perspective(struct CameraData * cam, float aspect){
+
+	cam->aspect_ratio = aspect;
+
+
+	
+	glm_perspective_rh_no(
+		glm_rad(cam->fov),
+		cam->aspect_ratio, 
+		cam->near_plane,
+		cam->far_plane, 
+		cam->proj
+	);
+	// cam->proj[1][1] *= -1.f;
+
+	glm_mat4_mul(
+		cam->proj, 
+		cam->view,
+		cam->view_proj
+	);
+}
+
+// static void callback_FrameBuffer_Resize(void * scene,uint32_t width,uint32_t height){
+// 		PRINT_FNAME;
+
+// 		struct Scene * s = scene;
+
+// 		s->global_data.framebuffer_size[0] = width;	
+// 		s->global_data.framebuffer_size[1] = height;
+
+		
+// 		update_camera_perspective(&s->camera_data[CAMERA_MAIN],(float)width/height);
+
+		
+// 		app_info.renderer.framebuffer_resized = true;
+// }
+
+void Scene_callback_FrameBuffer_Resize(void * scene,uint32_t w,uint32_t h){
+	PRINT_FNAME;
+
+	PRINT_FNAME;
+
+	struct Scene * s = scene;
+
+	s->global_data.framebuffer_size[0] = w;	
+	s->global_data.framebuffer_size[1] = h;
+
+	
+	update_camera_perspective(&s->camera_data[CAMERA_MAIN],(float)w/h);
 }
