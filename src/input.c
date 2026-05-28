@@ -14,8 +14,11 @@ void Input_Update(struct Input_State * input, struct Input_Backend * backend) {
 
 	
 	if (!input->initialized) {
-		input->prevPosX = current_x;
-		input->prevPosY = current_y;
+		// input->prevPosX = current_x;
+		// input->prevPosY = current_y;
+
+		input->cursorPosX = current_x;
+		input->cursorPosY = current_y;
 		input->initialized = 1;
 	}
 

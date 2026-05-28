@@ -1,5 +1,5 @@
 #pragma once
-#include "src/device2.h"
+#include "device2.h"
 #include <vulkan/vulkan.h>
 
 struct GraphicsPipelineCreateInfo {

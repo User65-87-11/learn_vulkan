@@ -1,5 +1,5 @@
-#include "app.h"
 #include "GLFW/glfw3.h"
+#include "app.h"
 #include "assets/asset0.h"
 #include "descriptor.h"
 #include "device2.h"
@@ -20,17 +20,17 @@ void App_start() { mainLoop(); }
 static void mainLoop() {
 	PRINT_FNAME;
 
-	// printf("struct InstanceData align on %d\n", _Alignof(struct InstanceData));
-	// printf("struct InstanceData sizeof on %d\n", sizeof(struct InstanceData));
+	printf("struct InstanceData align on %d\n", _Alignof(struct InstanceData));
+	printf("struct InstanceData sizeof on %d\n", sizeof(struct InstanceData));
 
-	// printf("struct Camera _Alignof on %d\n", _Alignof(struct CameraData));
-	// printf("struct Camera sizeof on %d\n", sizeof(struct CameraData));
-	// printf("struct Camera sizeof % 16 %d\n", sizeof(struct CameraData) % 16);
-	// if (sizeof(struct CameraData) % 32 != 0) {
+	printf("struct Camera _Alignof on %d\n", _Alignof(struct CameraData));
+	printf("struct Camera sizeof on %d\n", sizeof(struct CameraData));
+	printf("struct Camera sizeof % 16 %d\n", sizeof(struct CameraData) % 16);
+	if (sizeof(struct CameraData) % 32 != 0) {
 
-	// 	printf("struct is missing %d\n", sizeof(struct CameraData) % 32);
-	// 	exit(1);
-	// }
+		printf("struct is missing %d\n", sizeof(struct CameraData) % 32);
+		exit(1);
+	}
 
 
 	

@@ -7,6 +7,7 @@ CompileFlags:
     - "-IC:/VulkanSDK/1.4.341.1/Include"
     - "-IC:/glfw-3.4.bin.WIN64/include"
     - "-Isrc"
+    - "-Iexternal"
     - -Wno-format
     - -Wno-unused-parameter
     - -Wno-unused-variable

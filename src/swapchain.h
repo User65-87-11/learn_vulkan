@@ -1,6 +1,6 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
-#include "src/device2.h"
+#include "device2.h"
 #include "util/common.h"
 
 

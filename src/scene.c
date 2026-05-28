@@ -271,6 +271,7 @@ static void update_camera(
 	}
 
 
+
 	vec3 front;
 
 	front[0] = cos(glm_rad(cam->yaw)) *

@@ -1,8 +1,8 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
-#include "src/device2.h"
-#include "src/input.h"
-#include "src/resource.h"
+#include "device2.h"
+#include "input.h"
+#include "resource.h"
 #include "util/common.h"
 #include "shader_common.h"
 #include "cglm/types.h"

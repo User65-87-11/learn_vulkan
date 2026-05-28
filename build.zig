@@ -118,7 +118,7 @@ pub fn build(b: *std.Build) void {
     });
 
 	exe.root_module.addIncludePath(.{
-		.cwd_relative = ".",
+		.cwd_relative = "./external",
 	});
 
 
