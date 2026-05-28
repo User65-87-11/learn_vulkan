@@ -1,7 +1,7 @@
 array.h
 asm.asm
 bootstrap_gen.text
-main2.c
+main.c
 points.txt
 todo.txt
 shaders/*.spv
