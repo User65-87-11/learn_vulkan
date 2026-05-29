@@ -53,7 +53,7 @@ struct Renderer {
 	// struct DescriptorContext * ref_descriptor;
 	
 	struct Swapchain swapchain;
-	struct GraphicsPipeline pipeline;
+	struct Pipeline_Main pipeline;
 
 	VkDescriptorSet desc_set_globals[MAX_FRAMES_IN_FLIGHT];
 

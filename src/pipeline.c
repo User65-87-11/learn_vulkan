@@ -7,7 +7,7 @@
 
 // static VkFormat findDepthFormat();
 
-void Pipeline_CreateGraphics( struct GraphicsPipelineCreateInfo *info, struct GraphicsPipeline* pipeline) {
+void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_Main* pipeline) {
 
 	PRINT_FNAME;
 	VkDevice device = info->ref_device->logical_device;
@@ -201,7 +201,7 @@ void Pipeline_CreateGraphics( struct GraphicsPipelineCreateInfo *info, struct Gr
 		device, NULL, 1, &graphicsPipelineCreateInfo, NULL, &pipeline->handle);
 }
 
-void Pipeline_Destroy( struct GraphicsPipeline* pipeline) {
+void Pipeline_Destroy( struct Pipeline_Main* pipeline) {
 	VkDevice device = pipeline->ref_device->logical_device;
 	vkDestroyShaderModule(device, pipeline->fragmentShader, NULL);
 	vkDestroyShaderModule(device, pipeline->vertexShader, NULL);

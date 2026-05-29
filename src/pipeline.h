@@ -2,7 +2,7 @@
 #include "device2.h"
 #include <vulkan/vulkan.h>
 
-struct GraphicsPipelineCreateInfo {
+struct Pipeline_Info {
 
 	struct Device_State * ref_device;
 	// VkDevice device;
@@ -19,7 +19,7 @@ struct GraphicsPipelineCreateInfo {
 	uint32_t descriptorSetLayoutCount;
 };
 
-struct GraphicsPipeline {
+struct Pipeline_Main {
 	struct Device_State * ref_device;
 	
 	VkPipeline handle;
@@ -29,6 +29,6 @@ struct GraphicsPipeline {
 	VkShaderModule fragmentShader;
 };
 
-void Pipeline_CreateGraphics( struct GraphicsPipelineCreateInfo *info, struct GraphicsPipeline* pipeline) ;
+void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_Main* pipeline) ;
 
-void Pipeline_Destroy( struct GraphicsPipeline* pipeline);
+void Pipeline_Destroy( struct Pipeline_Main* pipeline);

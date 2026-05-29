@@ -108,7 +108,7 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 	);
 
 
-	struct GraphicsPipelineCreateInfo pipe_info;
+	struct Pipeline_Info pipe_info;
 	memset(&pipe_info, 0, sizeof(pipe_info));
 	
 	pipe_info.ref_device = renderer->ref_device;
