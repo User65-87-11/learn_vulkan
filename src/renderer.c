@@ -35,12 +35,25 @@ static void renderMainPass(struct Renderer* renderer,
 	uint32_t frame_index,
 	uint32_t imageIndex);
 
+static void createDeapthImage(struct Renderer * renderer,
+	uint32_t width,
+	uint32_t height,
+	uint32_t mip_levels,
+	VkFormat format,
+	VkImageTiling tiling,
+	VkImageUsageFlags usage,
+	VkMemoryPropertyFlags properties
+
+);
+
 void Renderer_Destroy(struct Renderer* renderer) {
 	PRINT_FNAME;
 	VkDevice device  = renderer->ref_device->logical_device;
 
 	Pipeline_Destroy(&renderer->pipeline);
 
+
+	
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 
 		vkDestroyFence(device, renderer->frames[i].inFlightFence, NULL);
@@ -59,6 +72,8 @@ void Renderer_Destroy(struct Renderer* renderer) {
 		Resource_FreeTexture(renderer->ref_device,&texture);
 	}
 	renderer->texture_cnt = 0;
+
+	Resource_FreeBuffer(renderer->ref_device, &renderer->buffer_global);
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_index);
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_vertex);
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_materials);
@@ -142,6 +157,29 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 
 	Pipeline_CreateGraphics(&pipe_info,&renderer->pipeline);
 
+	uint32_t size_all = sizeof(struct InstanceData)   * MAX_INSTANCES ;
+
+	size_all += sizeof(struct MaterialData)  * MAX_MATERIALS ;
+
+	size_all += sizeof(struct GlobalData)  ;
+
+	size_all += sizeof(struct LightData)  ;
+
+	size_all += sizeof(struct CameraData) ;
+
+	{
+		Resource_CreateBuffer(
+			renderer->ref_device, 
+			size_all, 
+			BUFFER_SSBO_USAGE,
+			BUFFER_SSBO_PROPS, 
+			&renderer->buffer_global
+		);
+	 	Resource_mapBufferMemory(renderer->ref_device,&renderer->buffer_global);
+
+			
+	}
+
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		struct FrameData* f = &renderer->frames[i];
@@ -150,17 +188,25 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 			BUFFER_UBO_PROPS, &f->buffer_global);
 		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global);
 
-		Descriptor_UpdateBuffer(ctx,renderer->desc_set_globals[i],
-			BINDING_GLOBAL_GLOBAL, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			f->buffer_global.handle, f->buffer_global.size);
+		Descriptor_UpdateBuffer(ctx,
+			renderer->desc_set_globals[i],
+			BINDING_GLOBAL_GLOBAL, 
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			f->buffer_global.handle,
+			f->buffer_global.size,0
+		);
 
 		Resource_CreateBuffer(renderer->ref_device,sizeof(struct CameraData)*MAX_CAMERAS, BUFFER_UBO_USAGE,
 			BUFFER_UBO_PROPS, &f->buffer_global_camera);
 		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global_camera);
 
-		Descriptor_UpdateBuffer(ctx,renderer->desc_set_globals[i],
-			BINDING_GLOBAL_CAMERA, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			f->buffer_global_camera.handle, f->buffer_global_camera.size);
+		Descriptor_UpdateBuffer(ctx,
+			renderer->desc_set_globals[i],
+			BINDING_GLOBAL_CAMERA, 
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			f->buffer_global_camera.handle,
+			f->buffer_global_camera.size,0
+		);
 
 		Resource_CreateBuffer(renderer->ref_device,sizeof(struct LightData), BUFFER_UBO_USAGE,
 			BUFFER_UBO_PROPS, &f->buffer_global_light);
@@ -168,47 +214,32 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 
 		Descriptor_UpdateBuffer(ctx,renderer->desc_set_globals[i],
 			BINDING_GLOBAL_LIGHT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			f->buffer_global_light.handle, f->buffer_global_light.size);
+			f->buffer_global_light.handle,f->buffer_global_light.size,0);
 
 		Resource_CreateBuffer(renderer->ref_device,sizeof(struct InstanceData) * MAX_INSTANCES,
 			BUFFER_SSBO_USAGE, BUFFER_SSBO_PROPS, &f->buffer_instances);
 		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_instances);
 
 		Descriptor_UpdateBuffer(ctx,renderer->desc_set_instances[i], 0,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, f->buffer_instances.handle,
-			f->buffer_instances.size);
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+			f->buffer_instances.handle,f->buffer_instances.size,0
+		
+		);
 
-		Resource_CreateImage(renderer->ref_device,extent.width, extent.height,
-			1, // mip levels
-			renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
-			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &f->depth_image);
-
-		Resource_CreateImageView(renderer->ref_device,&f->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
-		// Resource_transitionImageLayout(VkCommandBuffer cmdBuffer, VkImage
-		// *image, VkImageLayout oldLayout, VkImageLayout newLayout,
-		// VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
-		// VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
-		// VkImageAspectFlagBits aspectFlags, uint32_t mipLevels)
-
-		VkCommandBuffer command = Device_beginSingleTimeCommands(renderer->ref_device);
-
-		Resource_transitionImageLayout(renderer->ref_device,command, &f->depth_image.handle,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			0, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			VK_PIPELINE_STAGE_2_NONE,
-			VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-			VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-		Device_endSingleTimeCommands(renderer->ref_device, command);
 	}
 
+	createDeapthImage(renderer,extent.width, extent.height,
+		1, // mip levels
+		renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	
 	Resource_CreateBuffer(renderer->ref_device,sizeof(struct MaterialData) * MAX_MATERIALS,
 		BUFFER_SSBO_USAGE, BUFFER_SSBO_PROPS, &renderer->buffer_materials);
 	Resource_mapBufferMemory(renderer->ref_device,&renderer->buffer_materials);
 
 	Descriptor_UpdateBuffer(ctx,renderer->desc_set_materials, 0,
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, renderer->buffer_materials.handle,
-		renderer->buffer_materials.size);
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, renderer->buffer_materials.handle,renderer->buffer_materials.size,0);
 
 	Resource_CreateBuffer(renderer->ref_device,MAX_VERTICES * sizeof(struct Vertex),
 		BUFFER_VERTEX_USAGE, BUFFER_VERTEX_PROPS, &renderer->buffer_vertex);
@@ -224,7 +255,7 @@ void Renderer_AppendToVertexBuffer(
 
 	printf("vetex_used:%d, vertex_cnt:%d vsize:%d\n",
 		renderer->buffer_vertex_used, vertex_cnt, sizeof(struct Vertex));
-	Resource_AppendToBuffer(renderer->ref_device,&renderer->buffer_vertex,
+	Resource_AppendToBuffer(renderer->ref_device, &renderer->buffer_vertex,
 		sizeof(struct Vertex) * renderer->buffer_vertex_used, vertices,
 		sizeof(struct Vertex) * vertex_cnt);
 	renderer->buffer_vertex_used += vertex_cnt;
@@ -282,6 +313,7 @@ void Renderer_Render(
 	if (result != VK_SUCCESS) {
 		EXIT_CLEAN("failed to wait for fence!");
 	}
+	vkResetFences(renderer->ref_device->logical_device, 1, &frame->inFlightFence);
 
 	uint32_t imageIndex = -1;
 
@@ -309,9 +341,8 @@ void Renderer_Render(
 
 	updateBuffers(renderer, renderer->ref_scene, time, delta_time);
 
-	vkResetFences(renderer->ref_device->logical_device, 1, &frame->inFlightFence);
-
 	recordCommandBuffer(renderer, renderer->ref_scene, imageIndex, frame_index);
+
 
 	VkPipelineStageFlags2 stageMask =
 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -346,6 +377,7 @@ void Renderer_Render(
 
 			},
 	};
+
 
 	vkQueueSubmit2(
 		renderer->ref_device->queue_graphics.queue, 1, &submitInfo2, frame->inFlightFence);
@@ -384,32 +416,39 @@ void Renderer_Render(
 			.height = height,
 		};
 
-		VkCommandBuffer command = Device_beginSingleTimeCommands(renderer->ref_device);
+
+		createDeapthImage(renderer,new_extent.width, new_extent.height,
+			1, // mip levels
+			renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		
+		// VkCommandBuffer command = Device_beginSingleTimeCommands(renderer->ref_device);
 			
-		for(int i=0;i < MAX_FRAMES_IN_FLIGHT ; i++){
+		// for(int i=0;i < MAX_FRAMES_IN_FLIGHT ; i++){
 
-			struct FrameData * frame = &renderer->frames[i];
+		// 	struct FrameData * frame = &renderer->frames[i];
 
-			Resource_FreeImage(renderer->ref_device, &frame->depth_image);
+		// 	Resource_FreeImage(renderer->ref_device, &frame->depth_image);
 
-			Resource_CreateImage(renderer->ref_device,new_extent.width, new_extent.height,
-				1, // mip levels
-				renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &frame->depth_image);
+		// 	Resource_CreateImage(renderer->ref_device,new_extent.width, new_extent.height,
+		// 		1, // mip levels
+		// 		renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
+		// 		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		// 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &frame->depth_image);
 			
-			Resource_CreateImageView(renderer->ref_device,&frame->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
+		// 	Resource_CreateImageView(renderer->ref_device,&frame->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 
-			Resource_transitionImageLayout(renderer->ref_device, command,
-				&frame->depth_image.handle, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
-				VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-				VK_PIPELINE_STAGE_2_NONE,
-				VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-				VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-		}
-		Device_endSingleTimeCommands(renderer->ref_device, command);
+		// 	Resource_transitionImageLayout(renderer->ref_device, command,
+		// 		&frame->depth_image.handle, VK_IMAGE_LAYOUT_UNDEFINED,
+		// 		VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+		// 		VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+		// 		VK_PIPELINE_STAGE_2_NONE,
+		// 		VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+		// 		VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+		// }
+		// Device_endSingleTimeCommands(renderer->ref_device, command);
 		
 		
 
@@ -549,9 +588,6 @@ static void renderMainPass(struct Renderer* renderer,
 
 	vkCmdBeginRendering(frame->commandBuffer, &renderingInfo);
 
-	vkCmdBindPipeline(frame->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-		renderer->pipeline.handle);
-
 	VkViewport viewPort = {.x = 0,
 		.y = 0,
 		.width = renderer->swapchain.extent.width,
@@ -563,11 +599,19 @@ static void renderMainPass(struct Renderer* renderer,
 
 	VkRect2D scissor = {.extent = renderer->swapchain.extent, .offset = {0, 0}};
 	vkCmdSetScissor(frame->commandBuffer, 0, 1, &scissor);
+	
+	vkCmdBindPipeline(
+		frame->commandBuffer, 
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		renderer->pipeline.handle
+	);
+
 
 	VkDeviceSize offset = 0;
 
 	vkCmdBindVertexBuffers(
 		frame->commandBuffer, 0, 1, &renderer->buffer_vertex.handle, &offset);
+	
 	vkCmdBindIndexBuffer(frame->commandBuffer, renderer->buffer_index.handle, 0,
 		VK_INDEX_TYPE_UINT32);
 
@@ -578,8 +622,10 @@ static void renderMainPass(struct Renderer* renderer,
 		renderer->desc_set_samplers,
 	};
 
-	vkCmdBindDescriptorSets(frame->commandBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline.layout, 0,
+	vkCmdBindDescriptorSets(
+		frame->commandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		renderer->pipeline.layout, 0,
 		ARR_LEN(dset), dset, 0, NULL
 	);
 
@@ -634,4 +680,44 @@ void  Renderer_callback_FrameBuffer_Resize(void * renderer,uint32_t w,uint32_t h
 
 	struct Renderer * r = renderer;
 	r->framebuffer_resized = true;
+}
+
+
+
+static void createDeapthImage(struct Renderer * renderer,
+	uint32_t width,
+	uint32_t height,
+	uint32_t mip_levels,
+	VkFormat format,
+	VkImageTiling tiling,
+	VkImageUsageFlags usage,
+	VkMemoryPropertyFlags properties
+){
+
+	VkCommandBuffer command = Device_beginSingleTimeCommands(renderer->ref_device);
+		
+	for(int i=0;i < MAX_FRAMES_IN_FLIGHT ; i++){
+
+		struct FrameData * frame = &renderer->frames[i];
+
+		Resource_FreeImage(renderer->ref_device, &frame->depth_image);
+
+		Resource_CreateImage(renderer->ref_device,width, height,
+			1, // mip levels
+			renderer->swapchain.depthFormat, VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &frame->depth_image);
+		
+		Resource_CreateImageView(renderer->ref_device,&frame->depth_image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+
+		Resource_transitionImageLayout(renderer->ref_device, command,
+			&frame->depth_image.handle, VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+			VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			VK_PIPELINE_STAGE_2_NONE,
+			VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	}
+	Device_endSingleTimeCommands(renderer->ref_device, command);
 }

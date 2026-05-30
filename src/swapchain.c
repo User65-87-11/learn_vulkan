@@ -16,10 +16,7 @@ static void createImageViews(struct Swapchain* sc);
 void Swapchain_Create(
 	struct Swapchain_info * info,
 	struct Swapchain* sc
-	// VkDevice device,
-	// VkPhysicalDevice physicalDevice,
-	// VkSurfaceKHR surface,
-	// VkExtent2D extent
+
 )
 {
 	PRINT_FNAME;

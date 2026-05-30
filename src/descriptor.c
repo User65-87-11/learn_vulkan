@@ -4,6 +4,7 @@
 
 #include "descriptor.h"
 #include "device2.h"
+#include "resource.h"
 #include "shader_common.h"
 #include "util/common.h"
 
@@ -169,10 +170,13 @@ void Descriptor_UpdateBuffer(struct DescriptorContext * context,
 	uint32_t binding,
 	VkDescriptorType type,
 	VkBuffer buffer,
-	VkDeviceSize size) {
+	VkDeviceSize size,
+	uint32_t offset
+	
+) {
 	// Update Global descriptor set (UBO)
 	VkDescriptorBufferInfo globalBufferInfo = {
-		.buffer = buffer, .offset = 0, .range = size};
+		.buffer = buffer, .offset = offset, .range = size};
 
 	VkWriteDescriptorSet wite = {
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -250,16 +254,3 @@ VkDescriptorSet Descriptor_Allocate(
 	vkAllocateDescriptorSets(context->device_ref->logical_device, &allocInfo, &set);
 	return set;
 }
-
-// updates
-// void Descriptor_UpdateBuffer(struct DescriptorContext* context,
-// 	VkDescriptorSet set,
-// 	uint32_t binding,
-// 	VkDescriptorType type,
-// 	VkBuffer buffer,
-// 	VkDeviceSize size);
-
-// void Descriptor_UpdateImage(struct DescriptorContext* context,
-// 	VkDescriptorSet set,
-// 	uint32_t binding,
-// 	VkDescriptorImageInfo* imageInfo);

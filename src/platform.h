@@ -44,7 +44,7 @@ struct Platform_State{
 
 
 	
-	struct Platform_callback* callback_resize;
+	struct Platform_callback callback_resize[4];
 	uint32_t collback_cnt;
 
 	
@@ -61,36 +61,26 @@ void Platform_WaitForEvents(struct Platform_State *info);
 
 
 void Platform_Shutdown(struct Platform_State *info);
-// void Platform_procMouseInput(GLFWwindow *window);
 
-// void Platform_mouseCallback(GLFWwindow *window, double xposIn, double
-// yposIn);
 
 void Platform_createSurface(struct Platform_State * plaftorm,VkSurfaceKHR *surface);
 
 void Platform_destroySurface(struct Platform_State * plaftorm,VkSurfaceKHR sufrace);
 
-// VkSurfaceKHR Platform_GetSurface();
 
-// int Platform_GetMouseButtonState(struct Platform_State * plaftorm,int button);
-
-// void Platform_GetCursorPos(struct Platform_State * plaftorm,double* x, double* y);
 
 float Platform_GetAspectRatio(struct Platform_State * plaftorm);
 
-// int Platform_GetKeyState(struct Platform_State * plaftorm,int key);
+
 
 void Platform_PollEvents(struct Platform_State * plaftorm);
 
-float Platform_GetTime(struct Platform_State * plaftorm);
+double Platform_GetTime(struct Platform_State * plaftorm);
 
 int Platform_ShouldCloseWindow(struct Platform_State * plaftorm);
 
 void Platform_SetShouldCloseWindow(struct Platform_State * plaftorm,uint32_t value);
 
-
-
-// bool Platform_HasFrameBufferResized(struct Platform_State * plaftorm);
 
 void Platform_GetFramebufferSize(struct Platform_State * plaftorm,uint32_t* width, uint32_t* height);
 

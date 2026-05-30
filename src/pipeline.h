@@ -19,7 +19,7 @@ struct Pipeline_Info {
 	uint32_t descriptorSetLayoutCount;
 };
 
-struct Pipeline_Main {
+struct Pipeline_State {
 	struct Device_State * ref_device;
 	
 	VkPipeline handle;
@@ -29,6 +29,8 @@ struct Pipeline_Main {
 	VkShaderModule fragmentShader;
 };
 
-void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_Main* pipeline) ;
+void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_State* pipeline) ;
 
-void Pipeline_Destroy( struct Pipeline_Main* pipeline);
+void Pipeline_Grid(struct Pipeline_Info *info, struct Pipeline_State* pipeline);
+
+void Pipeline_Destroy( struct Pipeline_State* pipeline);

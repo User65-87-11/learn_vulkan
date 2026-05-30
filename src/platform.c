@@ -1,4 +1,5 @@
 #include <string.h>
+#include <sys/stat.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan_core.h>
@@ -25,30 +26,9 @@
 
 #endif
 
-// static GLFWwindow* window = NULL;
-
-// static bool leftPressed = false;
-// static bool firstMouse = true;
-// static float prevX, prevY;
-// static float dx,dy;
-// static float lastX = 800.0f / 2.0;
-// static float lastY = 600.0 / 2.0;
-
-// static double mouseX, mouseY;
-
-
-
-// static VkSurfaceKHR surface = VK_NULL_HANDLE;
-
-// static VkInstance instance = VK_NULL_HANDLE;
-
-// static VkSurfaceCapabilitiesKHR surfaceCapabilities;
-
-// static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn);
 
 static void frameResizeCallback(GLFWwindow * window, int width, int height);
 
-// static void frameResizeCallback(GLFWwindow* window, int width, int height);
 
 void Platform_createSurface(
 	struct Platform_State* plaftorm, VkSurfaceKHR *surface) {
@@ -65,8 +45,8 @@ void Platform_destroySurface(	struct Platform_State * plaftorm, VkSurfaceKHR  su
 void Platform_Init(struct Plaftorm_info * info ,struct Platform_State * state) {
 	PRINT_FNAME;
 
-	assert(info->collback_cnt <= 4);
-	// instance = Instance_getInstance();
+	assert(info->collback_cnt <= ARR_LEN(state->callback_resize));
+	
 	printf("%s %d %d\n", __FUNCTION__, WIDTH, HEIGHT);
 
 	glfwInit();
@@ -76,6 +56,7 @@ void Platform_Init(struct Plaftorm_info * info ,struct Platform_State * state) {
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+	
 	memset(state,0, sizeof(*state));
 
 	printf("callbacks: %d\n",info->collback_cnt);
@@ -85,7 +66,7 @@ void Platform_Init(struct Plaftorm_info * info ,struct Platform_State * state) {
 	state->ref_inst = info->ref_inst;
 	state->cursor_state = info->cursor_state;
 
-	state->callback_resize = malloc(sizeof(struct Platform_callback)*info->collback_cnt);
+	// state->callback_resize = malloc(sizeof(struct Platform_callback)*info->collback_cnt);
 	
 	for(int i=0;i<info->collback_cnt;i++)
 	{
@@ -95,12 +76,9 @@ void Platform_Init(struct Plaftorm_info * info ,struct Platform_State * state) {
 	}
 	
 	
-	// state->posX = info->width >> 1;
-	// state->posY = info->height >> 1;
+
 
 	glfwSetInputMode(state->window, GLFW_CURSOR, state->cursor_state);
-
-	// glfwSetCursorPosCallback(window, mouseCallback);
 
 	glfwSetWindowUserPointer(state->window, state);
 
@@ -124,19 +102,11 @@ void Platform_GetFramebufferSize(struct Platform_State * platform, uint32_t* wid
 	glfwGetFramebufferSize(platform->window, (int*)width, (int*)height);
 }
 
-// float Platform_GetAspectRatio() {
-	
-// 	VkExtent2D extent;
-// 	glfwGetFramebufferSize(window, (int*)&extent.width, (int*)&extent.height);
 
-// 	float aspect_ratio = (float)extent.width / (float)extent.height;
-
-// 	return aspect_ratio;
-// }
 
 void Platform_Shutdown(struct Platform_State * plaftorm) { 
 	glfwDestroyWindow(plaftorm->window);
-	free(plaftorm->callback_resize);
+	
 }
 
 
@@ -146,51 +116,10 @@ int Platform_ShouldCloseWindow(struct Platform_State* plaftorm) {
 	return glfwWindowShouldClose(plaftorm->window);
 }
 
-float Platform_GetTime(struct Platform_State* plaftorm) {
+double Platform_GetTime(struct Platform_State* plaftorm) {
 	return glfwGetTime();
 }
 
-// void createSurface(VkInstance instance,VkSurfaceKHR * surface) {
-//   PRINT_FNAME;
-
-//   glfwCreateWindowSurface(instance, window, NULL, surface);
-// }
-
-// void Platform_GetCursorPos(struct Platform_State * plaftorm, double* x, double* y) {
-// 	glfwGetCursorPos(plaftorm->window, x, y);
-// 	// *x = posX;
-// 	// *y = posY;
-// }
-
-// static void mouseCallback(struct Platform_State * plaftorm, double xposIn, double yposIn) {
-
-// 	plaftorm->posX = xposIn;
-// 	plaftorm->posY = yposIn;
-// 	// float xpos = xposIn;
-// 	// float ypos = yposIn;
-
-// 	// if (firstMouse) {
-// 	//   lastX = xpos;
-// 	//   lastY = ypos;
-// 	//   firstMouse = false;
-// 	// }
-
-// 	// float xoffset = xpos - lastX;
-// 	// float yoffset = lastY - ypos;
-// 	// lastX = xpos;
-// 	// lastY = ypos;
-
-// 	// float sensitivity = 0.1f;
-// 	// xoffset *= sensitivity;
-// 	// yoffset *= sensitivity;
-// }
-
-// int Platform_GetMouseButtonState(struct Platform_State * plaftorm,int button) {
-
-// 	return glfwGetMouseButton(plaftorm->window, button);
-// }
-
-// int Platform_GetKeyState(struct Platform_State * plaftorm,int key) { return glfwGetKey(plaftorm->window, key); }
 
 void Platform_SetShouldCloseWindow(struct Platform_State * plaftorm,uint32_t value) {
 

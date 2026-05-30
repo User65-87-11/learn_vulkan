@@ -1,7 +1,56 @@
-Entity
-	uint32_t * meshes;
-	uint32_t mesh_count;
+Pipeline
+Descriptor
+Buffers
+Images
+Shaders
+
+
+	some buffer updates
+
+
+	vkCmdBindPipeline(
+		frame->commandBuffer, 
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		renderer->pipeline.handle
+	);
+
+
+	VkDeviceSize offset = 0;
+
+	vkCmdBindVertexBuffers(
+		frame->commandBuffer, 0, 1, &renderer->buffer_vertex.handle, &offset);
 	
-Equals to scene
-	mesh
-		primitives
+	vkCmdBindIndexBuffer(frame->commandBuffer, renderer->buffer_index.handle, 0,
+		VK_INDEX_TYPE_UINT32);
+
+	VkDescriptorSet dset[4] = {
+		renderer->desc_set_globals[frame_index],
+		renderer->desc_set_instances[frame_index],
+		renderer->desc_set_materials,
+		renderer->desc_set_samplers,
+	};
+
+	vkCmdBindDescriptorSets(
+		frame->commandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		renderer->pipeline.layout, 0,
+		ARR_LEN(dset), dset, 0, NULL
+	);
+
+
+
+	for (int i = 0; i < scene->mesh_count; i++) {
+
+
+		struct Mesh* mesh = &scene->meshes[i];
+
+		
+		vkCmdDrawIndexed(
+			frame->commandBuffer,
+			mesh->index_count, 
+			mesh->instance_cnt, 
+			mesh->index_offset, 
+			mesh->vertex_offset,
+			mesh->instance_offset
+		);
+	}

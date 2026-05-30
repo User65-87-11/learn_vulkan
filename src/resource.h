@@ -30,8 +30,12 @@
 		VK_IMAGE_USAGE_TRANSFER_SRC_BIT
 #define IMAGE_TEXTURE_PROPS VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 
+#define BUFFER_DATA_GLOBAL_SIZE  1024*4
+
+
 struct Buffer {
 	VkBuffer handle;
+
 	VkDeviceMemory memory;
 	VkDeviceSize size;
 	void* mapped;
@@ -53,17 +57,22 @@ struct Texture {
 	VkSampler sampler;
 };
 
-void Resource_CreateBuffer(struct Device_State * device,VkDeviceSize size,
+void Resource_CreateBuffer(struct Device_State* device,
+	VkDeviceSize size,
 	VkBufferUsageFlags usage,
 	VkMemoryPropertyFlags properties,
 	struct Buffer* out);
 
-void Resource_AppendToBuffer(struct Device_State * device,
-	struct Buffer* dest, uint32_t dest_offset, void* data, uint32_t size);
+void Resource_AppendToBuffer(struct Device_State* device,
+	struct Buffer* dest,
+	uint32_t dest_offset,
+	void* data,
+	uint32_t size);
 
-void Resource_FreeBuffer(struct Device_State * device,struct Buffer* image);
+void Resource_FreeBuffer(struct Device_State* device, struct Buffer* buffer);
 
-void Resource_CreateImage(struct Device_State * device,uint32_t width,
+void Resource_CreateImage(struct Device_State* device,
+	uint32_t width,
 	uint32_t height,
 	uint32_t mip_levels,
 	VkFormat format,
@@ -71,16 +80,25 @@ void Resource_CreateImage(struct Device_State * device,uint32_t width,
 	VkImageUsageFlags usage,
 	VkMemoryPropertyFlags properties,
 	struct Image* out);
-void Resource_CreateImageView(struct Device_State * device,
-	struct Image* img, VkImageAspectFlagBits aspectFlags);
 
-void Resource_CreateTexture(struct Device_State * device,void* pixel_data,
+
+
+
+void Resource_CreateImageView(struct Device_State* device,
+	struct Image* img,
+	VkImageAspectFlagBits aspectFlags);
+
+void Resource_CreateTexture(struct Device_State* device,
+	void* pixel_data,
 	uint32_t width,
 	uint32_t height,
 	VkFormat format,
 	struct Texture* out);
 
-void Resource_transitionImageLayout(struct Device_State * device,VkCommandBuffer cmdBuffer,
+
+
+void Resource_transitionImageLayout(struct Device_State* device,
+	VkCommandBuffer cmdBuffer,
 	VkImage* image,
 	VkImageLayout oldLayout,
 	VkImageLayout newLayout,
@@ -95,13 +113,11 @@ void Resource_transitionImageLayout(struct Device_State * device,VkCommandBuffer
 
 	uint32_t mipLevels);
 
-// VkCommandBuffer Resource_beginSingleTimeCommands(struct Device_State * device,);
-
-// void Resource_endSingleTimeCommands(struct Device_State * device,VkCommandBuffer commandBuffer);
-
 void Resource_mapBufferMemory(struct Device_State * device,struct Buffer* buffer);
 
 void Resource_unmapBufferMemory(struct Device_State * device,struct Buffer* buffer);
 
 void Resource_FreeImage(struct Device_State * device,struct Image* image);
+
+
 void Resource_FreeTexture(struct Device_State * device,struct Texture* texture);

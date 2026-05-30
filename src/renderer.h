@@ -14,6 +14,16 @@
 
 
 
+
+struct Renderer_info{
+
+	struct Device_State * ref_device;
+	struct Instance_State * ref_instance;
+	struct Platform_State * ref_platform;
+	struct DescriptorContext * ref_descriptor;
+	struct Scene * ref_scene;
+};
+
 struct FrameData {
 	VkCommandPool commandPool;
 	VkCommandBuffer commandBuffer;
@@ -25,24 +35,24 @@ struct FrameData {
 
 	uint32_t imageIndex;
 
+
+
+	VkDescriptorSet desc_sets[16];
+	uint32_t desc_sets_len;
+	
 	struct Buffer buffer_global;
 	struct Buffer buffer_global_camera;
 	struct Buffer buffer_global_light;
 
 	struct Buffer buffer_instances;
+
+	
 	struct Image depth_image;
 
 	struct Mesh meshes[MAX_MESHES];
 	uint32_t mesh_count;
 };
-struct Renderer_info{
 
-	struct Device_State * ref_device;
-	struct Instance_State * ref_instance;
-	struct Platform_State * ref_platform;
-	struct DescriptorContext * ref_descriptor;
-	struct Scene * ref_scene;
-};
 struct Renderer {
 
 	struct Device_State * ref_device;
@@ -53,7 +63,8 @@ struct Renderer {
 	// struct DescriptorContext * ref_descriptor;
 	
 	struct Swapchain swapchain;
-	struct Pipeline_Main pipeline;
+	
+	struct Pipeline_State pipeline;
 
 	VkDescriptorSet desc_set_globals[MAX_FRAMES_IN_FLIGHT];
 
@@ -61,11 +72,25 @@ struct Renderer {
 	VkDescriptorSet desc_set_materials;
 	VkDescriptorSet desc_set_samplers;
 
+
+	VkDescriptorSet desc_set_globals_2;
+	VkDescriptorSet desc_set_instances_2;
+	VkDescriptorSet desc_set_materials_2;
+	VkDescriptorSet desc_set_samplers_2;
+	
+
 	struct FrameData frames[MAX_FRAMES_IN_FLIGHT];
 	uint32_t current_frame;
 
+
+	
+	struct Buffer buffer_global;
+	
+	
+	
 	struct Buffer buffer_vertex;
 	uint32_t buffer_vertex_used;
+	
 	struct Buffer buffer_index;
 	uint32_t buffer_index_used;
 

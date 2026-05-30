@@ -95,3 +95,15 @@ do {                                                                         \
           exit(1);                                                            \
       }                                                                       \
   } while (0)
+
+
+
+  #ifdef _WIN32
+  #include <malloc.h>
+  #define gm_alloc_aligned(size, align) _aligned_malloc(size, align)
+  #define gm_free_aligned(ptr) _aligned_free(ptr)
+  #else
+  #include <stdlib.h>
+  #define gm_alloc_aligned(size, align) aligned_alloc(align, size)
+  #define gm_free_aligned(ptr) free(ptr)
+  #endif

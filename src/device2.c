@@ -233,6 +233,9 @@ static void physicalDeviceFeatureCheck(struct Device_CreateInfo * info ,struct D
 
 	PRINT_FNAME;
 
+
+
+	
 	VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 
@@ -554,10 +557,14 @@ static void createPhysicalDevice(struct Device_CreateInfo* info, struct Device_S
 
 	vkGetPhysicalDeviceProperties(device->physical_device, &properties);
 
+	
+	
 	printf("\nSELECTED device name: %s\n", properties.deviceName);
 	printf("device rating: %d\n", ratings[max_id]);
 	printf("device type: %d\n", properties.deviceType);
 	printf("geometry shader: %d\n", features.geometryShader);
+	printf("alignment UBO: %d\n", properties.limits.minUniformBufferOffsetAlignment);
+	printf("alignment SSBO: %d\n", properties.limits.minStorageBufferOffsetAlignment);
 	bool supportsVulkan1_3 = properties.apiVersion >= VK_VERSION_1_3;
 	printf("API >= 1.3 support: %d\n", supportsVulkan1_3);
 	printf("\n");
@@ -601,7 +608,6 @@ void  Device_createCommandPool(
 )
 {
 
-	
 	PRINT_FNAME;
 
 	VkCommandPoolCreateInfo commandPoolCreateInfo = {
@@ -615,34 +621,6 @@ void  Device_createCommandPool(
 		&commandPoolCreateInfo, NULL, pool));
 
 
-	// fix
-	//  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-	//  {
-	//  	struct FrameData *frame = &g_frames[i];
-
-	// 	VkCommandBufferAllocateInfo allocInfo = {
-	// 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-	// 		.commandPool = graphicsPool,
-	// 		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-	// 		.commandBufferCount = 1,
-	// 	};
-
-	// 	vkAllocateCommandBuffers(
-	// 		device,
-	// 		&allocInfo,
-	// 		&
-	// 	);
-	// }
-
-	// VkCommandBufferAllocateInfo allocInfo = (VkCommandBufferAllocateInfo){
-	//     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-	//     .commandPool = transferCommnadPool,
-	//     .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-	//     .commandBufferCount = 1,
-
-	// };
-
-	// vkAllocateCommandBuffers(device, &allocInfo, &transferCommandBuffers);
 }
 
 void  Device_AllocateCommandBuffer(

@@ -1,4 +1,6 @@
 #include "GLFW/glfw3.h"
+
+
 #include "app.h"
 #include "assets/asset0.h"
 #include "descriptor.h"
@@ -16,13 +18,28 @@ struct ApplicationContext app_info;
 
 static void mainLoop();
 
-static void callback_FrameBuffer_Resize(void * window,uint32_t width,uint32_t height);
+
 
 
 void App_start() { mainLoop(); }
 
 static void mainLoop() {
 	PRINT_FNAME;
+
+
+
+	printf("struct Scene_Data align on %d\n", _Alignof(struct Scene_Data));
+	printf("struct Scene_Data sizeof on %d\n", sizeof(struct Scene_Data));
+
+	printf("  Scene_Data.global_data offsetof on %d\n", offsetof(struct Scene_Data,global_data));
+	printf("  Scene_Data.camera_data offsetof on %d\n", offsetof(struct Scene_Data,camera_data));
+
+	printf("  Scene_Data.light_data offsetof on %d\n", offsetof(struct Scene_Data,light_data));
+	printf("  Scene_Data.instance_data offsetof on %d\n", offsetof(struct Scene_Data,instance_data));
+
+	printf("  Scene_Data.material_data offsetof on %d\n", offsetof(struct Scene_Data,material_data));
+	
+
 
 	printf("struct InstanceData align on %d\n", _Alignof(struct InstanceData));
 	printf("struct InstanceData sizeof on %d\n", sizeof(struct InstanceData));
@@ -36,13 +53,7 @@ static void mainLoop() {
 		exit(1);
 	}
 
-	// void (* callbacks[])(void * win,uint32_t w,uint32_t h)={
-	// 	Renderer_callback_FrameBuffer_Resize,
-	// 	Scene_callback_FrameBuffer_Resize
-	// };
 
-	// app_info.callbacks_cnt = 2;
-	// app_info.callbacks = malloc(sizeof(struct Platform_callback)* app_info.callbacks_cnt);
 	app_info.callbacks[0].callback_resize = Scene_callback_FrameBuffer_Resize;
 	app_info.callbacks[0].dst = &app_info.scene;
 
@@ -144,7 +155,7 @@ static void mainLoop() {
 
 	int running = 1;
 
-	float lastTime = Platform_GetTime(&app_info.platform);
+	double lastTime = Platform_GetTime(&app_info.platform);
 
 	while (running) {
 
@@ -154,7 +165,7 @@ static void mainLoop() {
 
 		Platform_PollEvents(&app_info.platform);
 
-		Input_Update(&app_info.input,&app_info.input_backend);
+		Input_Update(&app_info.input,&app_info.input_backend,dt);
 
 		Scene_Update(&app_info.scene, dt);
 
@@ -185,5 +196,5 @@ static void mainLoop() {
 }
 
 void App_destroy(struct ApplicationContext * app){
-	
+	PRINT_FNAME;
 }

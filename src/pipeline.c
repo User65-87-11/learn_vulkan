@@ -7,7 +7,7 @@
 
 // static VkFormat findDepthFormat();
 
-void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_Main* pipeline) {
+void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_State* pipeline) {
 
 	PRINT_FNAME;
 	VkDevice device = info->ref_device->logical_device;
@@ -64,8 +64,10 @@ void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_Main* 
 
 	vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){
 		0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)};
+	
 	vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){
 		1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)};
+	
 	vertexInputAttributeDescriptions[2] = (VkVertexInputAttributeDescription){
 		2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)};
 
@@ -138,6 +140,7 @@ void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_Main* 
 			.colorWriteMask =
 				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
 				VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+				
 			.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
 			.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
 			.colorBlendOp = VK_BLEND_OP_ADD,
@@ -201,7 +204,7 @@ void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_Main* 
 		device, NULL, 1, &graphicsPipelineCreateInfo, NULL, &pipeline->handle);
 }
 
-void Pipeline_Destroy( struct Pipeline_Main* pipeline) {
+void Pipeline_Destroy( struct Pipeline_State* pipeline) {
 	VkDevice device = pipeline->ref_device->logical_device;
 	vkDestroyShaderModule(device, pipeline->fragmentShader, NULL);
 	vkDestroyShaderModule(device, pipeline->vertexShader, NULL);

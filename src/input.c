@@ -4,7 +4,7 @@
 #include "platform.h"
 
 
-void Input_Update(struct Input_State * input, struct Input_Backend * backend) {
+void Input_Update(struct Input_State * input, struct Input_Backend * backend, double delta) {
 
 	double current_x;
 	double current_y;
@@ -32,6 +32,12 @@ void Input_Update(struct Input_State * input, struct Input_Backend * backend) {
 	for (int i = 0; i < MAX_MOUSE_BUTTONS; i++) {
 		input->mouseButtons_prev[i] = input->mouseButtons[i];
 		input->mouseButtons[i] = backend->get_mouse_button(backend->window,i);
+
+		if(input->mouseButtons[i] == GLFW_PRESS){
+			input->mouseHeldTime[i] += delta;
+		}else {
+			 input->mouseHeldTime[i] = 0.0;
+		}
 		
 	}
 	for (int i = 0; i < MAX_KEYS; i++) {
@@ -39,6 +45,11 @@ void Input_Update(struct Input_State * input, struct Input_Backend * backend) {
 		input->keys_prev[i]  = 	input->keys[i] ;
 		input->keys[i] = backend->get_key(backend->window,i);
 		
+		if(input->keys[i] == GLFW_PRESS){
+			input->keyHeldTime[i] += delta;
+		}else {
+			 input->keyHeldTime[i] = 0.0;
+		}
 	}
 
 
@@ -53,6 +64,19 @@ void Input_Update(struct Input_State * input, struct Input_Backend * backend) {
 	input->mouseDeltaY *= input->sensitivity;
 
 
+}
+
+void Input_MouseHeldTime_Reset(struct Input_State * input,int button){
+	input->mouseHeldTime[button] = 0.0;
+}
+void Input_KeyHeldTime_Reset(struct Input_State * input,int key){
+	input->keyHeldTime[key] = 0.0;
+}
+double Input_KeyHeldTime(struct Input_State * input,int key){
+	return input->keyHeldTime[key];
+}
+double Input_MouseHeldTime(struct Input_State * input,int button){
+	return input->mouseHeldTime[button];
 }
 bool Input_IsMouseDown(struct Input_State * input,int button){
 	if(input->mouseButtons[button] == GLFW_PRESS ){

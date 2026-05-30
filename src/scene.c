@@ -1,6 +1,7 @@
 #include <GLFW/glfw3.h>
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cglm/cam.h"
@@ -13,22 +14,6 @@
 #include "platform.h"
 #include "shader_common.h"
 #include "util/common.h"
-
-
-// static struct Camera camera;
-
-// static vec3 cameraPos = {1.5f, 0.5f, -1.6f};
-// static vec3 cameraFront = {-0.7f, 0.0f, 0.7f};
-// static vec3 cameraUp = {0.0f, 1.0f, 0.0f};
-
-// static float yaw = -90.0f;
-// static float pitch = 0.0f;
-// static float fov = 45.0f;
-//
-
-// static struct Scene* scene_ref;
-
-// static struct GmArray array_meshes;
 
 
 static const float yaw = -230.0f;
@@ -58,6 +43,11 @@ void Scene_Init(struct Scene_Info * info, struct Scene* scene) {
 	PRINT_FNAME;
 	memset(scene, 0, sizeof(struct Scene));
 
+	
+	scene->data = gm_alloc_aligned(sizeof(*scene->data),32);
+	memset(scene->data, 0, sizeof(*scene->data));
+	
+	
 	scene->ref_device = info->ref_device;
 	scene->ref_input = info->ref_input;
 	scene->ref_platform = info->ref_platform;
@@ -73,7 +63,7 @@ void Scene_Init(struct Scene_Info * info, struct Scene* scene) {
 		yaw, pitch, 
 		pos0
 	);
-
+	
 
 
 	
@@ -83,7 +73,20 @@ void Scene_Init(struct Scene_Info * info, struct Scene* scene) {
 	scene->global_data.framebuffer_size[0] = info->width;	
 	scene->global_data.framebuffer_size[1] = info->height;
 
+
+	scene->data->global_data.frame_cnt = 0x88;
+	scene->data->global_data.framebuffer_size[0] = info->width;	
+	scene->data->global_data.framebuffer_size[1] = info->height;
 	
+	
+	
+}
+
+void Scene_Destroy(struct Scene* scene){
+	if(scene->data!= NULL){
+		free(scene->data);
+		scene->data= NULL;
+	}
 }
 
 static void camera_perspective_init(
@@ -205,6 +208,9 @@ void Scene_Update(struct Scene* scene, float dt) {
 	
 	// struct Input_State* input = scene->ref_input;
 	update_keys(scene,  dt);
+
+
+	
 	update_camera(scene,  dt);
 }
 
@@ -216,10 +222,12 @@ static void update_keys(
 
 
 
-	
-	
-	if (scene->ref_input->keys[GLFW_KEY_ESCAPE] == GLFW_PRESS) {
 
+	if(Input_KeyHeldTime(scene->ref_input, GLFW_KEY_ESCAPE) > 1.0)
+	// if(Input_IsKeyPressed(scene->ref_input, GLFW_KEY_ESCAPE))
+	// if (scene->ref_input->keys[GLFW_KEY_ESCAPE] == GLFW_PRESS)
+	{
+		
 	
 		Platform_SetShouldCloseWindow(scene->ref_platform,true);
 	}
@@ -227,13 +235,15 @@ static void update_keys(
 
 	if(Input_IsKeyPressed(scene->ref_input, GLFW_KEY_LEFT_ALT)){
 
-		Platform_ToggleCursor(scene->ref_platform);		
+		Platform_ToggleCursor(scene->ref_platform);	
+		
 	}
 
 	
 
 	float cameraSpeed = 2.5 * dt;
-	if (scene->ref_input->keys[GLFW_KEY_W] == GLFW_PRESS) {
+	if(Input_IsKeyDown(scene->ref_input, GLFW_KEY_W)){
+//	if (scene->ref_input->keys[GLFW_KEY_W] == GLFW_PRESS) {
 
 		glm_vec3_muladds(
 			cam->front, 
@@ -241,23 +251,26 @@ static void update_keys(
 			cam->pos
 		);
 	}
-
-	if (scene->ref_input->keys[GLFW_KEY_S] == GLFW_PRESS) {
+if(Input_IsKeyDown(scene->ref_input, GLFW_KEY_S)){
+//	if (scene->ref_input->keys[GLFW_KEY_S] == GLFW_PRESS) {
 		glm_vec3_mulsubs(
 			cam->front, cameraSpeed, cam->pos);
 	}
-	if (scene->ref_input->keys[GLFW_KEY_A] == GLFW_PRESS) {
+	if(Input_IsKeyDown(scene->ref_input, GLFW_KEY_A)){
+//	if (scene->ref_input->keys[GLFW_KEY_A] == GLFW_PRESS) {
 		vec3 temp;
 		glm_vec3_crossn(cam->front, cam->up, temp);
 		glm_vec3_mulsubs(temp, cameraSpeed, cam->pos);
 	}
-	if (scene->ref_input->keys[GLFW_KEY_D] == GLFW_PRESS) {
+	if(Input_IsKeyDown(scene->ref_input, GLFW_KEY_D)){
+//	if (scene->ref_input->keys[GLFW_KEY_D] == GLFW_PRESS) {
 		vec3 temp;
 		glm_vec3_crossn(cam->front, cam->up, temp);
 		glm_vec3_muladds(temp, cameraSpeed, cam->pos);
 	}
 
-	if (scene->ref_input->keys[GLFW_KEY_SPACE] == GLFW_PRESS) {
+	if(Input_IsKeyDown(scene->ref_input, GLFW_KEY_SPACE)){
+	// if (scene->ref_input->keys[GLFW_KEY_SPACE] == GLFW_PRESS) {
 
 		glm_vec3_mulsubs(
 			cam->up, cameraSpeed, cam->pos);
@@ -267,12 +280,18 @@ static void update_keys(
 static void update_camera(
 	struct Scene* scene,  float dt
 ) {
-	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
+
 	
-	cam->yaw += scene->ref_input->mouseDeltaX;
+	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
 
-	cam->pitch -= scene->ref_input->mouseDeltaY;
 
+	if(scene->ref_platform->cursor_state != GLFW_CURSOR_NORMAL)
+	{
+		cam->yaw += scene->ref_input->mouseDeltaX;
+
+		cam->pitch -= scene->ref_input->mouseDeltaY;
+	}
+	
 	if (cam->pitch > 89.0f) {
 		cam->pitch = 89.0f;
 	}
@@ -339,20 +358,6 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 	);
 }
 
-// static void callback_FrameBuffer_Resize(void * scene,uint32_t width,uint32_t height){
-// 		PRINT_FNAME;
-
-// 		struct Scene * s = scene;
-
-// 		s->global_data.framebuffer_size[0] = width;	
-// 		s->global_data.framebuffer_size[1] = height;
-
-		
-// 		update_camera_perspective(&s->camera_data[CAMERA_MAIN],(float)width/height);
-
-		
-// 		app_info.renderer.framebuffer_resized = true;
-// }
 
 void Scene_callback_FrameBuffer_Resize(void * scene,uint32_t w,uint32_t h){
 	PRINT_FNAME;

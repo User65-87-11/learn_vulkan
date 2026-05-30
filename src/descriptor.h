@@ -1,7 +1,9 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <stdint.h>
 
+#include "resource.h"
 #include "shader_common.h"
 #include "device2.h"
 
@@ -61,7 +63,9 @@ void Descriptor_UpdateBuffer(struct DescriptorContext * context,
 	uint32_t binding,
 	VkDescriptorType type,
 	VkBuffer buffer,
-	VkDeviceSize size);
+	VkDeviceSize size,
+	uint32_t offset
+);
 
 void Descriptor_UpdateImage(struct DescriptorContext * context,
 	VkDescriptorSet set,

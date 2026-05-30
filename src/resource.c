@@ -303,6 +303,10 @@ void createTextureSampler(struct Device_State * device,VkSampler* sampler) {
 void Resource_mapBufferMemory(struct Device_State * device,struct Buffer* buffer) {
 	vkMapMemory(device->logical_device, buffer->memory, 0, buffer->size,
 		0, &buffer->mapped);
+
+
+
+	
 }
 
 void Resource_unmapBufferMemory(struct Device_State * device,struct Buffer* buffer) {

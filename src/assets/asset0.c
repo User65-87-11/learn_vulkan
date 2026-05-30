@@ -193,4 +193,6 @@ static void create_Instance0(
 
 	
 	app->scene.global_data.instance_cnt = app->scene.instance_count;
+
+	app->scene.data->global_data.instance_cnt = app->scene.instance_count;
 }
