@@ -28,16 +28,16 @@ static void mainLoop() {
 
 
 
-	printf("struct Scene_Data align on %d\n", _Alignof(struct Scene_Data));
-	printf("struct Scene_Data sizeof on %d\n", sizeof(struct Scene_Data));
+	// printf("struct Scene_Data align on %d\n", _Alignof(struct Scene_Data));
+	// printf("struct Scene_Data sizeof on %d\n", sizeof(struct Scene_Data));
 
-	printf("  Scene_Data.global_data offsetof on %d\n", offsetof(struct Scene_Data,global_data));
-	printf("  Scene_Data.camera_data offsetof on %d\n", offsetof(struct Scene_Data,camera_data));
+	// printf("  Scene_Data.global_data offsetof on %d\n", offsetof(struct Scene_Data,global_data));
+	// printf("  Scene_Data.camera_data offsetof on %d\n", offsetof(struct Scene_Data,camera_data));
 
-	printf("  Scene_Data.light_data offsetof on %d\n", offsetof(struct Scene_Data,light_data));
-	printf("  Scene_Data.instance_data offsetof on %d\n", offsetof(struct Scene_Data,instance_data));
+	// printf("  Scene_Data.light_data offsetof on %d\n", offsetof(struct Scene_Data,light_data));
+	// printf("  Scene_Data.instance_data offsetof on %d\n", offsetof(struct Scene_Data,instance_data));
 
-	printf("  Scene_Data.material_data offsetof on %d\n", offsetof(struct Scene_Data,material_data));
+	// printf("  Scene_Data.material_data offsetof on %d\n", offsetof(struct Scene_Data,material_data));
 	
 
 

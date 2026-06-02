@@ -74,7 +74,7 @@ void Renderer_Destroy(struct Renderer* renderer) {
 	}
 	renderer->texture_cnt = 0;
 
-
+	Resource_FreeSampler(renderer->ref_device, renderer->sampler);
 
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_index);
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_vertex);
@@ -138,11 +138,39 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 
 	struct DescriptorContext* ctx = info->ref_descriptor;
 
-	VkDescriptorSetLayout layouts[] = {ctx->globalLayout, ctx->instanceLayout,
-		ctx->materialLayout, ctx->samplerLayout};
+	VkDescriptorSetLayout layouts[] = {
+		ctx->globalLayout, 
+		ctx->instanceLayout,
+		ctx->materialLayout, 
+		ctx->textureLayout, 
+		ctx->samplerLayout
+	};
 
 	pipe_info.descriptorSetLayouts = layouts;
 	pipe_info.descriptorSetLayoutCount = ARR_LEN(layouts);
+
+
+	VkVertexInputAttributeDescription attributes [3]={
+		
+		(VkVertexInputAttributeDescription){
+			0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)},
+		
+	(VkVertexInputAttributeDescription){
+			1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)},
+		
+		(VkVertexInputAttributeDescription){
+			2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)},
+	};
+	
+	pipe_info.vertexInputAttributeDescriptions = attributes;
+	pipe_info.vertexInputAttributeDescriptions_cnt = ARR_LEN(attributes);
+	
+	pipe_info.depthFormat = renderer->swapchain.depthFormat;
+	pipe_info.colorFormat = renderer->swapchain.surfaceFormat;
+
+	Pipeline_CreateGraphics(&pipe_info,&renderer->pipeline);
+
+
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 			struct FrameData* frame = &renderer->frames[i];
@@ -153,13 +181,10 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 			Descriptor_Allocate(ctx,ctx->instanceLayout);
 	}
 	renderer->desc_set_materials = Descriptor_Allocate(ctx,ctx->materialLayout);
-	renderer->desc_set_samplers = Descriptor_Allocate(ctx,ctx->samplerLayout);
 
-	pipe_info.depthFormat = renderer->swapchain.depthFormat;
-	pipe_info.colorFormat = renderer->swapchain.surfaceFormat;
-
-	Pipeline_CreateGraphics(&pipe_info,&renderer->pipeline);
-
+	renderer->desc_set_textures = Descriptor_Allocate(ctx,ctx->textureLayout);
+	renderer->desc_set_sampler = Descriptor_Allocate(ctx,ctx->samplerLayout);
+	
 	// uint32_t size_all = sizeof(struct InstanceData)   * MAX_INSTANCES ;
 
 	// size_all += sizeof(struct MaterialData)  * MAX_MATERIALS ;
@@ -184,7 +209,10 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 
 			
 	// }
+	
+	Resouce_createTextureSampler(renderer->ref_device, &renderer->sampler);
 
+	Descriptor_UpdateSamplerDescriptors(ctx, renderer->desc_set_sampler, 0, renderer->sampler);
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		struct FrameData* frame = &renderer->frames[i];
@@ -621,11 +649,12 @@ static void renderMainPass(struct Renderer* renderer,
 	vkCmdBindIndexBuffer(frame->commandBuffer, renderer->buffer_index.handle, 0,
 		VK_INDEX_TYPE_UINT32);
 
-	VkDescriptorSet dset[4] = {
+	VkDescriptorSet dset[5] = {
 		frame->desc_set_globals,
 		frame->desc_set_instances,
 		renderer->desc_set_materials,
-		renderer->desc_set_samplers,
+		renderer->desc_set_textures,
+		renderer->desc_set_sampler,
 	};
 
 	vkCmdBindDescriptorSets(

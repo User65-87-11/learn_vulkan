@@ -28,15 +28,21 @@ void Descriptor_Init(struct Descriptor_InitInfo *info, struct DescriptorContext 
 	uint32_t cnt_inst = MAX_FRAMES_IN_FLIGHT;
 	uint32_t cnt_material = 1;
 	uint32_t cnt_textures = MAX_TEXTURES;
-	uint32_t max_sets = cnt_inst + cnt_glob + cnt_material + cnt_textures;
+	uint32_t cnt_sampler = 1;
+	uint32_t max_sets = cnt_inst + cnt_glob + cnt_material + cnt_textures +cnt_sampler;
 
 	VkDevice device = context->device_ref->logical_device;
 
 	VkDescriptorPoolSize poolSizes[] = {
 
 		(VkDescriptorPoolSize){
-			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = MAX_TEXTURES},
+			.type = VK_DESCRIPTOR_TYPE_SAMPLER,
+			.descriptorCount = 1
+		},
+		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			.descriptorCount = MAX_TEXTURES
+		},
 		
 		(VkDescriptorPoolSize){.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT * 3},
@@ -147,8 +153,8 @@ void Descriptor_Init(struct Descriptor_InitInfo *info, struct DescriptorContext 
 		VkDescriptorSetLayoutBinding samplerBindings = {
 
 			.binding = 0,
-			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = MAX_TEXTURES,
+			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+			.descriptorCount = 1,
 			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
 
 		};
@@ -156,10 +162,35 @@ void Descriptor_Init(struct Descriptor_InitInfo *info, struct DescriptorContext 
 		VkDescriptorSetLayoutCreateInfo samplerLayoutInfo = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 			.bindingCount = 1,
-			.pBindings = &samplerBindings};
+			.pBindings = &samplerBindings
+		};
 
 		VkResult res = vkCreateDescriptorSetLayout(
 			device, &samplerLayoutInfo, NULL, &context->samplerLayout);
+
+		if (res != VK_SUCCESS) {
+			EXIT_CLEAN("vkCreateDescriptorSetLayout samplerBindings");
+		}
+	}
+
+	{
+		VkDescriptorSetLayoutBinding textureBindings = {
+
+			.binding = 0,
+			.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			.descriptorCount = MAX_TEXTURES,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+
+		};
+
+		VkDescriptorSetLayoutCreateInfo textureLayoutInfo = {
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = 1,
+			.pBindings = &textureBindings
+		};
+
+		VkResult res = vkCreateDescriptorSetLayout(
+			device, &textureLayoutInfo, NULL, &context->textureLayout);
 
 		if (res != VK_SUCCESS) {
 			EXIT_CLEAN("vkCreateDescriptorSetLayout samplerBindings");
@@ -192,35 +223,67 @@ void Descriptor_UpdateBuffer(struct DescriptorContext * context,
 	vkUpdateDescriptorSets(context->device_ref->logical_device, 1, &wite, 0, NULL);
 }
 
-void Descriptor_SetTextureToDescriptorInfoArray(
-	struct DescriptorContext* context,
-	VkImageView view,
-	VkSampler sampler,
-	uint32_t position) {
+// void Descriptor_SetTextureToDescriptorInfoArray(
+// 	struct DescriptorContext* context,
+// 	VkImageView view,
+// 	VkSampler sampler,
+// 	uint32_t position) {
 
-	PRINT_FNAME;
-	VkDescriptorImageInfo info = {.imageView = view,
-		.sampler = sampler,
-		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-	context->descriptor_image_info_textures[position] = info;
-}
+// 	PRINT_FNAME;
+// 	VkDescriptorImageInfo info = {.imageView = view,
+// 		.sampler = sampler,
+// 		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+// 	context->descriptor_image_info_textures[position] = info;
+// }
 
 void Descriptor_UpdateTextureDescriptors(struct DescriptorContext* context,
 	VkDescriptorSet descriptor_set,
-	VkDescriptorImageInfo* arr,
-	uint32_t count,
+	uint32_t binding,
+	VkImageView view,
 	uint32_t offset) {
 	PRINT_FNAME;
 
+
+	VkDescriptorImageInfo info = {
+		.imageView = view,
+		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	};
+	
 	VkWriteDescriptorSet write = {};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write.dstSet = descriptor_set;
-	write.dstBinding = 0;
+	write.dstBinding = binding;
 	write.dstArrayElement = offset;
-	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	write.descriptorCount = count;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	write.descriptorCount = 1;
 
-	write.pImageInfo = arr;
+	write.pImageInfo = &info;
+
+	vkUpdateDescriptorSets(
+		context->device_ref->logical_device, 1, &write, 0, NULL);
+}
+
+void Descriptor_UpdateSamplerDescriptors(struct DescriptorContext* context,
+	VkDescriptorSet descriptor_set,
+	uint32_t binding,
+	VkSampler sampler) {
+	PRINT_FNAME;
+
+
+	VkDescriptorImageInfo info = {
+		.sampler = sampler,
+		// .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	};
+	
+	VkWriteDescriptorSet write = {};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = descriptor_set;
+	write.dstBinding = binding;
+	write.dstArrayElement = 0;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	write.descriptorCount = 1;
+
+	write.pImageInfo = &info;
 
 	vkUpdateDescriptorSets(
 		context->device_ref->logical_device, 1, &write, 0, NULL);
@@ -234,6 +297,7 @@ void Descriptor_Destroy(struct DescriptorContext* context) {
 	vkDestroyDescriptorSetLayout(device, context->globalLayout, NULL);
 	vkDestroyDescriptorSetLayout(device, context->instanceLayout, NULL);
 	vkDestroyDescriptorSetLayout(device, context->materialLayout, NULL);
+	vkDestroyDescriptorSetLayout(device, context->textureLayout, NULL);
 	vkDestroyDescriptorSetLayout(device, context->samplerLayout, NULL);
 }
 

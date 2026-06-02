@@ -32,7 +32,7 @@ static void copyBufferToImage(struct Device_State * device,VkCommandBuffer comma
 	VkImage* image,
 	uint32_t width,
 	uint32_t height);
-static void createTextureSampler(struct Device_State * device,VkSampler* sampler);
+
 
 static uint32_t getMipmapLevels(struct Device_State * device,uint32_t w, uint32_t h);
 
@@ -188,11 +188,18 @@ void Resource_FreeTexture(struct Device_State * device,struct Texture* texture) 
 
 	Resource_FreeImage(device,&texture->image);
 
-	if (texture->sampler != NULL) {
+	// if (texture->sampler != NULL) {
 
-		vkDestroySampler(device->logical_device, texture->sampler, NULL);
-		texture->sampler = NULL;
-	}
+	// 	vkDestroySampler(device->logical_device, texture->sampler, NULL);
+	// 	texture->sampler = NULL;
+	// }
+}
+void Resource_FreeSampler(struct Device_State * device,VkSampler sampler){
+	// if (texture->sampler != NULL) {
+
+		vkDestroySampler(device->logical_device, sampler, NULL);
+		// texture->sampler = NULL;
+	// }
 }
 
 void Resource_CreateBuffer(struct Device_State * device,VkDeviceSize size,
@@ -265,7 +272,7 @@ void Resource_FreeBuffer(struct Device_State * device,struct Buffer* out) {
 	}
 }
 
-void createTextureSampler(struct Device_State * device,VkSampler* sampler) {
+void Resouce_createTextureSampler(struct Device_State * device,VkSampler* sampler) {
 	PRINT_FNAME;
 	
 	// VkPhysicalDevice physicalDevice = getPhysicalDevice();
@@ -359,7 +366,7 @@ void Resource_CreateTexture(struct Device_State * device,void* data,
 	Resource_FreeBuffer(device,&staging);
 	Resource_CreateImageView(device,&out->image, VK_IMAGE_ASPECT_COLOR_BIT);
 
-	createTextureSampler(device,&out->sampler);
+	// Resouce_createTextureSampler(device,&out->sampler);
 }
 
 static void copyBufferToImage(struct Device_State * device,VkCommandBuffer command,

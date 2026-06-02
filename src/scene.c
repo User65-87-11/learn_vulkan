@@ -44,8 +44,8 @@ void Scene_Init(struct Scene_Info * info, struct Scene* scene) {
 	memset(scene, 0, sizeof(struct Scene));
 
 	
-	scene->data = gm_alloc_aligned(sizeof(*scene->data),32);
-	memset(scene->data, 0, sizeof(*scene->data));
+	// scene->data = gm_alloc_aligned(sizeof(*scene->data),32);
+	// memset(scene->data, 0, sizeof(*scene->data));
 	
 	
 	scene->ref_device = info->ref_device;
@@ -74,19 +74,19 @@ void Scene_Init(struct Scene_Info * info, struct Scene* scene) {
 	scene->global_data.framebuffer_size[1] = info->height;
 
 
-	scene->data->global_data.frame_cnt = 0x88;
-	scene->data->global_data.framebuffer_size[0] = info->width;	
-	scene->data->global_data.framebuffer_size[1] = info->height;
+	// scene->data->global_data.frame_cnt = 0x88;
+	// scene->data->global_data.framebuffer_size[0] = info->width;	
+	// scene->data->global_data.framebuffer_size[1] = info->height;
 	
 	
 	
 }
 
 void Scene_Destroy(struct Scene* scene){
-	if(scene->data!= NULL){
-		free(scene->data);
-		scene->data= NULL;
-	}
+	// if(scene->data!= NULL){
+	// 	free(scene->data);
+	// 	scene->data= NULL;
+	// }
 }
 
 static void camera_perspective_init(

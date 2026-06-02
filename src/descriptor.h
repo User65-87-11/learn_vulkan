@@ -19,11 +19,12 @@ struct DescriptorContext {
 	VkDescriptorSetLayout globalLayout;
 	VkDescriptorSetLayout instanceLayout;
 	VkDescriptorSetLayout materialLayout;
+	VkDescriptorSetLayout textureLayout;
 	VkDescriptorSetLayout samplerLayout;
 
 	// should work on load only
-	VkDescriptorImageInfo descriptor_image_info_textures[MAX_TEXTURES];
-	uint32_t descriptor_texture_last_used;
+	// VkDescriptorImageInfo descriptor_image_info_textures[MAX_TEXTURES];
+	// uint32_t descriptor_texture_last_used;
 };
 
 // lifecycle
@@ -50,11 +51,15 @@ void Descriptor_SetTextureToDescriptorInfoArray(
 	VkSampler sampler,
 	uint32_t position);
 
-void Descriptor_UpdateTextureDescriptors(
-	struct DescriptorContext * context,
+void Descriptor_UpdateSamplerDescriptors(struct DescriptorContext* context,
 	VkDescriptorSet descriptor_set,
-	VkDescriptorImageInfo* arr,
-	uint32_t count,
+	uint32_t binding,
+	VkSampler sampler);
+
+void Descriptor_UpdateTextureDescriptors(struct DescriptorContext* context,
+	VkDescriptorSet descriptor_set,
+	uint32_t binding,
+	VkImageView view,
 	uint32_t offset);
 
 // updates

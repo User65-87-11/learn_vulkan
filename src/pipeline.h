@@ -15,6 +15,10 @@ struct Pipeline_Info {
 	VkShaderModule vertexShader;
 	VkShaderModule fragmentShader;
 
+
+	VkVertexInputAttributeDescription * vertexInputAttributeDescriptions;
+	uint32_t vertexInputAttributeDescriptions_cnt;
+	
 	VkDescriptorSetLayout* descriptorSetLayouts;
 	uint32_t descriptorSetLayoutCount;
 };

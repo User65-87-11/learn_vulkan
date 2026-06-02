@@ -36,7 +36,10 @@ layout(set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
     MaterialData materials[];
 };
 
-layout(set = DESC_SET_TEXTURES, binding = 0) uniform sampler2D tex[MAX_TEXTURES];
+layout(set = DESC_SET_SAMPLER, binding = 0) uniform sampler  sam;
+
+
+layout(set = DESC_SET_TEXTURES, binding = 0) uniform texture2D tex[MAX_TEXTURES];
 
 /*
 
@@ -70,11 +73,11 @@ void main() {
 
     if (mat.base_color_texture_idx != UNSET_VALUE)
     {
-        texColor = texture(tex[mat.base_color_texture_idx], texCoord);
+        texColor = texture(sampler2D(tex[mat.base_color_texture_idx], sam), texCoord);
     }
     vec2 fb_size = global.framebuffer_size;
 
-    ivec3 cam_pos = ivec3(camera[CAMERA_MAIN].pos);
+    ivec3 cam_pos = ivec3(camera.pos);
      
    	vec2 hpos = fb_size/2;
 

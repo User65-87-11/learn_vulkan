@@ -176,23 +176,26 @@ static void create_Instance0(
 	inst->material_idx = material_idx;
 
 
-		struct DescriptorContext * context = &app->descriptor;
+	struct DescriptorContext * context = &app->descriptor;
 		
 	for(int i=0; i<MAX_TEXTURES ;i++)
 	{
-		Descriptor_SetTextureToDescriptorInfoArray(context,texture0->image.view, texture0->sampler,i);
+		// Descriptor_SetTextureToDescriptorInfoArray(context,texture0->image.view, texture0->sampler,i);
+
+		Descriptor_UpdateTextureDescriptors(context,
+			app->renderer.desc_set_textures, 0, texture0->image.view, i);
 	}
 
 
-	Descriptor_UpdateTextureDescriptors(context,
-		app->renderer.desc_set_samplers, 
-		context->descriptor_image_info_textures, 
-		MAX_TEXTURES,
-		0
-	);
+	// Descriptor_UpdateTextureDescriptors(context,
+	// 	app->renderer.desc_set_samplers, 
+	// 	context->descriptor_image_info_textures, 
+	// 	MAX_TEXTURES,
+	// 	0
+	// );
 
 	
 	app->scene.global_data.instance_cnt = app->scene.instance_count;
 
-	app->scene.data->global_data.instance_cnt = app->scene.instance_count;
+	// app->scene.data->global_data.instance_cnt = app->scene.instance_count;
 }

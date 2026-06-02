@@ -16,16 +16,16 @@ So scene has SSBO UBO and renderer has their buffers?
 
  */
 
-struct Scene_Data{
+// struct Scene_Data{
 
-	struct GlobalData global_data;
-	struct CameraData camera_data;
-	struct LightData light_data;
+// 	struct GlobalData global_data;
+// 	struct CameraData camera_data;
+// 	struct LightData light_data;
 	
-	struct InstanceData instance_data[MAX_INSTANCES];
+// 	struct InstanceData instance_data[MAX_INSTANCES];
 	
-	struct MaterialData material_data[MAX_MATERIALS];
-};
+// 	struct MaterialData material_data[MAX_MATERIALS];
+// };
 
 struct SceneNode{
    	uint32_t parent;
@@ -79,7 +79,7 @@ struct Scene {
 	struct LightData light_data;
 
 
-	struct Scene_Data * data;
+	// struct Scene_Data * data;
 };
 
 struct Scene_Info{

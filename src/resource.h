@@ -54,9 +54,9 @@ struct Image {
 
 struct Texture {
 	struct Image image;
-	VkSampler sampler;
-};
 
+};
+void Resource_FreeSampler(struct Device_State * device,VkSampler sampler);
 void Resource_CreateBuffer(struct Device_State* device,
 	VkDeviceSize size,
 	VkBufferUsageFlags usage,
@@ -82,7 +82,7 @@ void Resource_CreateImage(struct Device_State* device,
 	struct Image* out);
 
 
-
+void Resouce_createTextureSampler(struct Device_State * device,VkSampler* sampler);
 
 void Resource_CreateImageView(struct Device_State* device,
 	struct Image* img,

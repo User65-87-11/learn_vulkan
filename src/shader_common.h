@@ -22,6 +22,8 @@ typedef uint32_t uint;
 #define DESC_SET_INSTANCES 1
 #define DESC_SET_MATERIALS 2
 #define DESC_SET_TEXTURES 3
+#define DESC_SET_SAMPLER 4
+
 
 #define BINDING_GLOBAL_GLOBAL 0
 #define BINDING_GLOBAL_CAMERA 1
@@ -31,7 +33,7 @@ typedef uint32_t uint;
 #define MAX_TEXTURES 1
 #define MAX_INSTANCES 1024
 #define MAX_LIGHTS 1
-#define CAMERA_MAIN 0
+
 
 
 

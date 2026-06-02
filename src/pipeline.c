@@ -60,19 +60,19 @@ void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_State*
 		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 	};
 
-	VkVertexInputAttributeDescription vertexInputAttributeDescriptions[3];
+	// VkVertexInputAttributeDescription vertexInputAttributeDescriptions[3];
 
-	vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){
-		0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)};
+	// vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){
+	// 	0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)};
 	
-	vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){
-		1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)};
+	// vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){
+	// 	1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)};
 	
-	vertexInputAttributeDescriptions[2] = (VkVertexInputAttributeDescription){
-		2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)};
+	// vertexInputAttributeDescriptions[2] = (VkVertexInputAttributeDescription){
+	// 	2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)};
 
-	uint32_t vertexInputAttributeDescriptionsCount =
-		ARR_LEN(vertexInputAttributeDescriptions);
+	// uint32_t vertexInputAttributeDescriptionsCount =
+	// 	ARR_LEN(vertexInputAttributeDescriptions);
 	// sizeof(vertexInputAttributeDescriptions) /
 	// (sizeof(VkVertexInputAttributeDescription));
 
@@ -81,8 +81,8 @@ void Pipeline_CreateGraphics( struct Pipeline_Info *info, struct Pipeline_State*
 		.vertexBindingDescriptionCount = 1,
 		.pVertexBindingDescriptions = &vertexInputBindingDescription,
 		.vertexAttributeDescriptionCount =
-			vertexInputAttributeDescriptionsCount,
-		.pVertexAttributeDescriptions = vertexInputAttributeDescriptions,
+			info->vertexInputAttributeDescriptions_cnt,
+		.pVertexAttributeDescriptions = info->vertexInputAttributeDescriptions,
 
 	};
 

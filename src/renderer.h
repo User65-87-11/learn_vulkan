@@ -73,7 +73,9 @@ struct Renderer {
 
 
 	VkDescriptorSet desc_set_materials;
-	VkDescriptorSet desc_set_samplers;
+
+	VkDescriptorSet desc_set_textures;
+	VkDescriptorSet desc_set_sampler;
 
 
 	// VkDescriptorSet desc_set_globals_2;
@@ -99,6 +101,9 @@ struct Renderer {
 
 	struct Buffer buffer_materials;
 
+
+	VkSampler sampler;
+	
 	struct Texture textures[MAX_TEXTURES];
 	uint32_t texture_cnt;
 
