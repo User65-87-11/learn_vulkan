@@ -19,7 +19,7 @@ So scene has SSBO UBO and renderer has their buffers?
 struct Scene_Data{
 
 	struct GlobalData global_data;
-	struct CameraData camera_data[MAX_CAMERAS];
+	struct CameraData camera_data;
 	struct LightData light_data;
 	
 	struct InstanceData instance_data[MAX_INSTANCES];
@@ -75,7 +75,7 @@ struct Scene {
 	uint32_t instance_count;
 
 	struct GlobalData global_data;
-	struct CameraData camera_data[MAX_CAMERAS];
+	struct CameraData camera_data;
 	struct LightData light_data;
 
 

@@ -31,7 +31,6 @@ typedef uint32_t uint;
 #define MAX_TEXTURES 1
 #define MAX_INSTANCES 1024
 #define MAX_LIGHTS 1
-#define MAX_CAMERAS 1
 #define CAMERA_MAIN 0
 
 

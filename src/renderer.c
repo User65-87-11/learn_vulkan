@@ -65,6 +65,7 @@ void Renderer_Destroy(struct Renderer* renderer) {
 		Resource_FreeBuffer(renderer->ref_device,&renderer->frames[i].buffer_global_camera);
 		Resource_FreeBuffer(renderer->ref_device,&renderer->frames[i].buffer_global_light);
 		Resource_FreeBuffer(renderer->ref_device,&renderer->frames[i].buffer_instances);
+		
 		Resource_FreeImage(renderer->ref_device,&renderer->frames[i].depth_image);
 	}
 	for (int i = 0; i < renderer->texture_cnt; i++) {
@@ -73,7 +74,8 @@ void Renderer_Destroy(struct Renderer* renderer) {
 	}
 	renderer->texture_cnt = 0;
 
-	Resource_FreeBuffer(renderer->ref_device, &renderer->buffer_global);
+
+
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_index);
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_vertex);
 	Resource_FreeBuffer(renderer->ref_device,&renderer->buffer_materials);
@@ -143,10 +145,11 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 	pipe_info.descriptorSetLayoutCount = ARR_LEN(layouts);
 
 	for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			struct FrameData* frame = &renderer->frames[i];
+		
+		frame->desc_set_globals = Descriptor_Allocate(ctx,ctx->globalLayout);
 
-		renderer->desc_set_globals[i] = Descriptor_Allocate(ctx,ctx->globalLayout);
-
-		renderer->desc_set_instances[i] =
+		frame->desc_set_instances =
 			Descriptor_Allocate(ctx,ctx->instanceLayout);
 	}
 	renderer->desc_set_materials = Descriptor_Allocate(ctx,ctx->materialLayout);
@@ -157,72 +160,75 @@ void Renderer_Init(struct Renderer_info* info, struct Renderer* renderer) {
 
 	Pipeline_CreateGraphics(&pipe_info,&renderer->pipeline);
 
-	uint32_t size_all = sizeof(struct InstanceData)   * MAX_INSTANCES ;
+	// uint32_t size_all = sizeof(struct InstanceData)   * MAX_INSTANCES ;
 
-	size_all += sizeof(struct MaterialData)  * MAX_MATERIALS ;
+	// size_all += sizeof(struct MaterialData)  * MAX_MATERIALS ;
 
-	size_all += sizeof(struct GlobalData)  ;
+	// size_all += sizeof(struct GlobalData)  ;
 
-	size_all += sizeof(struct LightData)  ;
+	// size_all += sizeof(struct LightData)  ;
 
-	size_all += sizeof(struct CameraData) ;
+	// size_all += sizeof(struct CameraData) ;
 
-	{
-		Resource_CreateBuffer(
-			renderer->ref_device, 
-			size_all, 
-			BUFFER_SSBO_USAGE,
-			BUFFER_SSBO_PROPS, 
-			&renderer->buffer_global
-		);
-	 	Resource_mapBufferMemory(renderer->ref_device,&renderer->buffer_global);
+	// for(int i=0;i<MAX_FRAMES_IN_FLIGHT;i++)
+	// {
+	// 	struct FrameData * frame = &renderer->frames[i];
+	// 	Resource_CreateBuffer(
+	// 		renderer->ref_device, 
+	// 		size_all, 
+	// 		BUFFER_SSBO_USAGE,
+	// 		BUFFER_SSBO_PROPS, 
+	// 		&frame->buffer_global
+	// 	);
+	//  	Resource_mapBufferMemory(renderer->ref_device,&frame->buffer_global);
 
 			
-	}
+	// }
 
 
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		struct FrameData* f = &renderer->frames[i];
+		struct FrameData* frame = &renderer->frames[i];
 
 		Resource_CreateBuffer(renderer->ref_device,sizeof(struct GlobalData), BUFFER_UBO_USAGE,
-			BUFFER_UBO_PROPS, &f->buffer_global);
-		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global);
+			BUFFER_UBO_PROPS, &frame->buffer_global);
+		
+		Resource_mapBufferMemory(renderer->ref_device,&frame->buffer_global);
 
 		Descriptor_UpdateBuffer(ctx,
-			renderer->desc_set_globals[i],
+			frame->desc_set_globals,
 			BINDING_GLOBAL_GLOBAL, 
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			f->buffer_global.handle,
-			f->buffer_global.size,0
+			frame->buffer_global.handle,
+			frame->buffer_global.size,0
 		);
 
-		Resource_CreateBuffer(renderer->ref_device,sizeof(struct CameraData)*MAX_CAMERAS, BUFFER_UBO_USAGE,
-			BUFFER_UBO_PROPS, &f->buffer_global_camera);
-		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global_camera);
+		Resource_CreateBuffer(renderer->ref_device,sizeof(struct CameraData), BUFFER_UBO_USAGE,
+			BUFFER_UBO_PROPS, &frame->buffer_global_camera);
+		Resource_mapBufferMemory(renderer->ref_device,&frame->buffer_global_camera);
 
 		Descriptor_UpdateBuffer(ctx,
-			renderer->desc_set_globals[i],
+			frame->desc_set_globals,
 			BINDING_GLOBAL_CAMERA, 
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			f->buffer_global_camera.handle,
-			f->buffer_global_camera.size,0
+			frame->buffer_global_camera.handle,
+			frame->buffer_global_camera.size,0
 		);
 
 		Resource_CreateBuffer(renderer->ref_device,sizeof(struct LightData), BUFFER_UBO_USAGE,
-			BUFFER_UBO_PROPS, &f->buffer_global_light);
-		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_global_light);
+			BUFFER_UBO_PROPS, &frame->buffer_global_light);
+		Resource_mapBufferMemory(renderer->ref_device,&frame->buffer_global_light);
 
-		Descriptor_UpdateBuffer(ctx,renderer->desc_set_globals[i],
+		Descriptor_UpdateBuffer(ctx,frame->desc_set_globals,
 			BINDING_GLOBAL_LIGHT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			f->buffer_global_light.handle,f->buffer_global_light.size,0);
+			frame->buffer_global_light.handle,frame->buffer_global_light.size,0);
 
 		Resource_CreateBuffer(renderer->ref_device,sizeof(struct InstanceData) * MAX_INSTANCES,
-			BUFFER_SSBO_USAGE, BUFFER_SSBO_PROPS, &f->buffer_instances);
-		Resource_mapBufferMemory(renderer->ref_device,&f->buffer_instances);
+			BUFFER_SSBO_USAGE, BUFFER_SSBO_PROPS, &frame->buffer_instances);
+		Resource_mapBufferMemory(renderer->ref_device,&frame->buffer_instances);
 
-		Descriptor_UpdateBuffer(ctx,renderer->desc_set_instances[i], 0,
+		Descriptor_UpdateBuffer(ctx,frame->desc_set_instances, 0,
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-			f->buffer_instances.handle,f->buffer_instances.size,0
+			frame->buffer_instances.handle,frame->buffer_instances.size,0
 		
 		);
 
@@ -616,8 +622,8 @@ static void renderMainPass(struct Renderer* renderer,
 		VK_INDEX_TYPE_UINT32);
 
 	VkDescriptorSet dset[4] = {
-		renderer->desc_set_globals[frame_index],
-		renderer->desc_set_instances[frame_index],
+		frame->desc_set_globals,
+		frame->desc_set_instances,
 		renderer->desc_set_materials,
 		renderer->desc_set_samplers,
 	};

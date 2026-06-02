@@ -37,8 +37,10 @@ void Descriptor_Init(struct Descriptor_InitInfo *info, struct DescriptorContext 
 		(VkDescriptorPoolSize){
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.descriptorCount = MAX_TEXTURES},
+		
 		(VkDescriptorPoolSize){.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT * 3},
+		
 		(VkDescriptorPoolSize){.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.descriptorCount =
 				MAX_FRAMES_IN_FLIGHT * MAX_INSTANCES + MAX_MATERIALS},

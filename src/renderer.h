@@ -37,8 +37,13 @@ struct FrameData {
 
 
 
-	VkDescriptorSet desc_sets[16];
-	uint32_t desc_sets_len;
+	// VkDescriptorSet desc_sets[16];
+	// uint32_t desc_sets_len;
+
+
+	VkDescriptorSet desc_set_globals;
+
+	VkDescriptorSet desc_set_instances;
 	
 	struct Buffer buffer_global;
 	struct Buffer buffer_global_camera;
@@ -66,17 +71,15 @@ struct Renderer {
 	
 	struct Pipeline_State pipeline;
 
-	VkDescriptorSet desc_set_globals[MAX_FRAMES_IN_FLIGHT];
 
-	VkDescriptorSet desc_set_instances[MAX_FRAMES_IN_FLIGHT];
 	VkDescriptorSet desc_set_materials;
 	VkDescriptorSet desc_set_samplers;
 
 
-	VkDescriptorSet desc_set_globals_2;
-	VkDescriptorSet desc_set_instances_2;
-	VkDescriptorSet desc_set_materials_2;
-	VkDescriptorSet desc_set_samplers_2;
+	// VkDescriptorSet desc_set_globals_2;
+	// VkDescriptorSet desc_set_instances_2;
+	// VkDescriptorSet desc_set_materials_2;
+	// VkDescriptorSet desc_set_samplers_2;
 	
 
 	struct FrameData frames[MAX_FRAMES_IN_FLIGHT];
@@ -84,7 +87,7 @@ struct Renderer {
 
 
 	
-	struct Buffer buffer_global;
+	// struct Buffer buffer_global;
 	
 	
 	

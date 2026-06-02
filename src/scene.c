@@ -57,7 +57,7 @@ void Scene_Init(struct Scene_Info * info, struct Scene* scene) {
 
 
 	camera_perspective_init(
-		&scene->camera_data[CAMERA_MAIN], 
+		&scene->camera_data, 
 		45.0, 0.1f, 100.0f,
 		(float)info->width / info->height, 
 		yaw, pitch, 
@@ -218,7 +218,7 @@ static void update_keys(
 	struct Scene* scene,
 	float dt
 ) {
-	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
+	struct CameraData* cam = &scene->camera_data;
 
 
 
@@ -282,7 +282,7 @@ static void update_camera(
 ) {
 
 	
-	struct CameraData* cam = &scene->camera_data[CAMERA_MAIN];
+	struct CameraData* cam = &scene->camera_data;
 
 
 	if(scene->ref_platform->cursor_state != GLFW_CURSOR_NORMAL)
@@ -370,5 +370,5 @@ void Scene_callback_FrameBuffer_Resize(void * scene,uint32_t w,uint32_t h){
 	s->global_data.framebuffer_size[1] = h;
 
 	
-	update_camera_perspective(&s->camera_data[CAMERA_MAIN],(float)w/h);
+	update_camera_perspective(&s->camera_data,(float)w/h);
 }

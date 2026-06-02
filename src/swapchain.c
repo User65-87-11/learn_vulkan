@@ -55,18 +55,18 @@ void Swapchain_Create(
 	sc->colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 	for (int i = 0; i < physicalDeviceSurfaceFormatCount; i++) {
-		printf("\tSurfaceFormat.format: %d\n", surfaceFormats[i].format);
 
 		if (surfaceFormats[i].format == VK_FORMAT_B8G8R8A8_SRGB) {
 
+			printf("\tSurfaceFormat.format: %d\n", surfaceFormats[i].format);
 			sc->surfaceFormat = surfaceFormats[i].format;
 		}
 	}
 
 	for (int i = 0; i < physicalDeviceSurfaceFormatCount; i++) {
-		printf("\tSurfaceFormat.colorSpace:%d\n", surfaceFormats[i].colorSpace);
 
 		if (surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+			printf("\tSurfaceFormat.colorSpace:%d\n", surfaceFormats[i].colorSpace);
 			sc->colorSpace = surfaceFormats[i].colorSpace;
 		}
 	}
@@ -86,9 +86,9 @@ void Swapchain_Create(
 	uint32_t presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
 	for (int i = 0; i < presentModeCount; i++) {
-		printf("\tpresent mode: %d\n", presentModes[i]);
 
 		if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+			printf("\tpresent mode: %d\n", presentModes[i]);
 			presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 		}
 	}
