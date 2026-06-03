@@ -158,7 +158,7 @@ static void create_Instance0(
 	GLM_VEC4_SET(material0->base_color_factor, 0.0, 0.0, 1.0, 0.5);
 
 	
-	struct Texture * texture0 = Renderer_NewTexture(
+	struct Image * texture0 = Renderer_NewTexture(
 		&app->renderer, 
 		image_png0, 
 		sizeof(image_png0)
@@ -183,7 +183,7 @@ static void create_Instance0(
 		// Descriptor_SetTextureToDescriptorInfoArray(context,texture0->image.view, texture0->sampler,i);
 
 		Descriptor_UpdateTextureDescriptors(context,
-			app->renderer.desc_set_textures, 0, texture0->image.view, i);
+			app->renderer.desc_set_textures, 0, texture0->view, i);
 	}
 
 

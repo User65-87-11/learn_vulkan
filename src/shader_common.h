@@ -127,3 +127,10 @@ struct GlobalData {
     uint instance_cnt; 
 
 } ;
+
+
+struct CommonData{
+	struct CameraData camera;
+	struct LightData light;
+	struct GlobalData global;
+};
