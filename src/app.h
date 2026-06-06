@@ -1,17 +1,20 @@
 #pragma once
 #include "input.h"
-#include "renderer.h"
-#include "scene.h"
+// #include "renderer.h"
+// #include "scene.h"
 #include "descriptor.h"
 #include "device2.h"
 #include "instance.h"
 #include "platform.h"
+#include "mess.h"
 
 struct ApplicationContext {
-	struct DescriptorContext descriptor;
 	struct Device_State device;
-	struct Renderer renderer;
-	struct Scene scene;
+	
+	// struct DescriptorContext descriptor;
+	// struct Renderer renderer;
+	// struct Scene scene;
+	
 	struct Instance_State instance;
 	struct Platform_State platform;
 
@@ -19,8 +22,9 @@ struct ApplicationContext {
 	struct Input_Backend input_backend;
 
 
-	struct Platform_callback  callbacks[2];
-	
+
+
+	struct Mess mess;
 	
 };
 

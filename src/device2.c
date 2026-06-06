@@ -5,7 +5,7 @@
 #include "device2.h"
 #include "instance.h"
 #include "platform.h"
-#include "util/common.h"
+#include "common.h"
 
 
 static void createPhysicalDevice(

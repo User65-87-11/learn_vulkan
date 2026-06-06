@@ -37,6 +37,8 @@ layout(location = 1) out vec3 out_norm;
 
 layout(location = 2) out flat uint out_instance_idx;
 
+layout(location = 3) out vec3 out_local_pos;
+
 mat4 get_proj() {
 	float fov = radians(45.0);
     float aspect = 16.0 / 9.0;
@@ -78,11 +80,14 @@ void main() {
 
  
     gl_Position = camera.view_proj * world_pos;
-  
+
+    
 
     out_texCoord = in_texCoord;
 
     out_norm = in_norm;
 
     out_instance_idx = gl_InstanceIndex;
+
+    out_local_pos = in_position;
 }

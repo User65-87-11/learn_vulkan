@@ -7,12 +7,13 @@
 #include "device2.h"
 #include "input.h"
 #include "instance.h"
+#include "mess.h"
 #include "platform.h"
-#include "renderer.h"
-#include "scene.h"
+// #include "renderer.h"
+// #include "scene.h"
 #include "shader_common.h"
-#include "util/common.h"
-#include <stdlib.h>
+#include "common.h"
+
 
 struct ApplicationContext app_info;
 
@@ -54,18 +55,20 @@ static void mainLoop() {
 	}
 
 
-	app_info.callbacks[0].callback_resize = Scene_callback_FrameBuffer_Resize;
-	app_info.callbacks[0].dst = &app_info.scene;
+	// app_info.callbacks[0].callback_resize = Scene_callback_FrameBuffer_Resize;
+	// app_info.callbacks[0].dst = &app_info.scene;
 
-	app_info.callbacks[1].callback_resize = Renderer_callback_FrameBuffer_Resize;
-	app_info.callbacks[1].dst = &app_info.renderer;
+	// app_info.callbacks[1].callback_resize = Renderer_callback_FrameBuffer_Resize;
+	// app_info.callbacks[1].dst = &app_info.renderer;
 	
-
+	
+	
+	
 	
 	struct Plaftorm_info platform_info = {
 		.ref_inst = &app_info.instance,
-		.callback_resize = app_info.callbacks,
-		.collback_cnt = ARR_LEN(app_info.callbacks),
+		// .callback_resize = app_info.callbacks,
+		// .collback_cnt = ARR_LEN(app_info.callbacks),
 		.width = WIDTH,
 		.height = HEIGHT,
 		.cursor_state = GLFW_CURSOR_DISABLED
@@ -121,67 +124,25 @@ static void mainLoop() {
 
 	
 
+	Mess_Init(
+		&app_info.device, 
+		&app_info.input, 
+		&app_info.input_backend,
+		&app_info.platform, 
+		&app_info.mess
+	);
 
-	struct Descriptor_InitInfo descriptor_info={
-		.device_ref = &app_info.device
-	};
-	Descriptor_Init(&descriptor_info,&app_info.descriptor);
 
-	uint32_t width,height;
- 	Platform_GetFramebufferSize(&app_info.platform,&width,&height);
-
-	struct Scene_Info scene_info = {
-		.ref_device = &app_info.device, 
-		.ref_input = &app_info.input,
-		.ref_platform = &app_info.platform,
-		.width = width,
-		.height = height
-	};
-
-	Scene_Init(&scene_info,&app_info.scene);
-
-	struct Renderer_info   renderer_info = {
-		.ref_device = &app_info.device,
-		.ref_instance = &app_info.instance,
-		.ref_descriptor = &app_info.descriptor,
-		.ref_platform = &app_info.platform,
-		.ref_scene = &app_info.scene
-	};
+	Asset0_init(&app_info.mess);
 	
-	Renderer_Init(&renderer_info,&app_info.renderer);
+	Mess_Proc(&app_info.mess);
 
+	Mess_Clean(&app_info.mess);
+	// Swapchain_Destroy(&app_info.renderer.swapchain);
 
-	Asset0_init(&app_info);
+	// Renderer_Destroy(&app_info.renderer);
 
-	int running = 1;
-
-	double lastTime = Platform_GetTime(&app_info.platform);
-
-	while (running) {
-
-		double currentTime = Platform_GetTime(&app_info.platform);
-		float dt = (float)(currentTime - lastTime);
-		lastTime = currentTime;
-
-		Platform_PollEvents(&app_info.platform);
-
-		Input_Update(&app_info.input,&app_info.input_backend,dt);
-
-		Scene_Update(&app_info.scene, dt);
-
-		Renderer_Render(
-			&app_info.renderer, currentTime, dt);
-
-		if (Platform_ShouldCloseWindow(&app_info.platform)) {
-			running = 0;
-		}
-	}
-
-	Swapchain_Destroy(&app_info.renderer.swapchain);
-
-	Renderer_Destroy(&app_info.renderer);
-
-	Descriptor_Destroy(&app_info.descriptor);
+	// Descriptor_Destroy(&app_info.descriptor);
 
 	Device_Destroy(&app_info.device);
 

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "common.h"
+#include "../common.h"
 #include "gm_array.h"
 
 

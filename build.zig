@@ -25,17 +25,12 @@ pub fn build(b: *std.Build) void {
        "src/instance.c",
        "src/loader/loader.c",
        "src/main2.c",
-       "src/pipeline.c",
        "src/platform.c",
-       "src/renderer.c",
        "src/resource.c",
-       "src/scene.c",
        "src/shader.c",
-       "src/swapchain.c",
+        "src/mess.c",
     },
-    .flags = &.{
-                "-std=c23",
-    }
+    .flags = &.{"-std=c23",}
     });
    
 	

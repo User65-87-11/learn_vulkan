@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <string.h>
 #include <sys/stat.h>
 #define GLFW_INCLUDE_VULKAN
@@ -13,9 +14,9 @@
 
 #include "app.h"
 #include "shader_common.h"
-#include "util/common.h"
+#include "common.h"
 #include "platform.h"
-#include "renderer.h"
+// #include "renderer.h"
 #include "instance.h"
 
 #ifdef _WIN32
@@ -140,7 +141,18 @@ int Platform_GetKey(void* window, int key){
 	
 	 return glfwGetKey((GLFWwindow*)window, key);
 }
-
+void Platform_setFrameResizeCallBack(
+	struct Platform_State * platform,
+	struct Platform_callback * callbacks,
+	uint32_t callback_num
+){
+	assert(callback_num <= 4);
+	for(int i=0;i<callback_num;i++)
+	{
+		platform->callback_resize[i] = callbacks[i];
+		platform->collback_cnt ++;
+	}
+}
 static void frameResizeCallback(GLFWwindow * window, int width, int height){
 	struct Platform_State * platform = glfwGetWindowUserPointer(window);
 //void (*callback)(void * window, uint32_t w,uint32_t h) 

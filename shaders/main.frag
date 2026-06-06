@@ -9,6 +9,8 @@ layout(location = 0) in vec2 texCoord;
 layout(location = 1) in vec3 normal;
 layout(location = 2) in flat uint instance_idx;
 
+layout(location = 3) in vec3 local_pos;
+
 //to the first color attachment
 layout(location = 0) out vec4 out_color;
 
@@ -41,9 +43,15 @@ layout(set = DESC_SET_SAMPLER, binding = 0) uniform sampler  sam;
 
 layout(set = DESC_SET_TEXTURES, binding = 0) uniform texture2D tex[MAX_TEXTURES];
 
+layout(set = DESC_SET_NOISE, binding = 0) uniform texture2D tex_noise;
+
 /*
 
 */
+float random(vec2 st, float time) {
+    // We add time to the dot product to change the pattern every frame
+    return fract(sin(dot(st.xy, vec2(12.9898, 78.233)) + time * 1.0) * 43758.5453);
+}
 
 void main() {
 
@@ -60,6 +68,27 @@ void main() {
 
     // uint material_idx = inst[idx].material_id;
 
+    // vec2 uv = local_pos.xy; 
+
+
+    
+    // float noise_value = texture(sampler2D(tex_noise, sam), uv).r;
+
+    // if (noise_value > 0.5) {
+    //         discard;
+    // }
+
+   // float slowTime = floor(global.time_total); 
+
+    float randVal = random(texCoord, 1);
+        
+   // float treshold = texture(sampler2D(tex_noise, sam), texCoord + vec2(global.time_total * 0.5)).r;
+
+    if (randVal > 0.1) {
+            discard;
+    }
+    
+    
     InstanceData inst = inst[instance_idx];
 
     uint material_idx = inst.material_idx;
@@ -74,6 +103,11 @@ void main() {
     if (mat.base_color_texture_idx != UNSET_VALUE)
     {
         texColor = texture(sampler2D(tex[mat.base_color_texture_idx], sam), texCoord);
+
+         if (texColor.r > 0.5) {
+                 discard;
+         }
+        
     }
     vec2 fb_size = global.framebuffer_size;
 

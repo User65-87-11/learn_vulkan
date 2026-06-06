@@ -1,7 +1,8 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
+
 #include "device2.h"
-#include "util/common.h"
+#include "common.h"
 #include "vertex.h"
 
 #define BUFFER_UBO_USAGE VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
@@ -42,6 +43,8 @@ struct Buffer {
 	VkBufferUsageFlags usage;
 };
 
+
+
 struct Image {
 	VkImage handle;
 	VkDeviceMemory memory;
@@ -52,18 +55,22 @@ struct Image {
 	uint32_t mip_levels;
 };
 
-struct Texture {
-	struct Image image;
-
+struct Sampler{
+	VkSampler handle;
 };
-void Resource_FreeSampler(struct Device_State * device,VkSampler sampler);
-void Resource_CreateBuffer(struct Device_State* device,
+
+void Resource_FreeSampler(struct Device_State * device,struct Sampler* sampler);
+
+void Resource_CreateBuffer(
+	struct Device_State * device,
 	VkDeviceSize size,
 	VkBufferUsageFlags usage,
 	VkMemoryPropertyFlags properties,
-	struct Buffer* out);
+	struct Buffer* out
+);
 
-void Resource_AppendToBuffer(struct Device_State* device,
+void Resource_AppendToBuffer(
+	struct Device_State* device,
 	struct Buffer* dest,
 	uint32_t dest_offset,
 	void* data,
@@ -82,7 +89,7 @@ void Resource_CreateImage(struct Device_State* device,
 	struct Image* out);
 
 
-void Resouce_createTextureSampler(struct Device_State * device,VkSampler* sampler);
+void Resouce_createSampler(struct Device_State * device,VkSampler* sampler);
 
 void Resource_CreateImageView(struct Device_State* device,
 	struct Image* img,
@@ -93,7 +100,7 @@ void Resource_CreateTexture(struct Device_State* device,
 	uint32_t width,
 	uint32_t height,
 	VkFormat format,
-	struct Texture* out);
+	struct Image* out);
 
 
 
@@ -120,4 +127,22 @@ void Resource_unmapBufferMemory(struct Device_State * device,struct Buffer* buff
 void Resource_FreeImage(struct Device_State * device,struct Image* image);
 
 
-void Resource_FreeTexture(struct Device_State * device,struct Texture* texture);
+void Resource_FreeTexture(struct Device_State * device,struct Image* texture);
+
+
+
+void Resource_AppendToIndexBuffer(
+	struct Device_State * device,
+	struct Buffer* buffer, 
+	uint32_t* indices, 
+	uint32_t indices_offset,
+	uint32_t indices_cnt
+);
+
+void Resource_AppendToVertexBuffer(
+	struct Device_State * device,
+	struct Buffer* buffer, 
+	struct Vertex* vertices, 
+	uint32_t vertices_offset,
+	uint32_t vertex_cnt
+);

@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
-#include "../util/common.h"
+#include "../common.h"
 #include "loader.h"
 #include "gltf_asset.h"
 
 #define CGLTF_IMPLEMENTATION
 #include "cgltf/cgltf.h"
 
-static void print_gltf(char* path);
+
 
 void Loader_LoadImageDataFromFile(char* path, struct ImageData* out) {
 

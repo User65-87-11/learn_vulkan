@@ -1,5 +1,6 @@
 #pragma once
 #include <stdio.h>
+#include <string.h>
 
 #include "cglm/cglm.h"
 #include "cglm/mat4.h"
@@ -16,6 +17,11 @@
 
 #define MAX_INDICES   300000
 
+#define MAX_ENTITIES 1024
+
+#define MAX_MESHES 512
+
+#define MAX_STATIC_CHILD_NODES 8
 
 // extern void cleanup();
 #define PRINT_FNAME printf("Call to: %s\n", __FUNCTION__)

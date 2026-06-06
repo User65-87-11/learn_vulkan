@@ -21,8 +21,3 @@ void Loader_LoadImageDataFromMemory(
 );
 
 void Loader_FreeImageData(struct ImageData* out);
-
-void Loader_LoadGLTF(
-    char* path, 
-    struct GltfAsset* asset
-);

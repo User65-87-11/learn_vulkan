@@ -59,6 +59,11 @@ void Platform_Init(struct Plaftorm_info *info, struct Platform_State* context);
 
 void Platform_WaitForEvents(struct Platform_State *info);
 
+void Platform_setFrameResizeCallBack(
+	struct Platform_State * platform,
+	struct Platform_callback * callbacks,
+	uint32_t callback_num
+);
 
 void Platform_Shutdown(struct Platform_State *info);
 

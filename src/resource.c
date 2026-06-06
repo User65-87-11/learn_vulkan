@@ -4,7 +4,7 @@
 #include <limits.h>
 #include "resource.h"
 #include "device2.h"
-#include "util/common.h"
+#include "common.h"
 #include "util/gm_array.h"
 #include "util/gm_list.h"
 #include "shader_common.h"
@@ -184,9 +184,9 @@ void Resource_FreeImage(struct Device_State * device,struct Image* image) {
 	}
 }
 
-void Resource_FreeTexture(struct Device_State * device,struct Texture* texture) {
+void Resource_FreeTexture(struct Device_State * device,struct Image* image) {
 
-	Resource_FreeImage(device,&texture->image);
+	Resource_FreeImage(device,image);
 
 	// if (texture->sampler != NULL) {
 
@@ -194,18 +194,21 @@ void Resource_FreeTexture(struct Device_State * device,struct Texture* texture) 
 	// 	texture->sampler = NULL;
 	// }
 }
-void Resource_FreeSampler(struct Device_State * device,VkSampler sampler){
+void Resource_FreeSampler(struct Device_State * device,struct Sampler * sampler){
 	// if (texture->sampler != NULL) {
 
-		vkDestroySampler(device->logical_device, sampler, NULL);
+		vkDestroySampler(device->logical_device, sampler->handle, NULL);
 		// texture->sampler = NULL;
 	// }
 }
 
-void Resource_CreateBuffer(struct Device_State * device,VkDeviceSize size,
+void Resource_CreateBuffer(
+	struct Device_State * device,
+	VkDeviceSize size,
 	VkBufferUsageFlags usage,
 	VkMemoryPropertyFlags properties,
-	struct Buffer* out) {
+	struct Buffer* out
+) {
 
 	out->usage = usage;
 	out->size = size;
@@ -272,7 +275,7 @@ void Resource_FreeBuffer(struct Device_State * device,struct Buffer* out) {
 	}
 }
 
-void Resouce_createTextureSampler(struct Device_State * device,VkSampler* sampler) {
+void Resouce_createSampler(struct Device_State * device,VkSampler* sampler) {
 	PRINT_FNAME;
 	
 	// VkPhysicalDevice physicalDevice = getPhysicalDevice();
@@ -285,7 +288,8 @@ void Resouce_createTextureSampler(struct Device_State * device,VkSampler* sample
 
 	VkSamplerCreateInfo samplerInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		.magFilter = VK_FILTER_LINEAR,
+		// .magFilter = VK_FILTER_LINEAR,
+		.magFilter = VK_FILTER_NEAREST,
 		.minFilter = VK_FILTER_LINEAR,
 
 		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
@@ -322,12 +326,14 @@ void Resource_unmapBufferMemory(struct Device_State * device,struct Buffer* buff
 	buffer->mapped = NULL;
 }
 
-void Resource_CreateTexture(struct Device_State * device,void* data,
+
+void Resource_CreateTexture(
+	struct Device_State * device, 
+	void* data,
 	uint32_t width,
 	uint32_t height,
 	VkFormat format,
-
-	struct Texture* out) {
+	struct Image* out) {
 
 	if (data == NULL) {
 		EXIT_CLEAN("NO IMAGE DATA");
@@ -335,7 +341,7 @@ void Resource_CreateTexture(struct Device_State * device,void* data,
 	
 	uint32_t w = width;
 	uint32_t h = height;
-	out->image.mip_levels = getMipmapLevels(device,w, h);
+	out->mip_levels = getMipmapLevels(device,w, h);
 
 	VkDeviceSize imageSize = w * h * 4;
 
@@ -346,25 +352,25 @@ void Resource_CreateTexture(struct Device_State * device,void* data,
 	memcpy(staging.mapped, data, imageSize);
 	Resource_unmapBufferMemory(device,&staging);
 
-	Resource_CreateImage(device,w, h, out->image.mip_levels, format,
+	Resource_CreateImage(device,w, h, out->mip_levels, format,
 		VK_IMAGE_TILING_OPTIMAL, IMAGE_TEXTURE_USAGE, IMAGE_TEXTURE_PROPS,
-		&out->image);
+		out);
 	VkCommandBuffer command = Device_beginSingleTimeCommands(device);
 
-	Resource_transitionImageLayout(device,command, &out->image.handle,
+	Resource_transitionImageLayout(device,command, &out->handle,
 		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
 		VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
-		out->image.mip_levels);
+		out->mip_levels);
 
-	copyBufferToImage(device,command, &staging.handle, &out->image.handle, w, h);
+	copyBufferToImage(device,command, &staging.handle, &out->handle, w, h);
 	generateMipmaps(device,
-		command, &out->image.handle, format, w, h, out->image.mip_levels);
+		command, &out->handle, format, w, h, out->mip_levels);
 
 	Device_endSingleTimeCommands(device,command);
 
 	Resource_FreeBuffer(device,&staging);
-	Resource_CreateImageView(device,&out->image, VK_IMAGE_ASPECT_COLOR_BIT);
+	Resource_CreateImageView(device,out, VK_IMAGE_ASPECT_COLOR_BIT);
 
 	// Resouce_createTextureSampler(device,&out->sampler);
 }
@@ -644,4 +650,42 @@ static void generateMipmaps(struct Device_State * device,
 	vkCmdPipelineBarrier2(command, &dependencyInfo);
 
 	// Resource_endSingleTimeCommands(device->transfer_cmd_buffer);
+}
+
+
+
+
+
+
+
+void Resource_AppendToVertexBuffer(
+	struct Device_State * device,
+	struct Buffer* buffer, 
+	struct Vertex* vertices, 
+	uint32_t vertices_offset,
+	uint32_t vertex_cnt
+){
+	Resource_AppendToBuffer(
+		device, 
+		buffer,
+		sizeof(struct Vertex) * vertices_offset, 
+		vertices,
+		sizeof(struct Vertex) * vertex_cnt);
+}
+
+
+void Resource_AppendToIndexBuffer(
+	struct Device_State * device,
+	struct Buffer* buffer, 
+	uint32_t* indices, 
+	uint32_t indices_offset,
+	uint32_t indices_cnt
+) {
+	PRINT_FNAME;
+	Resource_AppendToBuffer(
+		device, buffer,
+		sizeof(uint32_t) * indices_offset, 
+		indices,
+		sizeof(uint32_t) * indices_cnt
+	);
 }

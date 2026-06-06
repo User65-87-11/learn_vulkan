@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "device2.h"
-#include "util/common.h"
+#include "common.h"
 
 #ifdef _WIN32
 #include <direct.h>
