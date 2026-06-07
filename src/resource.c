@@ -540,6 +540,7 @@ static void generateMipmaps(struct Device_State * device,
 	// struct Device * device = Device_Get();
 	PRINT_FNAME;
 
+	if(mipLevels == 1) return;
 	// Resource_beginSingleTimeCommands(device->transfer_cmd_buffer);
 
 	int32_t mipWidth = texWidth;
