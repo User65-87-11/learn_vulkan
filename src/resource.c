@@ -3,7 +3,7 @@
 #include <string.h>
 #include <limits.h>
 #include "resource.h"
-#include "device2.h"
+#include "device.h"
 #include "common.h"
 #include "util/gm_array.h"
 #include "util/gm_list.h"
@@ -20,21 +20,7 @@ static void copyBufferOffset(struct Device_State * device,VkBuffer dstBuffer,
 	uint32_t srcOffset,
 	VkDeviceSize size);
 
-static void generateMipmaps(struct Device_State * device,VkCommandBuffer command,
-	VkImage* image,
-	VkFormat imageFormat,
-	int32_t texWidth,
-	int32_t texHeight,
-	uint32_t mipLevels);
 
-static void copyBufferToImage(struct Device_State * device,VkCommandBuffer command,
-	VkBuffer* buffer,
-	VkImage* image,
-	uint32_t width,
-	uint32_t height);
-
-
-static uint32_t getMipmapLevels(struct Device_State * device,uint32_t w, uint32_t h);
 
 static void copyBufferOffset(struct Device_State * device,VkBuffer dstBuffer,
 	uint32_t dstOffset,
@@ -111,14 +97,17 @@ void Resource_CreateImageView(struct Device_State * device,
 	vkCreateImageView(device->logical_device, &viewInfo, NULL, &image->view);
 }
 
-void Resource_CreateImage(struct Device_State * device,uint32_t width,
+void Resource_ImageAllocate(
+	struct Device_State * device,
+	uint32_t width,
 	uint32_t height,
 	uint32_t mip_levels,
 	VkFormat format,
 	VkImageTiling tiling,
 	VkImageUsageFlags usage,
 	VkMemoryPropertyFlags properties,
-	struct Image* out) {
+	struct Image* out
+) {
 		
 
 	VkImageCreateInfo imageCreateInfo = {
@@ -184,22 +173,12 @@ void Resource_FreeImage(struct Device_State * device,struct Image* image) {
 	}
 }
 
-void Resource_FreeTexture(struct Device_State * device,struct Image* image) {
 
-	Resource_FreeImage(device,image);
-
-	// if (texture->sampler != NULL) {
-
-	// 	vkDestroySampler(device->logical_device, texture->sampler, NULL);
-	// 	texture->sampler = NULL;
-	// }
-}
 void Resource_FreeSampler(struct Device_State * device,struct Sampler * sampler){
-	// if (texture->sampler != NULL) {
 
-		vkDestroySampler(device->logical_device, sampler->handle, NULL);
-		// texture->sampler = NULL;
-	// }
+
+	vkDestroySampler(device->logical_device, sampler->handle, NULL);
+
 }
 
 void Resource_CreateBuffer(
@@ -250,7 +229,7 @@ void Resource_CreateBuffer(
 	vkBindBufferMemory(device->logical_device, out->handle, out->memory, 0);
 }
 
-static uint32_t getMipmapLevels(struct Device_State * device,uint32_t w, uint32_t h) {
+uint32_t Resource_getMipmapLevels(struct Device_State * device,uint32_t w, uint32_t h) {
 	uint32_t max = w > h ? w : h;
 	uint32_t d = floor(log2(max));
 	d++;
@@ -325,57 +304,50 @@ void Resource_unmapBufferMemory(struct Device_State * device,struct Buffer* buff
 	vkUnmapMemory(device->logical_device, buffer->memory);
 	buffer->mapped = NULL;
 }
-
-
-void Resource_CreateTexture(
-	struct Device_State * device, 
+void Resouce_ImageSetData(
+	struct Device_State * device,
+	struct Image* img, 
 	void* data,
-	uint32_t width,
-	uint32_t height,
-	VkFormat format,
-	struct Image* out) {
-
-	if (data == NULL) {
-		EXIT_CLEAN("NO IMAGE DATA");
-	}
-	
-	uint32_t w = width;
-	uint32_t h = height;
-	out->mip_levels = getMipmapLevels(device,w, h);
-
-	VkDeviceSize imageSize = w * h * 4;
-
+	uint32_t data_size
+){
+	//should be commands instead
 	struct Buffer staging;
-	Resource_CreateBuffer(device,
-		imageSize, BUFFER_STAGING_USAGE, BUFFER_STAGING_PROPS, &staging);
+	Resource_CreateBuffer(
+		device,
+		data_size, 
+		BUFFER_STAGING_USAGE,
+	 	BUFFER_STAGING_PROPS, 
+		&staging
+	);
 	Resource_mapBufferMemory(device,&staging);
-	memcpy(staging.mapped, data, imageSize);
+	memcpy(staging.mapped, data, data_size);
 	Resource_unmapBufferMemory(device,&staging);
 
-	Resource_CreateImage(device,w, h, out->mip_levels, format,
-		VK_IMAGE_TILING_OPTIMAL, IMAGE_TEXTURE_USAGE, IMAGE_TEXTURE_PROPS,
-		out);
 	VkCommandBuffer command = Device_beginSingleTimeCommands(device);
 
-	Resource_transitionImageLayout(device,command, &out->handle,
-		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0,
-		VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_2_TRANSFER_BIT, VK_IMAGE_ASPECT_COLOR_BIT,
-		out->mip_levels);
-
-	copyBufferToImage(device,command, &staging.handle, &out->handle, w, h);
-	generateMipmaps(device,
-		command, &out->handle, format, w, h, out->mip_levels);
-
+	Resource_transitionImageLayout(device,command, 
+		&img->handle,
+		VK_IMAGE_LAYOUT_UNDEFINED, 
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+		0,
+		VK_ACCESS_2_TRANSFER_WRITE_BIT, 
+		VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_2_TRANSFER_BIT, 
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		img->mip_levels
+	);
+	Resouce_copyBufferToImage(device,command, 
+		&staging.handle, 
+		&img->handle, 
+		img->width, 
+		img->height
+	);
 	Device_endSingleTimeCommands(device,command);
-
 	Resource_FreeBuffer(device,&staging);
-	Resource_CreateImageView(device,out, VK_IMAGE_ASPECT_COLOR_BIT);
-
-	// Resouce_createTextureSampler(device,&out->sampler);
 }
 
-static void copyBufferToImage(struct Device_State * device,VkCommandBuffer command,
+void Resouce_copyBufferToImage(struct Device_State * device,
+	VkCommandBuffer command,
 	VkBuffer* buffer,
 	VkImage* image,
 	uint32_t width,
@@ -418,33 +390,6 @@ void Resource_transitionImageLayout(struct Device_State* device,
 	VkImageAspectFlagBits aspectFlags,
 	uint32_t mipLevels) {
 
-	// // beginSingleTimeCommands(&cmdBuffer);
-
-	// VkImageMemoryBarrier2 imageMemoryBarrier2 = {
-	//     .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-
-	// };
-
-	// VkImageMemoryBarrier imageMemoryBarriers = {
-	//     .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-	//     .oldLayout = oldLayout,
-	//     .newLayout = newLayout,
-
-	//     .image = *image,
-	//     .subresourceRange = {.aspectMask = aspectFlags,
-	//                         .baseMipLevel = 0,
-	//                         .levelCount = mipLevels,
-	//                         .baseArrayLayer = 0,
-	//                         .layerCount = 1},
-	//     .srcAccessMask = srcAccessMask,
-	//     .dstAccessMask = dstAccessMask,
-	// };
-
-	// vkCmdPipelineBarrier(cmdBuffer, srcStageMask, dstStageMask, 0, 0,
-	//                     (VkMemoryBarrier *)NULL, 0,
-	//                     (VkBufferMemoryBarrier *)NULL, 1,
-	//                     &imageMemoryBarriers);
-
 	{
 		VkImageMemoryBarrier2 beginBarrier = {
 
@@ -479,57 +424,11 @@ void Resource_transitionImageLayout(struct Device_State* device,
 
 		vkCmdPipelineBarrier2(cmdBuffer, &beginDepInfo);
 	}
-	// endSingleTimeCommands(cmdBuffer);
+
 }
 
-// VkCommandBuffer Resource_beginSingleTimeCommands(struct Device_State * device) {
 
-// 	VkCommandBuffer commandBuffer = createTransferCommandBuffer(device);
-
-// 	// vkResetCommandBuffer(commandBuffer, 0);
-
-// 	VkCommandBufferBeginInfo beginInfo = {
-// 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-// 		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-// 	};
-
-// 	vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-// 	return commandBuffer;
-// }
-
-// void Resource_endSingleTimeCommands(VkCommandBuffer commandBuffer) {
-
-// 	struct Device* device = Device_Get();
-// 	// VkDevice device = Device_Get()->device;
-
-// 	vkEndCommandBuffer(commandBuffer);
-
-// 	// VkPipelineStageFlags2 stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-
-// 	VkCommandBufferSubmitInfo buffersubmitInfo = {
-// 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-// 		.commandBuffer = commandBuffer};
-
-// 	VkSubmitInfo2 submitInfo2 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-// 		.commandBufferInfoCount = 1,
-// 		.pCommandBufferInfos = &buffersubmitInfo
-
-// 	};
-
-// 	vkResetFences(device->logical_device, 1, &device->transfer_fence);
-
-// 	vkQueueSubmit2(
-// 		device->transfer_queue, 1, &submitInfo2, device->transfer_fence);
-
-// 	vkWaitForFences(device->logical_device, 1, &device->transfer_fence, VK_TRUE,
-// 		UINT64_MAX);
-
-// 	vkFreeCommandBuffers(Device_Get()->logical_device,
-// 		Device_Get()->transfer_pool, 1, &commandBuffer);
-// }
-
-static void generateMipmaps(struct Device_State * device,
+void Resource_generateMipmaps(struct Device_State * device,
 	VkCommandBuffer command,
 	VkImage* image,
 	VkFormat imageFormat,

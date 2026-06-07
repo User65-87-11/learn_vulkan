@@ -9,6 +9,8 @@
 #include "shader.h"
 #include "shader_common.h"
 #include "common.h"
+#include "resource2.h"
+#include "vulkan/vulkan_core.h"
 
 
 
@@ -154,12 +156,13 @@ void Mess_Clean(
 		
 		Resource_FreeImage(ref->ref_device,&ref->gpu_objects.depth_image[i]);
 	}
-	Resource_FreeTexture(ref->ref_device,&ref->gpu_objects.texture0);
-	Resource_FreeTexture(ref->ref_device,&ref->gpu_objects.texture_noise0);
+	Resource2_FreeTexture(ref->ref_device,&ref->gpu_objects.img_texture0);
+	Resource2_FreeTexture(ref->ref_device,&ref->gpu_objects.img_texture_noise0);
+	Resource2_FreeTexture(ref->ref_device,&ref->gpu_objects.img_buffer_image0);
 	
 	for (int i = 0; i < ref->gpu_objects.texture_cnt; i++) {
 		struct Image texture = ref->gpu_objects.textures[i];
-		Resource_FreeTexture(ref->ref_device,&texture);
+		Resource2_FreeTexture(ref->ref_device,&texture);
 	}
 	ref->gpu_objects.texture_cnt =0;
 
@@ -180,6 +183,7 @@ void Mess_Clean(
 	vkDestroyDescriptorSetLayout(device, ref->Layout.materialLayout, NULL);
 	vkDestroyDescriptorSetLayout(device, ref->Layout.textureLayout, NULL);
 	vkDestroyDescriptorSetLayout(device, ref->Layout.noiseTextureLayout, NULL);
+	vkDestroyDescriptorSetLayout(device, ref->Layout.storageImageLayout, NULL);
 	vkDestroyDescriptorSetLayout(device, ref->Layout.samplerLayout, NULL);
 	
 	// Swapchain_Destroy(&app_info.renderer.swapchain);
@@ -319,7 +323,8 @@ static void Descriptor_Init(struct Mess *mess) {
 	uint32_t cnt_textures = MAX_TEXTURES ;
 	uint32_t cnt_noise_texture = 1;
 	uint32_t cnt_sampler = 1;
-	uint32_t max_sets = cnt_inst + cnt_glob + cnt_material + cnt_textures +cnt_sampler + cnt_noise_texture;
+	uint32_t cnt_buffer_image = 1;
+	uint32_t max_sets = cnt_inst + cnt_glob + cnt_material + cnt_textures +cnt_sampler + cnt_noise_texture + cnt_buffer_image;
 
 	VkDevice device = mess->ref_device->logical_device;
 	
@@ -335,6 +340,12 @@ static void Descriptor_Init(struct Mess *mess) {
 			.descriptorCount = MAX_TEXTURES 
 			+  1 // white noice texture
 		},
+
+		(VkDescriptorPoolSize){
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+			.descriptorCount = 1 
+		},
+		
 		
 		(VkDescriptorPoolSize){.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			.descriptorCount = MAX_FRAMES_IN_FLIGHT * 3},
@@ -356,14 +367,11 @@ static void Descriptor_Init(struct Mess *mess) {
 
 	VkResult result =
 		vkCreateDescriptorPool(device, &poolInfo, NULL,  &mess->Layout.pool);
+
+
+	// BINDING!!!!!!!!!!!!!
 	{
-		// VkDescriptorSetLayoutBinding globalBinding = {
-		// 	.binding = 0,
-		// 	.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		// 	.descriptorCount = 1,
-		// 	.stageFlags = VK_SHADER_STAGE_VERTEX_BIT |
-		// VK_SHADER_STAGE_FRAGMENT_BIT
-		// };
+
 
 		VkDescriptorSetLayoutBinding bindings[3] = {
 			{.binding = BINDING_GLOBAL_GLOBAL,
@@ -382,7 +390,8 @@ static void Descriptor_Init(struct Mess *mess) {
 				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.descriptorCount = 1,
 				.stageFlags =
-					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}};
+					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT}
+		};
 
 		VkDescriptorSetLayoutCreateInfo globalLayoutInfo = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -514,6 +523,29 @@ static void Descriptor_Init(struct Mess *mess) {
 			EXIT_CLEAN("vkCreateDescriptorSetLayout samplerBindings");
 		}
 	}
+	{
+		VkDescriptorSetLayoutBinding storageImageBinding  = {
+
+			.binding = 0,
+			.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+			.descriptorCount = 1,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+
+		};
+
+		VkDescriptorSetLayoutCreateInfo storageImageLayoutInfo = {
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = 1,
+			.pBindings = &storageImageBinding
+		};
+
+		VkResult res = vkCreateDescriptorSetLayout(
+			device, &storageImageLayoutInfo, NULL, &mess->Layout.storageImageLayout);
+
+		if (res != VK_SUCCESS) {
+			EXIT_CLEAN("vkCreateDescriptorSetLayout samplerBindings");
+		}
+	}
 }
 
 static void camera_perspective_init(
@@ -614,6 +646,7 @@ static void Buffers_Init(struct Mess * ref){
 
 	//dummy texture
 	{	
+		
 		uint32_t tex_data = 0xffffffff;
 		uint32_t tex_size = sizeof(tex_data);
 	
@@ -624,16 +657,58 @@ static void Buffers_Init(struct Mess * ref){
 			&ref->sets.set_textures,
 			1);
 	
-		Resource_CreateTexture(
+		Resource2_CreateTexture(
 			ref->ref_device,
 			&tex_data,
 			1,
 			1,
 			VK_FORMAT_R8G8B8A8_SRGB,
-			&ref->gpu_objects.texture0
+			&ref->gpu_objects.img_texture0
 		);
+		printf("here2 \n");
 	}
+	// buffer_image
+	{
 
+		uint32_t img_width = ref->width ;
+		uint32_t img_height = ref->height ;
+		uint32_t image_size = img_width * img_height;
+		uint32_t data_size = image_size * sizeof(float) * 2;
+		float  * data = malloc(data_size);
+	
+		for(int i=0; i < image_size ; i++){
+			data[i*2] = (float)rand() / (float)RAND_MAX;
+			data[i*2 + 1] = 1.0;
+		}
+	
+		Descriptor_Allocate(
+			ref->ref_device->logical_device,
+			ref->Layout.storageImageLayout, 
+			ref->Layout.pool, 
+			&ref->sets.set_buffer_image,
+			1);
+		printf("here5 \n");
+		Resource2_CreateImageBuffer(
+			ref->ref_device,
+			data,
+			data_size,
+			img_width,
+			img_height,
+			VK_FORMAT_R32G32_SFLOAT,
+			&ref->gpu_objects.img_buffer_image0
+		);
+	printf("here6 \n");
+		Descriptor_UpdateBufferImageDescriptors(
+			ref->ref_device->logical_device,
+			ref->sets.set_buffer_image,
+			0,
+			ref->gpu_objects.img_buffer_image0.view,
+			0);
+
+		free(data);
+
+			printf("here7 \n");
+	}
 	//noise texture
 	{	
 
@@ -649,21 +724,23 @@ static void Buffers_Init(struct Mess * ref){
 			&ref->sets.set_texture_noise,
 			1);
 	
-		Resource_CreateTexture(
+		Resource2_CreateTexture(
 			ref->ref_device,
 			temp_data.data,
 			temp_data.width,
 			temp_data.height,
 			VK_FORMAT_R8G8B8A8_SRGB,
-			&ref->gpu_objects.texture_noise0
+			&ref->gpu_objects.img_texture_noise0
 		);
 
 		Descriptor_UpdateTextureDescriptors(
 			ref->ref_device->logical_device,
 			ref->sets.set_texture_noise,
 			0,
-			ref->gpu_objects.texture_noise0.view,
+			ref->gpu_objects.img_texture_noise0.view,
 			0);
+
+		Loader_FreeImageData(&temp_data);
 	}
 	
 	for(int i=0;i<MAX_TEXTURES;i++){
@@ -673,7 +750,7 @@ static void Buffers_Init(struct Mess * ref){
 			ref->ref_device->logical_device,
 			ref->sets.set_textures,
 			0,
-			ref->gpu_objects.texture0.view,
+			ref->gpu_objects.img_texture0.view,
 			i);
 	}
 	
@@ -1052,7 +1129,8 @@ static void Pipeline_CreateGraphics( struct Mess * ref) {
 		ref->Layout.materialLayout, 
 		ref->Layout.textureLayout, 
 		ref->Layout.samplerLayout,
-		ref->Layout.noiseTextureLayout
+		ref->Layout.noiseTextureLayout,
+		ref->Layout.storageImageLayout
 	};
 
 	// pipe_info.descriptorSetLayouts = layouts;
@@ -1071,11 +1149,6 @@ static void Pipeline_CreateGraphics( struct Mess * ref) {
 			2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)},
 	};
 	
-	// pipe_info.vertexInputAttributeDescriptions = attributes;
-	// pipe_info.vertexInputAttributeDescriptions_cnt = ARR_LEN(attributes);
-	
-	// pipe_info.depthFormat = renderer->swapchain.depthFormat;
-	// pipe_info.colorFormat = renderer->swapchain.surfaceFormat;
 
 	
 
@@ -1125,21 +1198,7 @@ static void Pipeline_CreateGraphics( struct Mess * ref) {
 		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 	};
 
-	// VkVertexInputAttributeDescription vertexInputAttributeDescriptions[3];
 
-	// vertexInputAttributeDescriptions[0] = (VkVertexInputAttributeDescription){
-	// 	0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)};
-	
-	// vertexInputAttributeDescriptions[1] = (VkVertexInputAttributeDescription){
-	// 	1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)};
-	
-	// vertexInputAttributeDescriptions[2] = (VkVertexInputAttributeDescription){
-	// 	2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)};
-
-	// uint32_t vertexInputAttributeDescriptionsCount =
-	// 	ARR_LEN(vertexInputAttributeDescriptions);
-	// sizeof(vertexInputAttributeDescriptions) /
-	// (sizeof(VkVertexInputAttributeDescription));
 
 	VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -1199,7 +1258,7 @@ static void Pipeline_CreateGraphics( struct Mess * ref) {
 	VkPipelineColorBlendAttachmentState colorBlendAttachmentState[] = {
 
 		(VkPipelineColorBlendAttachmentState){
-			.blendEnable = VK_FALSE,
+			.blendEnable = VK_TRUE,
 
 			.colorWriteMask =
 				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
@@ -1280,7 +1339,7 @@ static void createDeapthImage(struct Mess * ref,
 	VkImageUsageFlags usage,
 	VkMemoryPropertyFlags properties
 ){
-
+	PRINT_FNAME;
 	VkCommandBuffer command = Device_beginSingleTimeCommands(ref->ref_device);
 		
 	for(int i=0;i < MAX_FRAMES_IN_FLIGHT ; i++){
@@ -1289,7 +1348,7 @@ static void createDeapthImage(struct Mess * ref,
 
 		Resource_FreeImage(ref->ref_device, &ref->gpu_objects.depth_image[i]);
 
-		Resource_CreateImage(ref->ref_device,width, height,
+		Resource_ImageAllocate(ref->ref_device,width, height,
 			1, // mip levels
 			ref->swapchain.depthFormat, 
 			VK_IMAGE_TILING_OPTIMAL,
@@ -1752,13 +1811,14 @@ static void renderMainPass(
 	vkCmdBindIndexBuffer(frame->commandBuffer, ref->gpu_objects.buffer_index.handle, 0,
 		VK_INDEX_TYPE_UINT32);
 
-	VkDescriptorSet dset[6] = {
+	VkDescriptorSet dset[7] = {
 		ref->sets.set_global[frame_index],
 		ref->sets.set_instance[frame_index],
 		ref->sets.set_material,
 		ref->sets.set_textures,
 		ref->sets.set_sampler,
 		ref->sets.set_texture_noise,
+		ref->sets.set_buffer_image
 	};
 
 	/*

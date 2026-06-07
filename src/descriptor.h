@@ -5,42 +5,9 @@
 
 #include "resource.h"
 #include "shader_common.h"
-#include "device2.h"
+#include "device.h"
 #include "vulkan/vulkan_core.h"
 
-// struct Descriptor_InitInfo{
-// 	struct Device_State* device_ref;
-// };
-// struct DescriptorContext {
-
-// 	struct Device_State* device_ref;
-	
-// 	VkDescriptorPool pool;
-
-// 	VkDescriptorSetLayout globalLayout;
-// 	VkDescriptorSetLayout instanceLayout;
-// 	VkDescriptorSetLayout materialLayout;
-// 	VkDescriptorSetLayout textureLayout;
-// 	VkDescriptorSetLayout samplerLayout;
-
-// 	// should work on load only
-// 	// VkDescriptorImageInfo descriptor_image_info_textures[MAX_TEXTURES];
-// 	// uint32_t descriptor_texture_last_used;
-// };
-
-// lifecycle
-// void Descriptor_Init(struct Descriptor_InitInfo *info, struct DescriptorContext * context);
-
-// void Descriptor_Destroy(struct DescriptorContext * context);
-
-// // pool control
-// void Descriptor_ResetPool(struct DescriptorContext * context);
-
-// // layouts access
-// struct DescriptorContext* Descriptor_GetContext(
-// 	);
-
-// allocation
 
 void Descriptor_Allocate(
 	VkDevice device, 
@@ -86,4 +53,12 @@ void Descriptor_UpdateImage(
 	VkDescriptorSet set,
 	uint32_t binding,
 	VkDescriptorImageInfo* imageInfo
+);
+
+void Descriptor_UpdateBufferImageDescriptors(
+	VkDevice device,
+	VkDescriptorSet descriptor_set,
+	uint32_t binding,
+	VkImageView view,
+	uint32_t offset
 );

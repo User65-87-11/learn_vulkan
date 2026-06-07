@@ -27,6 +27,7 @@ typedef uint32_t uint;
 #define DESC_SET_TEXTURES 3
 #define DESC_SET_SAMPLER 4
 #define DESC_SET_NOISE 5
+#define DESC_SET_STORAGE_IMAGE 6
 
 
 

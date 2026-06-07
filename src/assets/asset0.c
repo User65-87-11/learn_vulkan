@@ -6,6 +6,7 @@
 #include "../common.h"
 #include "../vertex.h"
 #include "../resource.h"
+#include "../resource2.h"
 #include "asset0.h"
 #include "../loader/loader.h"
 
@@ -253,7 +254,7 @@ struct Image* Assets_NewTexture(
 
 	struct Image* texture = &ref->gpu_objects.textures[ref->gpu_objects.texture_cnt++];
 	Loader_LoadImageDataFromMemory(data, size, &imageData);
-	Resource_CreateTexture(ref->ref_device,imageData.data, imageData.width, imageData.height,
+	Resource2_CreateTexture(ref->ref_device,imageData.data, imageData.width, imageData.height,
 		VK_FORMAT_R8G8B8A8_SRGB, texture);
 	Loader_FreeImageData(&imageData);
 	

@@ -6,20 +6,6 @@
 // #include "platform.h"
 #include "common.h"
 
-// static VkInstance instance = NULL;
-
-// static VkDebugUtilsMessengerEXT debugUtilsMessengerEXT = NULL;
-
-// #ifdef NDEBUG
-// const bool enableValidationLayers = false;
-// #else
-// const bool enableValidationLayers = true;
-// #endif
-
-// static uint32_t validationLayerCnt = 1;
-// static const char* validationLayers[] = {
-// 	"VK_LAYER_KHRONOS_validation",
-// };
 
 static VkBool32 debugCallback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -173,12 +159,6 @@ void Instance_Create(struct Instance_Into *info, struct Instance_State * instanc
 		instanceCreateInfo.ppEnabledLayerNames = info->validationLayers;
 	}
 
-	// if (vkCreateInstance(&instanceCreateInfo, NULL, &instance->instance) != VK_SUCCESS) {
-
-	// 	EXIT_CLEAN("vkCreateInstance failed");
-	// } else {
-	// 	printf("vkCreateInstance CREATED\n");
-	// }
 
 	VK_CHECK(vkCreateInstance(&instanceCreateInfo, NULL, &instance->instance));
 	

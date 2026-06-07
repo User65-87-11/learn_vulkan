@@ -4,7 +4,7 @@
 #include "app.h"
 #include "assets/asset0.h"
 #include "descriptor.h"
-#include "device2.h"
+#include "device.h"
 #include "input.h"
 #include "instance.h"
 #include "mess.h"

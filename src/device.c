@@ -2,7 +2,7 @@
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
-#include "device2.h"
+#include "device.h"
 #include "instance.h"
 #include "platform.h"
 #include "common.h"
@@ -238,11 +238,12 @@ static void physicalDeviceFeatureCheck(struct Device_CreateInfo * info ,struct D
 	
 	VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-
+		
 	};
 
 	VkPhysicalDeviceVulkan12Features features12 = {
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+		
 	};
 
 	VkPhysicalDeviceVulkan13Features features13 = {
@@ -282,6 +283,11 @@ static void physicalDeviceFeatureCheck(struct Device_CreateInfo * info ,struct D
 				if (next->features.vertexPipelineStoresAndAtomics) {
 					all_ok++;
 				}
+				if (next->features.fragmentStoresAndAtomics) {
+					all_ok++;
+				}
+			
+			
 			}
 
 			break;
@@ -329,7 +335,7 @@ static void physicalDeviceFeatureCheck(struct Device_CreateInfo * info ,struct D
 		}
 		next = next->pNext;
 	}
-	if (all_ok != 6) {
+	if (all_ok != 7) {
 
 		printf("supported :%d \n", all_ok);
 
@@ -440,6 +446,7 @@ static void createLogicalDevice(struct Device_CreateInfo *into ,struct Device_St
 
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 		.features.samplerAnisotropy = VK_TRUE,
+		.features.fragmentStoresAndAtomics = VK_TRUE,
 
 	};
 

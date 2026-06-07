@@ -1,7 +1,7 @@
 #pragma once
 #include <vulkan/vulkan_core.h>
 
-#include "device2.h"
+#include "device.h"
 #include "common.h"
 #include "vertex.h"
 
@@ -29,7 +29,14 @@
 #define IMAGE_TEXTURE_USAGE                                                    \
 	VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |             \
 		VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+		
 #define IMAGE_TEXTURE_PROPS VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+
+
+#define IMAGE_BUF_IMAGE_USAGE						\
+	VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+	
+#define IMAGE_BUF_IMAGE_PROPS VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 
 #define BUFFER_DATA_GLOBAL_SIZE  1024*4
 
@@ -78,7 +85,7 @@ void Resource_AppendToBuffer(
 
 void Resource_FreeBuffer(struct Device_State* device, struct Buffer* buffer);
 
-void Resource_CreateImage(struct Device_State* device,
+void Resource_ImageAllocate(struct Device_State* device,
 	uint32_t width,
 	uint32_t height,
 	uint32_t mip_levels,
@@ -88,6 +95,7 @@ void Resource_CreateImage(struct Device_State* device,
 	VkMemoryPropertyFlags properties,
 	struct Image* out);
 
+void Resouce_ImageSetData(struct Device_State * device,struct Image* img, void* data,uint32_t data_size);
 
 void Resouce_createSampler(struct Device_State * device,VkSampler* sampler);
 
@@ -95,14 +103,24 @@ void Resource_CreateImageView(struct Device_State* device,
 	struct Image* img,
 	VkImageAspectFlagBits aspectFlags);
 
-void Resource_CreateTexture(struct Device_State* device,
-	void* pixel_data,
+uint32_t Resource_getMipmapLevels(struct Device_State * device,uint32_t w, uint32_t h);
+
+
+void Resource_generateMipmaps(struct Device_State * device,
+	VkCommandBuffer command,
+	VkImage* image,
+	VkFormat imageFormat,
+	int32_t texWidth,
+	int32_t texHeight,
+	uint32_t mipLevels);
+
+
+void Resouce_copyBufferToImage(struct Device_State * device,
+	VkCommandBuffer command,
+	VkBuffer* buffer,
+	VkImage* image,
 	uint32_t width,
-	uint32_t height,
-	VkFormat format,
-	struct Image* out);
-
-
+	uint32_t height);
 
 void Resource_transitionImageLayout(struct Device_State* device,
 	VkCommandBuffer cmdBuffer,
@@ -126,8 +144,6 @@ void Resource_unmapBufferMemory(struct Device_State * device,struct Buffer* buff
 
 void Resource_FreeImage(struct Device_State * device,struct Image* image);
 
-
-void Resource_FreeTexture(struct Device_State * device,struct Image* texture);
 
 
 

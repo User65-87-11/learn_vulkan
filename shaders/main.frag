@@ -42,6 +42,11 @@ layout(set = DESC_SET_SAMPLER, binding = 0) uniform sampler  sam;
 
 layout(set = DESC_SET_NOISE, binding = 0) uniform texture2D tex_noise;
 
+
+layout(set = DESC_SET_STORAGE_IMAGE, binding = 0,rg32f) uniform image2D  fragment_state;
+
+
+
 layout(set = DESC_SET_TEXTURES, binding = 0) uniform texture2D tex[MAX_TEXTURES];
 
 
@@ -50,14 +55,58 @@ float random(vec2 st, float time) {
     return fract(sin(dot(st.xy, vec2(12.9898, 78.233)) + time * 1.0) * 43758.5453);
 }
 
+
+/*
+ref->Layout.globalLayout, 
+		ref->Layout.instanceLayout,
+		ref->Layout.materialLayout, 
+		ref->Layout.textureLayout, 
+		ref->Layout.samplerLayout,
+		ref->Layout.noiseTextureLayout,
+		ref->Layout.storageImageLayout
+
+
+		#define DESC_SET_GLOBALS 0
+#define DESC_SET_INSTANCES 1
+#define DESC_SET_MATERIALS 2
+#define DESC_SET_TEXTURES 3
+#define DESC_SET_SAMPLER 4
+#define DESC_SET_NOISE 5
+#define DESC_SET_STORAGE_IMAGE 6
+
+*/
 void main() {
+
+
+
+	ivec2 coord = ivec2(gl_FragCoord.xy);
+	vec4 existing = imageLoad(fragment_state, coord);
+
+	float alpha_value = existing.x;
+
+	float direction = existing.y;
+
+	alpha_value = alpha_value + direction * 0.001;
+	
+	if(alpha_value >= 1.0){
+		alpha_value = 1.0;
+	    direction = -1.0;  
+		
+	}else if(alpha_value <= 0.0){
+		alpha_value = 0.0;
+	    direction = 1.0;   
+	}
+	existing.x = alpha_value;
+	existing.y = direction;
+	
+	imageStore(fragment_state, coord, existing);
 
    
    
-     float randVal = random(texCoord, global.time_total);
-    if (randVal > 0.1) {
-            discard;
-    }
+    // float randVal = random(texCoord, global.time_total);
+    // if (randVal > 0.1) {
+    //         discard;
+    // }
     
     
     InstanceData inst = inst[instance_idx];
@@ -75,9 +124,7 @@ void main() {
     {
         texColor = texture(sampler2D(tex[mat.base_color_texture_idx], sam), texCoord);
 
-         if (texColor.r > 0.5) {
-                 discard;
-         }
+     
         
     }
     vec2 fb_size = global.framebuffer_size;
@@ -109,4 +156,6 @@ void main() {
 	vec4 finalColor = mix(texColor, inst_color, color_factor);
 	
 	out_color = finalColor;
+
+	out_color.a = alpha_value;
 }

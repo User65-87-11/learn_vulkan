@@ -1,6 +1,6 @@
 #pragma once
 
-#include "device2.h"
+#include "device.h"
 #include "input.h"
 #include "platform.h"
 #include "resource.h"
@@ -64,6 +64,7 @@ struct Mess {
 		VkDescriptorSetLayout materialLayout;
 		VkDescriptorSetLayout textureLayout;
 		VkDescriptorSetLayout noiseTextureLayout;
+		VkDescriptorSetLayout storageImageLayout;
 		VkDescriptorSetLayout samplerLayout;
 
 	} Layout;
@@ -96,8 +97,9 @@ struct Mess {
 		struct Image textures [MAX_TEXTURES];
 		uint32_t texture_cnt;
 
-		struct Image texture0;
-		struct Image texture_noise0;
+		struct Image img_texture0;
+		struct Image img_texture_noise0;
+		struct Image img_buffer_image0;
 		
 	} gpu_objects;
 
@@ -107,6 +109,7 @@ struct Mess {
 		VkDescriptorSet set_material;
 		VkDescriptorSet set_textures;
 		VkDescriptorSet set_texture_noise;
+		VkDescriptorSet set_buffer_image;
 		VkDescriptorSet set_sampler;
 	} sets;
 

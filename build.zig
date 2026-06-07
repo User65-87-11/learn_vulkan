@@ -20,15 +20,17 @@ pub fn build(b: *std.Build) void {
 		"src/util/gm_list.c",
        "src/app.c",
        "src/descriptor.c",
-       "src/device2.c",
+       "src/device.c",
        "src/input.c",
        "src/instance.c",
        "src/loader/loader.c",
        "src/main2.c",
        "src/platform.c",
        "src/resource.c",
+       "src/resource2.c",
        "src/shader.c",
         "src/mess.c",
+     
     },
     .flags = &.{"-std=c23",}
     });
