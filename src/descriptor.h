@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "resource.h"
-#include "shader_common.h"
+#include "shader/common.h"
 #include "device.h"
 #include "vulkan/vulkan_core.h"
 

@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 #include "../descriptor.h"
-#include "../shader_common.h"
+#include "../shader/common.h"
 #include "../common.h"
 #include "../vertex.h"
 #include "../resource.h"

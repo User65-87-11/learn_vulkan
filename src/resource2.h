@@ -3,7 +3,7 @@
 
 #include "device.h"
 #include "common.h"
-#include "vertex.h"
+#include "mess.h"
 #include "resource.h"
 
 
@@ -30,4 +30,19 @@ void Resource2_CreateImageBuffer(
 	uint32_t height,
 	VkFormat format,
 	struct Image* out
+);
+
+
+
+
+void Resource2_createDeapthImage(
+	struct Device_State *device,
+	uint32_t width,
+	uint32_t height,
+	uint32_t mip_levels,
+	VkFormat format,
+	VkImageTiling tiling,
+	VkImageUsageFlags usage,
+	VkMemoryPropertyFlags properties,
+	struct Image * out
 );

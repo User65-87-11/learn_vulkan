@@ -1,0 +1,19 @@
+#ifndef __SHADERS__
+#pragma once
+#endif
+
+
+#define HUD_DESC_SET_GLOBALS 0
+#define HUD_DESC_SET_INSTANCES 1
+#define HUD_DESC_SET_MATERIALS 2
+#define HUD_DESC_SET_TEXTURES 3
+#define HUD_DESC_SET_SAMPLER 4
+
+
+
+
+
+
+#define HUD_BINDING_GLOBAL_GLOBAL 0
+#define HUD_BINDING_GLOBAL_CAMERA 1
+#define HUD_BINDING_GLOBAL_LIGHT 2

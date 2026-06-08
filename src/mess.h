@@ -1,12 +1,14 @@
 #pragma once
 
+#include <vulkan/vulkan_core.h>
+
 #include "device.h"
 #include "input.h"
 #include "platform.h"
 #include "resource.h"
-#include "shader_common.h"
+#include "shader/common.h"
 #include "common.h"
-#include "vulkan/vulkan_core.h"
+
 
 struct Pipeline_State {
 	// struct Device_State * ref_device;
@@ -16,7 +18,9 @@ struct Pipeline_State {
 
 	VkShaderModule vertexShader;
 	VkShaderModule fragmentShader;
-} ;
+};
+
+
 
 struct Frame {
 	VkCommandPool commandPool;
@@ -69,7 +73,8 @@ struct Mess {
 
 	} Layout;
 
-	struct Pipeline_State pipeline;
+	struct Pipeline_State pipeline_main;
+	
 	
 	struct Frame frame[MAX_FRAMES_IN_FLIGHT];
 

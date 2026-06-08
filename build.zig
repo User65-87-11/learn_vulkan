@@ -30,6 +30,8 @@ pub fn build(b: *std.Build) void {
        "src/resource2.c",
        "src/shader.c",
         "src/mess.c",
+        "src/pipelines/pipeline_main.c",
+        "src/pipelines/pipeline.c",
      
     },
     .flags = &.{"-std=c23",}

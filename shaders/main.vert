@@ -1,32 +1,33 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#include "shader_common.h"
+#include "shader/common.h"
+#include "shader/binding_main.h"
 
 layout(location = 0) in vec3 in_position;
 layout(location = 1) in vec3 in_norm;
 layout(location = 2) in vec2 in_texCoord;
 
-layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_GLOBAL) uniform Global
+layout(set = MAIN_DESC_SET_GLOBALS, binding = MAIN_BINDING_GLOBAL_GLOBAL) uniform Global
 {
     GlobalData global;
 };
 
-layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_CAMERA) uniform Global_Camera
+layout(set = MAIN_DESC_SET_GLOBALS, binding = MAIN_BINDING_GLOBAL_CAMERA) uniform Global_Camera
 {
     CameraData camera;
 };
-layout(set = DESC_SET_GLOBALS, binding = BINDING_GLOBAL_LIGHT) uniform Global_Lights
+layout(set = MAIN_DESC_SET_GLOBALS, binding = MAIN_BINDING_GLOBAL_LIGHT) uniform Global_Lights
 {
     LightData light;
 };
 
-layout(set = DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
+layout(set = MAIN_DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
 {
     InstanceData instance[];
 };
 
-layout(set = DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
+layout(set = MAIN_DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
 {
     MaterialData material[];
 };

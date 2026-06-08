@@ -11,7 +11,7 @@
 #include "platform.h"
 // #include "renderer.h"
 // #include "scene.h"
-#include "shader_common.h"
+#include "shader/common.h"
 #include "common.h"
 
 

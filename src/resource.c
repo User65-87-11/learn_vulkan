@@ -7,7 +7,7 @@
 #include "common.h"
 #include "util/gm_array.h"
 #include "util/gm_list.h"
-#include "shader_common.h"
+#include "shader/common.h"
 #include "vertex.h"
 
 // static void mapBufferMemory(struct Buffer *buffer) ;
@@ -267,8 +267,7 @@ void Resouce_createSampler(struct Device_State * device,VkSampler* sampler) {
 
 	VkSamplerCreateInfo samplerInfo = {
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		// .magFilter = VK_FILTER_LINEAR,
-		.magFilter = VK_FILTER_NEAREST,
+		.magFilter = VK_FILTER_LINEAR,
 		.minFilter = VK_FILTER_LINEAR,
 
 		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,

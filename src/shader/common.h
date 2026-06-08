@@ -9,7 +9,7 @@
 #include "cglm/util.h"
 
 
-#include "common.h"
+#include "../common.h"
 
 typedef uint32_t uint;
 
@@ -20,23 +20,9 @@ typedef uint32_t uint;
 
 
 
-
-#define DESC_SET_GLOBALS 0
-#define DESC_SET_INSTANCES 1
-#define DESC_SET_MATERIALS 2
-#define DESC_SET_TEXTURES 3
-#define DESC_SET_SAMPLER 4
-#define DESC_SET_NOISE 5
-#define DESC_SET_STORAGE_IMAGE 6
-
-
-
-#define BINDING_GLOBAL_GLOBAL 0
-#define BINDING_GLOBAL_CAMERA 1
-#define BINDING_GLOBAL_LIGHT 2
-
 #define MAX_MATERIALS 1
 #define MAX_TEXTURES 1
+#define MAX_HUD_TEXTURES 1
 #define MAX_INSTANCES 1024
 #define MAX_LIGHTS 1
 
@@ -75,8 +61,6 @@ struct InstanceData
     #endif
 
     uint material_idx;
- 
-
     
 }
 #ifndef __SHADERS__
@@ -98,6 +82,26 @@ struct MaterialData {
 	uint metallic_roughness_texture_idx;
 };
 
+
+
+struct Camera2DData {
+	#ifdef __SHADERS__
+    mat4 view;
+    mat4 proj;
+    mat4 view_proj;
+    #else
+    vec4 view[4];
+    vec4 proj[4];
+    vec4 view_proj[4];
+    #endif
+   
+
+    float ortho_size;
+}
+#ifndef __SHADERS__
+	__attribute__((aligned(32)))
+#endif
+;
 
 
 struct CameraData {
@@ -139,6 +143,7 @@ struct LightData {
     vec3 color;
     float color_factor;
 };
+
 
 
 

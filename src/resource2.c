@@ -146,3 +146,56 @@ void Resource2_FreeTexture(struct Device_State * device,struct Image* image) {
 	Resource_FreeImage(device,image);
 
 }
+
+
+
+void Resource2_createDeapthImage(
+	struct Device_State *device,
+	uint32_t width,
+	uint32_t height,
+	uint32_t mip_levels,
+	VkFormat format,
+	VkImageTiling tiling,
+	VkImageUsageFlags usage,
+	VkMemoryPropertyFlags properties,
+	struct Image * out
+){
+	PRINT_FNAME;
+	VkCommandBuffer command = Device_beginSingleTimeCommands(device);
+		
+	// for(int i=0;i < MAX_FRAMES_IN_FLIGHT ; i++)
+	{
+
+		// struct Frame * frame = &ref->frame[i];
+
+		Resource_FreeImage(device, out);
+
+		Resource_ImageAllocate(device,width, height,
+			1, // mip levels
+			format, 
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+			out
+		);
+		
+		Resource_CreateImageView(
+		device,
+		out,
+			VK_IMAGE_ASPECT_DEPTH_BIT
+		);
+
+
+		Resource_transitionImageLayout(
+			device, 
+			command,
+			&out->handle, 
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, 0,
+			VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			VK_PIPELINE_STAGE_2_NONE,
+			VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+			VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	}
+	Device_endSingleTimeCommands(device, command);
+}

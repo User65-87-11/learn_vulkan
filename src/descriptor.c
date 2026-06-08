@@ -5,7 +5,7 @@
 #include "descriptor.h"
 #include "device.h"
 #include "resource.h"
-#include "shader_common.h"
+#include "shader/common.h"
 #include "common.h"
 
 
