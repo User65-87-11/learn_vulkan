@@ -163,6 +163,12 @@ void main() {
 	
 		texColor = vec4(2.0, 0.0, 0.0, 1.0);
 	}
+
+	hpos.y +=50;
+	if ( draw_value(mat.base_color_factor.b  == 1.0? 1:0  , gl_FragCoord.xy,hpos , 0.4,16) ) {
+	
+		texColor = vec4(2.0, 0.0, 0.0, 1.0);
+	}
 	
 	vec4 inst_color = vec4(mat.base_color_factor.xyz, 1.0);
 	

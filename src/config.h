@@ -8,4 +8,7 @@
 #define HUD_SHADER_FRAG "shaders/out/hud.frag.spv"
 
 
+#define GRID_SHADER_VERT "shaders/out/grid.vert.spv"
+#define GRID_SHADER_FRAG "shaders/out/grid.frag.spv"
+
 #define DEFAULT_NOISE_TEXTURE "textures/grainy 5 - 512x512.png"

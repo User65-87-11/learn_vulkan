@@ -31,6 +31,7 @@ pub fn build(b: *std.Build) void {
        "src/shader.c",
         "src/mess.c",
         "src/pipelines/pipeline_main.c",
+        "src/pipelines/pipeline_grid.c",
         "src/pipelines/pipeline.c",
      
     },

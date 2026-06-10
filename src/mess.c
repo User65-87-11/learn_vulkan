@@ -3,6 +3,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "mess.h"
+#include "cglm/mat4.h"
 #include "config.h"
 #include "input.h"
 #include "loader/loader.h"
@@ -24,6 +25,8 @@ static const float pitch = 30.0f;
 
 static void Mess_Draw(struct Mess* ref);
 static void Mess_Update(struct Mess* ref);
+
+static void Descriptors_Allocate(struct Mess * ref);
 
 
 static void Free_CPU_Data(struct Mess* ref);
@@ -58,6 +61,11 @@ static void Swapchain_Create(
 
 );
 static void renderMainPass(
+	struct Mess * ref,
+	uint32_t frame_index,
+	uint32_t imageIndex);
+
+static void render_grid(
 	struct Mess * ref,
 	uint32_t frame_index,
 	uint32_t imageIndex);
@@ -104,6 +112,27 @@ static void createSyncObjects(struct Mess* ref) ;
 static void Descriptor_Init(struct Mess *mess);
 
 static void Free_CPU_Data(struct Mess* ref){
+
+	if(ref->cpu_data.mesh_cap > 0)
+	{
+		gm_free_aligned(ref->cpu_data.meshes);
+		ref->cpu_data.meshes = NULL;
+		ref->cpu_data.mesh_cap = 0; 
+	}
+
+	if(ref->cpu_data.material_cap > 0)
+	{
+		gm_free_aligned(ref->cpu_data.material_data);
+		ref->cpu_data.material_data = NULL;
+		ref->cpu_data.material_cap = 0; 
+	}
+
+	if(ref->cpu_data.instance_cap > 0)
+	{
+		gm_free_aligned(ref->cpu_data.instance_data);
+		ref->cpu_data.instance_data = NULL;
+		ref->cpu_data.instance_cap = 0; 
+	}
 	for(int i=0;i<ref->cpu_data.node_count;i++)
 	{
 		struct Scene_Node * node = &ref->cpu_data.nodes[i];
@@ -137,6 +166,7 @@ void Mess_Clean(
 	Pipeline_destory(ref->ref_device,&ref->pipeline_main);
 	
 
+	Pipeline_destory(ref->ref_device,&ref->pipeline_grid);
 
 
 	
@@ -208,6 +238,21 @@ void Mess_Init(
 	ref->ref_input = input;
 	ref->ref_device = device;
 	ref->ref_backend= input_back;
+
+	ref->cpu_data.mesh_cap = MAX_MESHES;
+	ref->cpu_data.mesh_count = 0;
+	ref->cpu_data.meshes = gm_alloc_aligned(ref->cpu_data.mesh_cap* sizeof(struct Mesh),32);
+	
+	 ref->cpu_data.instance_cap = MAX_INSTANCES;
+	ref->cpu_data.instance_count = 0;
+	ref->cpu_data.instance_data = gm_alloc_aligned(ref->cpu_data.instance_cap * sizeof(struct InstanceData),32);
+
+	
+	 ref->cpu_data.material_cap = MAX_MATERIALS;
+	 ref->cpu_data.material_count = 0;
+	  ref->cpu_data.material_data = gm_alloc_aligned(ref->cpu_data.material_cap * sizeof(struct MaterialData),32);
+		
+
 	
 	struct Platform_callback callbacks[2];
 	callbacks[0].callback_resize = Scene_callback_FrameBuffer_Resize;
@@ -228,8 +273,10 @@ void Mess_Init(
 	{
 		vec3 pos0 = {2.0, -2.0f, -2.0f};
 
-		camera_perspective_init(&ref->cpu_data.camera_data, 45.0, 0.1f, 100.0f,
-			(float)ref->width / ref->height, yaw, pitch, pos0);
+		camera_perspective_init(
+			&ref->cpu_data.camera_data, 45.0, 0.1f, 100.0f,
+			(float)ref->width / ref->height, yaw, pitch, pos0
+		);
 
 		ref->cpu_data.global_data.frame_cnt = 0x88;
 		ref->cpu_data.global_data.framebuffer_size[0] = ref->width;
@@ -259,8 +306,11 @@ void Mess_Init(
 
 	Buffers_Init(ref);
 
+	Descriptors_Allocate(ref);
+
 	Pipeline_Create_Main(ref);
-	// Pipeline_CreateGraphics(ref) ;
+	
+	Pipeline_Create_Grid(ref) ;
 }
 
 
@@ -279,6 +329,7 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 
 
 	
+	
 	glm_perspective_rh_no(
 		glm_rad(cam->fov),
 		cam->aspect_ratio, 
@@ -293,6 +344,12 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 		cam->view,
 		cam->view_proj
 	);
+
+	glm_mat4_dup(cam->view, cam->inv_view);
+	glm_mat4_inv(cam->inv_view, cam->inv_view);
+	
+	glm_mat4_dup(cam->proj, cam->inv_proj);
+	glm_mat4_inv(cam->inv_proj, cam->inv_proj);
 }
 
 
@@ -623,13 +680,8 @@ static void camera_perspective_init(
 }
 
 
-
-
-static void Buffers_Init(struct Mess * ref){
-
+static void Descriptors_Allocate(struct Mess * ref){
 	
-	Resouce_createSampler(ref->ref_device, &ref->gpu_objects.sampler.handle);
-
 	Descriptor_Allocate(
 		ref->ref_device->logical_device,
 		ref->Layout.samplerLayout,
@@ -644,6 +696,136 @@ static void Buffers_Init(struct Mess * ref){
 		0,
 		ref->gpu_objects.sampler.handle
 	);
+	Descriptor_Allocate(
+		ref->ref_device->logical_device,
+		ref->Layout.textureLayout, 
+		ref->Layout.pool, 
+		&ref->sets.set_textures,
+		1);
+
+	for(int i=0;i<MAX_TEXTURES;i++){
+	
+	
+		Descriptor_UpdateTextureDescriptors(
+			ref->ref_device->logical_device,
+			ref->sets.set_textures,
+			0,
+			ref->gpu_objects.img_texture0.view,
+			i);
+	}
+
+	Descriptor_Allocate(
+		ref->ref_device->logical_device,
+		ref->Layout.storageImageLayout, 
+		ref->Layout.pool, 
+		&ref->sets.set_buffer_image,
+		1);
+
+
+	Descriptor_UpdateBufferImageDescriptors(
+		ref->ref_device->logical_device,
+		ref->sets.set_buffer_image,
+		0,
+		ref->gpu_objects.img_buffer_image0.view,
+		0);
+
+	Descriptor_Allocate(
+		ref->ref_device->logical_device,
+		ref->Layout.textureLayout, 
+		ref->Layout.pool, 
+		&ref->sets.set_texture_noise,
+		1);
+
+	Descriptor_UpdateTextureDescriptors(
+		ref->ref_device->logical_device,
+		ref->sets.set_texture_noise,
+		0,
+		ref->gpu_objects.img_texture_noise0.view,
+		0);
+
+
+	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		struct Frame* frame = &ref->frame[i];
+		Descriptor_Allocate(
+			ref->ref_device->logical_device,
+			ref->Layout.globalLayout,
+			ref->Layout.pool,
+			&ref->sets.set_global[i],
+			1
+		);
+		Descriptor_UpdateBuffer(
+			ref->ref_device->logical_device,
+			ref->sets.set_global[i],
+			MAIN_BINDING_GLOBAL_GLOBAL, 
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			ref->gpu_objects.buffer_global[i].handle,
+			ref->gpu_objects.buffer_global[i].size,
+			0
+		);
+		
+		Descriptor_UpdateBuffer(
+			ref->ref_device->logical_device,
+			ref->sets.set_global[i],
+			MAIN_BINDING_GLOBAL_CAMERA, 
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			ref->gpu_objects.buffer_global_camera[i].handle,
+			ref->gpu_objects.buffer_global_camera[i].size,
+			0
+		);
+		Descriptor_UpdateBuffer(
+			ref->ref_device->logical_device,
+			ref->sets.set_global[i],
+			MAIN_BINDING_GLOBAL_LIGHT, 
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			ref->gpu_objects.buffer_global_light[i].handle,
+			ref->gpu_objects.buffer_global_light[i].size,
+			0
+		);
+
+		Descriptor_Allocate(
+			ref->ref_device->logical_device,
+			ref->Layout.instanceLayout,
+			ref->Layout.pool,
+			&ref->sets.set_instance[i],
+			1
+		);
+
+		Descriptor_UpdateBuffer(
+			ref->ref_device->logical_device,
+			ref->sets.set_instance[i], 
+			0,
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+			ref->gpu_objects.buffer_instances[i].handle,
+			ref->gpu_objects.buffer_instances[i].size,
+			0
+		
+		);
+	}
+
+	Descriptor_Allocate(
+		ref->ref_device->logical_device,
+		ref->Layout.materialLayout,
+		ref->Layout.pool,
+		&ref->sets.set_material,
+		1
+	);
+	
+	Descriptor_UpdateBuffer(
+		ref->ref_device->logical_device,
+		ref->sets.set_material,
+		0,
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
+		ref->gpu_objects.buffer_materials.handle,
+		ref->gpu_objects.buffer_materials.size,
+		0
+	);
+}
+
+static void Buffers_Init(struct Mess * ref){
+
+	
+	Resouce_createSampler(ref->ref_device, &ref->gpu_objects.sampler.handle);
+
 
 	//dummy texture
 	{	
@@ -651,12 +833,7 @@ static void Buffers_Init(struct Mess * ref){
 		uint32_t tex_data = 0xffffffff;
 		uint32_t tex_size = sizeof(tex_data);
 	
-		Descriptor_Allocate(
-			ref->ref_device->logical_device,
-			ref->Layout.textureLayout, 
-			ref->Layout.pool, 
-			&ref->sets.set_textures,
-			1);
+	
 	
 		Resource2_CreateTexture(
 			ref->ref_device,
@@ -683,13 +860,6 @@ static void Buffers_Init(struct Mess * ref){
 			data[i*4 + 2] = (float)rand() / (float)RAND_MAX;
 		}
 	
-		Descriptor_Allocate(
-			ref->ref_device->logical_device,
-			ref->Layout.storageImageLayout, 
-			ref->Layout.pool, 
-			&ref->sets.set_buffer_image,
-			1);
-	
 		Resource2_CreateImageBuffer(
 			ref->ref_device,
 			data,
@@ -699,14 +869,7 @@ static void Buffers_Init(struct Mess * ref){
 			VK_FORMAT_R32G32B32A32_SFLOAT,
 			&ref->gpu_objects.img_buffer_image0
 		);
-
-		Descriptor_UpdateBufferImageDescriptors(
-			ref->ref_device->logical_device,
-			ref->sets.set_buffer_image,
-			0,
-			ref->gpu_objects.img_buffer_image0.view,
-			0);
-
+	
 		free(data);
 
 		
@@ -719,12 +882,6 @@ static void Buffers_Init(struct Mess * ref){
 		// uint32_t tex_data = 0xffffffff;
 		// uint32_t tex_size = sizeof(tex_data);
 	
-		Descriptor_Allocate(
-			ref->ref_device->logical_device,
-			ref->Layout.textureLayout, 
-			ref->Layout.pool, 
-			&ref->sets.set_texture_noise,
-			1);
 	
 		Resource2_CreateTexture(
 			ref->ref_device,
@@ -734,27 +891,12 @@ static void Buffers_Init(struct Mess * ref){
 			VK_FORMAT_R8G8B8A8_SRGB,
 			&ref->gpu_objects.img_texture_noise0
 		);
-
-		Descriptor_UpdateTextureDescriptors(
-			ref->ref_device->logical_device,
-			ref->sets.set_texture_noise,
-			0,
-			ref->gpu_objects.img_texture_noise0.view,
-			0);
+	
 
 		Loader_FreeImageData(&temp_data);
 	}
 	
-	for(int i=0;i<MAX_TEXTURES;i++){
-	
-	
-		Descriptor_UpdateTextureDescriptors(
-			ref->ref_device->logical_device,
-			ref->sets.set_textures,
-			0,
-			ref->gpu_objects.img_texture0.view,
-			i);
-	}
+
 	
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		struct Frame* frame = &ref->frame[i];
@@ -766,26 +908,10 @@ static void Buffers_Init(struct Mess * ref){
 			BUFFER_UBO_PROPS, 
 			&ref->gpu_objects.buffer_global[i]
 		);
-		Descriptor_Allocate(
-			ref->ref_device->logical_device,
-			ref->Layout.globalLayout,
-			ref->Layout.pool,
-			&ref->sets.set_global[i],
-			1
-		);
 		Resource_mapBufferMemory(
 			ref->ref_device,&ref->gpu_objects.buffer_global[i]
 		);
 
-		Descriptor_UpdateBuffer(
-			ref->ref_device->logical_device,
-			ref->sets.set_global[i],
-			MAIN_BINDING_GLOBAL_GLOBAL, 
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			ref->gpu_objects.buffer_global[i].handle,
-			ref->gpu_objects.buffer_global[i].size,
-			0
-		);
 
 		Resource_CreateBuffer(
 			ref->ref_device,
@@ -800,16 +926,8 @@ static void Buffers_Init(struct Mess * ref){
 			ref->ref_device,
 			&ref->gpu_objects.buffer_global_camera[i]
 		);
+	
 
-		Descriptor_UpdateBuffer(
-			ref->ref_device->logical_device,
-			ref->sets.set_global[i],
-			MAIN_BINDING_GLOBAL_CAMERA, 
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			ref->gpu_objects.buffer_global_camera[i].handle,
-			ref->gpu_objects.buffer_global_camera[i].size,
-			0
-		);
 
 		Resource_CreateBuffer(
 			ref->ref_device,
@@ -823,15 +941,7 @@ static void Buffers_Init(struct Mess * ref){
 			&ref->gpu_objects.buffer_global_light[i]
 		);
 
-		Descriptor_UpdateBuffer(
-			ref->ref_device->logical_device,
-			ref->sets.set_global[i],
-			MAIN_BINDING_GLOBAL_LIGHT, 
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			ref->gpu_objects.buffer_global_light[i].handle,
-			ref->gpu_objects.buffer_global_light[i].size,
-			0
-		);
+	
 
 		Resource_CreateBuffer(
 			ref->ref_device,
@@ -840,29 +950,12 @@ static void Buffers_Init(struct Mess * ref){
 			&ref->gpu_objects.buffer_instances[i]
 		);
 
-		Descriptor_Allocate(
-			ref->ref_device->logical_device,
-			ref->Layout.instanceLayout,
-			ref->Layout.pool,
-			&ref->sets.set_instance[i],
-			1
-		);
 		
 		Resource_mapBufferMemory(
 			ref->ref_device,
 			&ref->gpu_objects.buffer_instances[i]
 		);
-
-		Descriptor_UpdateBuffer(
-			ref->ref_device->logical_device,
-			ref->sets.set_instance[i], 
-			0,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-			ref->gpu_objects.buffer_instances[i].handle,
-			ref->gpu_objects.buffer_instances[i].size,
-			0
-		
-		);
+	
 
 	}
 
@@ -888,28 +981,13 @@ static void Buffers_Init(struct Mess * ref){
 		&ref->gpu_objects.buffer_materials
 	);
 	
-	Descriptor_Allocate(
-		ref->ref_device->logical_device,
-		ref->Layout.materialLayout,
-		ref->Layout.pool,
-		&ref->sets.set_material,
-		1
-	);
-	
+
 	Resource_mapBufferMemory(
 		ref->ref_device,
 		&ref->gpu_objects.buffer_materials
 	);
 
-	Descriptor_UpdateBuffer(
-		ref->ref_device->logical_device,
-		ref->sets.set_material,
-		0,
-		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-		ref->gpu_objects.buffer_materials.handle,
-		ref->gpu_objects.buffer_materials.size,
-		0
-	);
+
 
 	Resource_CreateBuffer(
 		ref->ref_device,
@@ -1225,12 +1303,7 @@ void Mess_Draw(struct Mess* ref){
 
 	VK_CHECK(vkWaitForFences(
 		ref->ref_device->logical_device, 1, &frame->inFlightFence, VK_TRUE, UINT64_MAX));
-	// VkResult result = vkWaitForFences(
-	// 	renderer->ref_device->logical_device, 1, &frame->inFlightFence, VK_TRUE, UINT64_MAX);
 
-	// if (result != VK_SUCCESS) {
-	// 	EXIT_CLEAN("failed to wait for fence!");
-	// }
 	vkResetFences(ref->ref_device->logical_device, 1, &frame->inFlightFence);
 
 	writeBuffers(ref);
@@ -1255,7 +1328,7 @@ void Mess_Draw(struct Mess* ref){
 
 	// updateGameObjects(frame_index);
 
-	writeBuffers(ref);
+
 
 	recordCommandBuffer(ref, imageIndex, frame_index);
 
@@ -1389,20 +1462,36 @@ static void writeBuffers(
 	uint32_t frame_idx = ref->current_frame;
 	struct GPU_Objects * gpu_o = &ref->gpu_objects;
 	
-	memcpy(gpu_o->buffer_instances[frame_idx].mapped, ref->cpu_data.instance_data,
-		sizeof(struct InstanceData) * ref->cpu_data.instance_count);
+	memcpy(
+		gpu_o->buffer_instances[frame_idx].mapped, 
+		ref->cpu_data.instance_data,
+		sizeof(struct InstanceData) * ref->cpu_data.instance_count
+	);
 
-	memcpy(gpu_o->buffer_global[frame_idx].mapped, &ref->cpu_data.global_data,
-		sizeof(ref->cpu_data.global_data));
+	memcpy(
+		gpu_o->buffer_global[frame_idx].mapped, 
+		&ref->cpu_data.global_data,
+		sizeof(struct GlobalData)
+	);
 
-	memcpy(gpu_o->buffer_global_camera[frame_idx].mapped,&ref->cpu_data.camera_data,
-		sizeof(ref->cpu_data.camera_data));
+	memcpy(
+		gpu_o->buffer_global_camera[frame_idx].mapped,
+		&ref->cpu_data.camera_data,
+		sizeof(struct CameraData)
+	);
 
-	memcpy(gpu_o->buffer_global_light[frame_idx].mapped,&ref->cpu_data.light_data,
-		sizeof(ref->cpu_data.light_data));
+	memcpy(
+		gpu_o->buffer_global_light[frame_idx].mapped,
+		&ref->cpu_data.light_data,
+		sizeof(struct LightData)
+	);
 
-	memcpy(gpu_o->buffer_materials.mapped, &ref->cpu_data.material_data,
-		sizeof(ref->cpu_data.material_data));
+	memcpy(
+		gpu_o->buffer_materials.mapped, 
+		ref->cpu_data.material_data,
+		sizeof(struct MaterialData) * ref->cpu_data.material_count
+	);
+	
 }
 
 
@@ -1435,6 +1524,7 @@ static void recordCommandBuffer(
 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
+	render_grid(ref, frameIndex, imageIndex);
 	renderMainPass(ref, frameIndex, imageIndex);
 
 	Resource_transitionImageLayout(ref->ref_device,
@@ -1576,6 +1666,140 @@ static void renderMainPass(
 }
 
 
+
+static void render_grid(
+	struct Mess * ref,
+	uint32_t frame_index,
+	uint32_t imageIndex) {
+
+	VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+	VkClearValue clearDepth = {{{1.0f, 0}}};
+
+	struct Frame* frame = &ref->frame[frame_index];
+	struct GPU_Objects* gpu_o = &ref->gpu_objects;
+
+	VkRenderingAttachmentInfo colorAttachmentsInfos[] = {
+
+		colorAttachmentsInfos[0] =
+			(VkRenderingAttachmentInfo){
+
+				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+				.imageView = ref->swapchain.image_views[imageIndex],
+				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.clearValue = clearColor
+
+			}
+
+	};
+
+	VkRenderingAttachmentInfo depthAttachmentInfo = {
+		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+		.imageView = gpu_o->depth_image[frame_index].view,
+		.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		.clearValue = clearDepth};
+
+	VkRenderingInfo renderingInfo = {
+		.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+		.renderArea = 
+		{
+			.offset = {0, 0}, 
+			.extent = ref->swapchain.extent
+		},
+		.layerCount = 1,
+		.colorAttachmentCount = ARR_LEN(colorAttachmentsInfos),
+		.pColorAttachments = colorAttachmentsInfos,
+
+		.pDepthAttachment = &depthAttachmentInfo,
+	};
+
+	vkCmdBeginRendering(frame->commandBuffer, &renderingInfo);
+
+	VkViewport viewPort = {.x = 0,
+		.y = 0,
+		.width = ref->swapchain.extent.width,
+		.height = ref->swapchain.extent.height,
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f};
+
+	vkCmdSetViewport(frame->commandBuffer, 0, 1, &viewPort);
+
+	VkRect2D scissor = {.extent = ref->swapchain.extent, .offset = {0, 0}};
+	vkCmdSetScissor(frame->commandBuffer, 0, 1, &scissor);
+	
+	vkCmdBindPipeline(
+		frame->commandBuffer, 
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		ref->pipeline_grid.handle
+	);
+
+
+	VkDeviceSize offset = 0;
+
+	// vkCmdBindVertexBuffers(
+	// 	frame->commandBuffer, 0, 1, 
+	// 	&ref->gpu_objects.buffer_vertex.handle, &offset
+	// );
+	
+	// vkCmdBindIndexBuffer(
+	// 	frame->commandBuffer, 
+	// 	ref->gpu_objects.buffer_index.handle, 0,
+	// 	VK_INDEX_TYPE_UINT32
+	// );
+
+	VkDescriptorSet dset[] = {
+		ref->sets.set_global[frame_index],
+		// ref->sets.set_instance[frame_index],
+		// ref->sets.set_material,
+		// ref->sets.set_textures,
+		// ref->sets.set_sampler,
+		// ref->sets.set_texture_noise,
+		// ref->sets.set_buffer_image
+	};
+
+	/*
+	
+		#define DESC_SET_GLOBALS 0
+#define DESC_SET_INSTANCES 1
+#define DESC_SET_MATERIALS 2
+#define DESC_SET_TEXTURES 3
+#define DESC_SET_SAMPLER 4
+#define DESC_SET_NOISE 5
+	 */
+
+	vkCmdBindDescriptorSets(
+		frame->commandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		ref->pipeline_grid.layout, 0,
+		ARR_LEN(dset), dset, 0, NULL
+	);
+
+
+
+	vkCmdDraw(frame->commandBuffer, 3, 1, 0, 0);
+	// for (int i = 0; i < ref->cpu_data.mesh_count; i++) {
+
+
+	// 	struct Mesh* mesh = &ref->cpu_data.meshes[i];
+
+		
+	// 	vkCmdDrawIndexed(
+	// 		frame->commandBuffer,
+	// 		mesh->index_count, 
+	// 		mesh->instance_cnt, 
+	// 		mesh->index_offset, 
+	// 		mesh->vertex_offset,
+	// 		mesh->instance_offset
+	// 	);
+	// }
+	
+
+	vkCmdEndRendering(frame->commandBuffer);
+}
+
 void Mess_Proc(struct Mess* ref){
 
 	
@@ -1613,6 +1837,18 @@ void Mess_Update(struct Mess* ref){
 	update_keys(ref,  ref->time_delta);
 	
 	update_camera(ref,  ref->time_delta);
+
+ printf("inv_view[3]: %.2f %.2f %.2f %.2f\n",
+        ref->cpu_data.camera_data.inv_view[3][0],
+        ref->cpu_data.camera_data.inv_view[3][1],
+       ref->cpu_data.camera_data.inv_view[3][2],
+       ref->cpu_data.camera_data.inv_view[3][3]);
+
+
+ printf("inv_proj[2][2]: %.4f  inv_proj[3][2]: %.4f\n",
+     ref->cpu_data.camera_data.inv_proj[2][2],
+     ref->cpu_data.camera_data.inv_proj[3][2]);
+
 
 	ref->cpu_data.global_data.time_total = ref->time_last;
 }
@@ -1678,6 +1914,8 @@ if(Input_IsKeyDown(input, GLFW_KEY_S)){
 		glm_vec3_mulsubs(
 			cam->up, cameraSpeed, cam->pos);
 	}
+
+	printf("cam pos: %.2f %.2f %.2f\n", cam->pos[0], cam->pos[1], cam->pos[2]);
 }
 
 
@@ -1735,4 +1973,10 @@ static void update_camera(
 		cam->view,
 		cam->view_proj
 	);
+
+	glm_mat4_copy(cam->view, cam->inv_view);
+	glm_mat4_inv(cam->inv_view, cam->inv_view);
+	
+	glm_mat4_copy(cam->proj, cam->inv_proj);
+	glm_mat4_inv(cam->inv_proj, cam->inv_proj);
 }

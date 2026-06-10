@@ -1,0 +1,11 @@
+#ifndef __SHADERS__
+#pragma once
+#endif
+
+
+#define GRID_DESC_SET_GLOBALS 0
+
+
+#define GRID_BINDING_GLOBAL_GLOBAL 0
+#define GRID_BINDING_GLOBAL_CAMERA 1
+#define GRID_BINDING_GLOBAL_LIGHT 2

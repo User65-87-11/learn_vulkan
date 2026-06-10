@@ -1,63 +1,50 @@
-// Inputs
-uniform mat4 invViewProj;
-uniform vec3 cameraPos;
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_GOOGLE_include_directive : require
 
-in vec2 uv; // fullscreen quad UV [0..1]
+#include "shader/common.h"
+#include "shader/binding_grid.h"
 
-out vec4 FragColor;
 
-float gridLine(float coord, float scale, float thickness)
+
+
+layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_GLOBAL) uniform Global
 {
-    float v = abs(fract(coord / scale - 0.5) - 0.5) / fwidth(coord / scale);
-    return 1.0 - smoothstep(thickness, thickness + 1.0, v);
+    GlobalData global;
+};
+
+layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_CAMERA) uniform Global_Camera
+{
+    CameraData camera;
+};
+layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_LIGHT) uniform Global_Lights
+{
+    LightData light;
+};
+
+
+vec2 positions[3] = vec2[](
+    vec2(-1.0, -1.0),
+    vec2( 3.0, -1.0),
+    vec2(-1.0,  3.0)
+);
+
+layout(location = 0) out vec3 nearPoint;
+layout(location = 1) out vec3 farPoint;
+
+vec3 unprojectPoint(float x, float y, float z) {
+    mat4 viewInv = camera.inv_view;
+    mat4 projInv = camera.inv_proj;
+    vec4 unprojected = viewInv * projInv * vec4(x, y, z, 1.0);
+    return unprojected.xyz / unprojected.w;
 }
 
-void main()
-{
-    // Reconstruct world ray
-    vec2 ndc = uv * 2.0 - 1.0;
+void main() {
+    vec2 p = positions[gl_VertexIndex];
+    // Unproject near/far plane points into world space
+    nearPoint = unprojectPoint(p.x, p.y, -1.0); // near plane in GL NDC
+    farPoint  = unprojectPoint(p.x, p.y,  1.0); // far plane
+   gl_Position = vec4(p, 0.0, 1.0);
 
-    vec4 nearPoint = invViewProj * vec4(ndc, 0.0, 1.0);
-    vec4 farPoint  = invViewProj * vec4(ndc, 1.0, 1.0);
-
-    nearPoint /= nearPoint.w;
-    farPoint  /= farPoint.w;
-
-    vec3 rayDir = normalize(farPoint.xyz - nearPoint.xyz);
-
-    // Intersect with plane y = 0
-    float t = -cameraPos.y / rayDir.y;
-
-    // Behind camera
-    if (t <= 0.0)
-        discard;
-
-    vec3 worldPos = cameraPos + rayDir * t;
-
-    // Grid
-    float major = gridLine(worldPos.x, 1.0, 1.0);
-    major = max(major, gridLine(worldPos.z, 1.0, 1.0));
-
-    float minor = gridLine(worldPos.x, 0.1, 1.0);
-    minor = max(minor, gridLine(worldPos.z, 0.1, 1.0));
-
-    vec3 color = vec3(0.0);
-
-    color += vec3(0.15) * minor;
-    color += vec3(0.35) * major;
-
-    // Axes
-    if (abs(worldPos.x) < 0.01)
-        color = vec3(0.0, 0.0, 1.0); // Z axis
-
-    if (abs(worldPos.z) < 0.01)
-        color = vec3(1.0, 0.0, 0.0); // X axis
-
-    // Distance fade
-    float dist = length(worldPos - cameraPos);
-    float fade = exp(-dist * 0.03);
-
-    color *= fade;
-
-    FragColor = vec4(color, 1.0);
+   
 }

@@ -74,6 +74,10 @@ struct Mess {
 	} Layout;
 
 	struct Pipeline_State pipeline_main;
+
+	struct Pipeline_State pipeline_grid;
+	
+	struct Pipeline_State pipeline_hud;
 	
 	
 	struct Frame frame[MAX_FRAMES_IN_FLIGHT];
@@ -82,9 +86,6 @@ struct Mess {
 		struct Buffer buffer_global[MAX_FRAMES_IN_FLIGHT];
 		struct Buffer buffer_global_camera[MAX_FRAMES_IN_FLIGHT];
 		struct Buffer buffer_global_light[MAX_FRAMES_IN_FLIGHT];
-
-		
-
 		
 		struct Buffer buffer_instances[MAX_FRAMES_IN_FLIGHT];
 		struct Image depth_image[MAX_FRAMES_IN_FLIGHT];
@@ -106,9 +107,11 @@ struct Mess {
 		struct Image img_texture_noise0;
 		struct Image img_buffer_image0;
 		
-	} gpu_objects;
+	} gpu_objects, gpu_objects_hud;
 
-	struct Descriptor_Sets{
+	
+
+	struct Descriptor_Sets_1{
 		VkDescriptorSet set_global[MAX_FRAMES_IN_FLIGHT];
 		VkDescriptorSet set_instance[MAX_FRAMES_IN_FLIGHT];
 		VkDescriptorSet set_material;
@@ -116,23 +119,31 @@ struct Mess {
 		VkDescriptorSet set_texture_noise;
 		VkDescriptorSet set_buffer_image;
 		VkDescriptorSet set_sampler;
-	} sets;
+	} sets, sets_hud;
+
+	struct Descriptor_Sets_2{
+		VkDescriptorSet set_global[MAX_FRAMES_IN_FLIGHT];
+	} sets_grid;
+	
+
 
 	// struct DescriptorContext descriptor;
 	struct Swapchain swapchain;
 
 	struct CPU_Data {
 
-		struct Mesh meshes[MAX_MESHES];
-
+		struct Mesh * meshes;
+		uint32_t mesh_cap;
 		uint32_t mesh_count;
 
 		// struct CameraData camera;
 
-		struct MaterialData material_data[MAX_MATERIALS];
-		uint32_t material_count;
+		struct MaterialData*  material_data;
+		uint32_t material_cap;
 
-		struct InstanceData instance_data[MAX_INSTANCES];
+		uint32_t material_count;
+		struct InstanceData *instance_data;
+		uint32_t instance_cap;
 		uint32_t instance_count;
 
 		struct GlobalData global_data;
@@ -145,6 +156,7 @@ struct Mess {
 		uint32_t node_count;
 		
 	} cpu_data;
+
 
 	// struct Platform_callback callbacks[2];
 

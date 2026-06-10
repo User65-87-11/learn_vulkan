@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "../descriptor.h"
 #include "../shader/common.h"
@@ -139,10 +140,16 @@ static void create_Instance0(
 
 	struct MaterialData * material0 = Assets_NewMaterial(ref);
 	uint32_t material_idx = ref->cpu_data.material_count - 1;
+	printf("material_idx %d\n",material_idx);
 
 	
 	GLM_VEC4_SET(material0->base_color_factor, 0.0, 0.0, 1.0, 0.5);
-
+	printf("material0 %f %f %f %f \n",
+		material0->base_color_factor[0],
+		material0->base_color_factor[1],
+		material0->base_color_factor[2],
+		material0->base_color_factor[3]
+	);
 	
 	struct Image * texture0 = Assets_NewTexture(
 		ref, 
@@ -200,7 +207,7 @@ static void create_Instance0(
 
 
 struct Mesh* Assets_NewMesh(struct Mess* ref) {
-	assert(ref->cpu_data.mesh_count < MAX_MESHES);
+	assert(ref->cpu_data.mesh_count < ref->cpu_data.mesh_cap);
 	
 	ref->cpu_data.meshes[ref->cpu_data.mesh_count].instance_cnt =  UNSET_VALUE;
 	ref->cpu_data.meshes[ref->cpu_data.mesh_count].instance_offset =  UNSET_VALUE;
@@ -214,7 +221,8 @@ struct Mesh* Assets_GetMesh(struct Mess* ref, uint32_t position) {
 }
 
 struct MaterialData* Assets_NewMaterial(struct Mess* ref) {
-	assert(ref->cpu_data.material_count < MAX_MATERIALS);
+	assert(ref->cpu_data.material_count < ref->cpu_data.material_cap);
+	
 	ref->cpu_data.material_data[ref->cpu_data.material_count].base_color_texture_idx = UNSET_VALUE;
 	ref->cpu_data.material_data[ref->cpu_data.material_count].metallic_roughness_texture_idx = UNSET_VALUE;	
 	return &ref->cpu_data.material_data[ref->cpu_data.material_count++];
@@ -229,7 +237,7 @@ struct MaterialData* Assets_GetMaterial(struct Mess* ref, uint32_t position) {
 struct InstanceData* Assets_NewInstanceData(
 	struct Mess* ref
 ){
-	assert(ref->cpu_data.instance_count < MAX_INSTANCES);
+	assert(ref->cpu_data.instance_count < ref->cpu_data.instance_cap);
 	ref->cpu_data.instance_data[ref->cpu_data.instance_count].material_idx = UNSET_VALUE;
 	return &ref->cpu_data.instance_data[ref->cpu_data.instance_count++];
 }

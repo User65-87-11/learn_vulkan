@@ -21,6 +21,12 @@
 
 #define MAX_MESHES 512
 
+#define MAX_HUD_MESHES 16
+
+#define MAX_HUD_VERTICES 256
+
+#define MAX_HUD_INDICES 512
+
 #define MAX_STATIC_CHILD_NODES 8
 
 // extern void cleanup();
