@@ -40,7 +40,7 @@ vec3 unprojectPoint(float x, float y, float z) {
 
 void main() {
 	vec3 p = gridPlane[gl_VertexIndex];
-    // Z=0.0 is near plane, Z=1.0 is far plane in Vulkan [0,1]
+  
     nearPoint  = unprojectPoint(p.x, p.y, 0.0);
     farPoint   = unprojectPoint(p.x, p.y, 1.0);
 
