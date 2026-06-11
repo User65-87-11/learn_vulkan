@@ -130,8 +130,8 @@ struct CameraData {
     float _pad2;
     float fov;
 
-    float near_plane;
-    float far_plane;
+    float near;
+    float far;
     float aspect_ratio;
 
     float ortho_size;

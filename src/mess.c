@@ -2,6 +2,8 @@
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
+#define CGLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #include "mess.h"
 #include "cglm/mat4.h"
 #include "config.h"
@@ -63,12 +65,13 @@ static void Swapchain_Create(
 static void renderMainPass(
 	struct Mess * ref,
 	uint32_t frame_index,
-	uint32_t imageIndex);
+	uint32_t imageIndex
+);
 
 static void render_grid(
 	struct Mess * ref,
 	uint32_t frame_index,
-	uint32_t imageIndex);
+	uint32_t imageIndex );
 
 static void recordCommandBuffer(
 	struct Mess * mess,
@@ -330,11 +333,11 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 
 	
 	
-	glm_perspective_rh_no(
+	glm_perspective_rh_zo(
 		glm_rad(cam->fov),
 		cam->aspect_ratio, 
-		cam->near_plane,
-		cam->far_plane, 
+		cam->near,
+		cam->far, 
 		cam->proj
 	);
 	// cam->proj[1][1] *= -1.f;
@@ -620,8 +623,8 @@ static void camera_perspective_init(
 
 	
 	cam->fov = fov;
-	cam->near_plane = near_plane;
-	cam->far_plane = far_plane;
+	cam->near = near_plane;
+	cam->far = far_plane;
 	cam->aspect_ratio = aspect_ratio;
 
 	cam->yaw = yaw;
@@ -633,16 +636,16 @@ static void camera_perspective_init(
 	
 
 	GLM_VEC3_COPY(cam->pos, pos);
-	GLM_VEC3_SET(cam->up,0.0,1.0,0.0);
+	GLM_VEC3_SET(cam->up,0.0,-1.0,0.0);
 
 	printf("CAM: %f,%f,%f\n",cam->pos);
 
 
-	glm_perspective_rh_no(
+	glm_perspective_rh_zo(
 		glm_rad(cam->fov),
 		cam->aspect_ratio, 
-		cam->near_plane,
-		cam->far_plane, 
+		cam->near,
+		cam->far, 
 		cam->proj
 	);
 	
@@ -1524,29 +1527,12 @@ static void recordCommandBuffer(
 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 		VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
-	render_grid(ref, frameIndex, imageIndex);
-	renderMainPass(ref, frameIndex, imageIndex);
 
-	Resource_transitionImageLayout(ref->ref_device,
-		commandBuffer,
-		&ref->swapchain.images[imageIndex],
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-		0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-		// VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_2_NONE, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-	vkEndCommandBuffer(commandBuffer);
-}
-
-static void renderMainPass(
-	struct Mess * ref,
-	uint32_t frame_index,
-	uint32_t imageIndex) {
-
+	
 	VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 	VkClearValue clearDepth = {{{1.0f, 0}}};
 
-	struct Frame* frame = &ref->frame[frame_index];
+	// struct Frame* frame = &ref->frame[frame_index];
 	struct GPU_Objects* gpu_o = &ref->gpu_objects;
 
 	VkRenderingAttachmentInfo colorAttachmentsInfos[] = {
@@ -1558,6 +1544,7 @@ static void renderMainPass(
 				.imageView = ref->swapchain.image_views[imageIndex],
 				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				// .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.clearValue = clearColor
 
@@ -1567,9 +1554,10 @@ static void renderMainPass(
 
 	VkRenderingAttachmentInfo depthAttachmentInfo = {
 		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-		.imageView = gpu_o->depth_image[frame_index].view,
+		.imageView = gpu_o->depth_image[frameIndex].view,
 		.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+		// .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 		.clearValue = clearDepth};
 
@@ -1588,6 +1576,49 @@ static void renderMainPass(
 	};
 
 	vkCmdBeginRendering(frame->commandBuffer, &renderingInfo);
+	
+	render_grid(ref, frameIndex, imageIndex);
+
+	// Resource_transitionImageLayout(ref->ref_device,
+	// 		commandBuffer,
+	// 		&ref->swapchain.images[imageIndex], 
+	// 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	// 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0,
+	// 		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+	// 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+	// 		VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+	
+		
+	renderMainPass(ref, frameIndex, imageIndex);
+	
+	vkCmdEndRendering(frame->commandBuffer);
+
+	Resource_transitionImageLayout(ref->ref_device,
+		commandBuffer,
+		&ref->swapchain.images[imageIndex],
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+		0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+		// VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_2_NONE, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+	
+	vkEndCommandBuffer(commandBuffer);
+
+
+}
+
+static void renderMainPass(
+	struct Mess * ref,
+	uint32_t frame_index,
+	uint32_t imageIndex
+) {
+
+		struct Frame* frame = &ref->frame[frame_index];
+		
+
 
 	VkViewport viewPort = {.x = 0,
 		.y = 0,
@@ -1662,7 +1693,7 @@ static void renderMainPass(
 	}
 	
 
-	vkCmdEndRendering(frame->commandBuffer);
+
 }
 
 
@@ -1672,51 +1703,51 @@ static void render_grid(
 	uint32_t frame_index,
 	uint32_t imageIndex) {
 
-	VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-	VkClearValue clearDepth = {{{1.0f, 0}}};
+	// VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+	// VkClearValue clearDepth = {{{1.0f, 0}}};
 
 	struct Frame* frame = &ref->frame[frame_index];
 	struct GPU_Objects* gpu_o = &ref->gpu_objects;
 
-	VkRenderingAttachmentInfo colorAttachmentsInfos[] = {
+	// VkRenderingAttachmentInfo colorAttachmentsInfos[] = {
 
-		colorAttachmentsInfos[0] =
-			(VkRenderingAttachmentInfo){
+	// 	colorAttachmentsInfos[0] =
+	// 		(VkRenderingAttachmentInfo){
 
-				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-				.imageView = ref->swapchain.image_views[imageIndex],
-				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.clearValue = clearColor
+	// 			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+	// 			.imageView = ref->swapchain.image_views[imageIndex],
+	// 			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	// 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+	// 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+	// 			.clearValue = clearColor
 
-			}
+	// 		}
 
-	};
+	// };
 
-	VkRenderingAttachmentInfo depthAttachmentInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-		.imageView = gpu_o->depth_image[frame_index].view,
-		.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-		.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		.clearValue = clearDepth};
+	// VkRenderingAttachmentInfo depthAttachmentInfo = {
+	// 	.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+	// 	.imageView = gpu_o->depth_image[frame_index].view,
+	// 	.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+	// 	.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+	// 	.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+	// 	.clearValue = clearDepth};
 
-	VkRenderingInfo renderingInfo = {
-		.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-		.renderArea = 
-		{
-			.offset = {0, 0}, 
-			.extent = ref->swapchain.extent
-		},
-		.layerCount = 1,
-		.colorAttachmentCount = ARR_LEN(colorAttachmentsInfos),
-		.pColorAttachments = colorAttachmentsInfos,
+	// VkRenderingInfo renderingInfo = {
+	// 	.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+	// 	.renderArea = 
+	// 	{
+	// 		.offset = {0, 0}, 
+	// 		.extent = ref->swapchain.extent
+	// 	},
+	// 	.layerCount = 1,
+	// 	.colorAttachmentCount = ARR_LEN(colorAttachmentsInfos),
+	// 	.pColorAttachments = colorAttachmentsInfos,
 
-		.pDepthAttachment = &depthAttachmentInfo,
-	};
+	// 	.pDepthAttachment = &depthAttachmentInfo,
+	// };
 
-	vkCmdBeginRendering(frame->commandBuffer, &renderingInfo);
+	// vkCmdBeginRendering(frame->commandBuffer, &renderingInfo);
 
 	VkViewport viewPort = {.x = 0,
 		.y = 0,
@@ -1739,36 +1770,13 @@ static void render_grid(
 
 	VkDeviceSize offset = 0;
 
-	// vkCmdBindVertexBuffers(
-	// 	frame->commandBuffer, 0, 1, 
-	// 	&ref->gpu_objects.buffer_vertex.handle, &offset
-	// );
-	
-	// vkCmdBindIndexBuffer(
-	// 	frame->commandBuffer, 
-	// 	ref->gpu_objects.buffer_index.handle, 0,
-	// 	VK_INDEX_TYPE_UINT32
-	// );
 
 	VkDescriptorSet dset[] = {
 		ref->sets.set_global[frame_index],
-		// ref->sets.set_instance[frame_index],
-		// ref->sets.set_material,
-		// ref->sets.set_textures,
-		// ref->sets.set_sampler,
-		// ref->sets.set_texture_noise,
-		// ref->sets.set_buffer_image
+
 	};
 
-	/*
-	
-		#define DESC_SET_GLOBALS 0
-#define DESC_SET_INSTANCES 1
-#define DESC_SET_MATERIALS 2
-#define DESC_SET_TEXTURES 3
-#define DESC_SET_SAMPLER 4
-#define DESC_SET_NOISE 5
-	 */
+
 
 	vkCmdBindDescriptorSets(
 		frame->commandBuffer,
@@ -1780,24 +1788,9 @@ static void render_grid(
 
 
 	vkCmdDraw(frame->commandBuffer, 3, 1, 0, 0);
-	// for (int i = 0; i < ref->cpu_data.mesh_count; i++) {
 
 
-	// 	struct Mesh* mesh = &ref->cpu_data.meshes[i];
-
-		
-	// 	vkCmdDrawIndexed(
-	// 		frame->commandBuffer,
-	// 		mesh->index_count, 
-	// 		mesh->instance_cnt, 
-	// 		mesh->index_offset, 
-	// 		mesh->vertex_offset,
-	// 		mesh->instance_offset
-	// 	);
-	// }
-	
-
-	vkCmdEndRendering(frame->commandBuffer);
+	// vkCmdEndRendering(frame->commandBuffer);
 }
 
 void Mess_Proc(struct Mess* ref){
@@ -1838,16 +1831,16 @@ void Mess_Update(struct Mess* ref){
 	
 	update_camera(ref,  ref->time_delta);
 
- printf("inv_view[3]: %.2f %.2f %.2f %.2f\n",
-        ref->cpu_data.camera_data.inv_view[3][0],
-        ref->cpu_data.camera_data.inv_view[3][1],
-       ref->cpu_data.camera_data.inv_view[3][2],
-       ref->cpu_data.camera_data.inv_view[3][3]);
+ // printf("inv_view[3]: %+.2f %+.2f %.+2f %+.2f\n",
+ //        ref->cpu_data.camera_data.inv_view[3][0],
+ //        ref->cpu_data.camera_data.inv_view[3][1],
+ //       ref->cpu_data.camera_data.inv_view[3][2],
+ //       ref->cpu_data.camera_data.inv_view[3][3]);
 
 
- printf("inv_proj[2][2]: %.4f  inv_proj[3][2]: %.4f\n",
-     ref->cpu_data.camera_data.inv_proj[2][2],
-     ref->cpu_data.camera_data.inv_proj[3][2]);
+ // printf("inv_proj[2][2]: %.+4f  inv_proj[3][2]: %.+4f\n",
+ //     ref->cpu_data.camera_data.inv_proj[2][2],
+ //     ref->cpu_data.camera_data.inv_proj[3][2]);
 
 
 	ref->cpu_data.global_data.time_total = ref->time_last;
@@ -1915,7 +1908,7 @@ if(Input_IsKeyDown(input, GLFW_KEY_S)){
 			cam->up, cameraSpeed, cam->pos);
 	}
 
-	printf("cam pos: %.2f %.2f %.2f\n", cam->pos[0], cam->pos[1], cam->pos[2]);
+	// printf("cam pos: %.2f %.2f %.2f\n", cam->pos[0], cam->pos[1], cam->pos[2]);
 }
 
 
@@ -1929,9 +1922,9 @@ static void update_camera(
 
 	if(ref->ref_platform->cursor_state != GLFW_CURSOR_NORMAL)
 	{
-		cam->yaw += ref->ref_input->mouseDeltaX;
+		cam->yaw -= ref->ref_input->mouseDeltaX;
 
-		cam->pitch -= ref->ref_input->mouseDeltaY;
+		cam->pitch += ref->ref_input->mouseDeltaY;
 	}
 	
 	if (cam->pitch > 89.0f) {
