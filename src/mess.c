@@ -2,7 +2,9 @@
 #include <string.h>
 #include <vulkan/vulkan_core.h>
 
-#define CGLM_FORCE_DEPTH_ZERO_TO_ONE
+#define CGLM_FORCE_LEFT_HANDED
+
+
 
 #include "mess.h"
 #include "cglm/mat4.h"
@@ -20,8 +22,13 @@
 
 
 
-static const float yaw = -230.0f;
-static const float pitch = 30.0f;
+// static const float yaw = -230.0f;
+// static const float pitch = 30.0f;
+
+
+
+static const float yaw = 0.0f;
+static const float pitch = 0.0f;
 
 
 
@@ -274,7 +281,7 @@ void Mess_Init(
  	Platform_GetFramebufferSize(ref->ref_platform,&ref->width,&ref->height);
 
 	{
-		vec3 pos0 = {2.0, -2.0f, -2.0f};
+		vec3 pos0 = {1.0, -1.5f, -5.0f};
 
 		camera_perspective_init(
 			&ref->cpu_data.camera_data, 45.0, 0.1f, 100.0f,
@@ -333,7 +340,7 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 
 	
 	
-	glm_perspective_rh_zo(
+	glm_perspective(
 		glm_rad(cam->fov),
 		cam->aspect_ratio, 
 		cam->near,
@@ -636,12 +643,12 @@ static void camera_perspective_init(
 	
 
 	GLM_VEC3_COPY(cam->pos, pos);
-	GLM_VEC3_SET(cam->up,0.0,-1.0,0.0);
+	GLM_VEC3_SET(cam->up,0.0,1.0,0.0);
 
 	printf("CAM: %f,%f,%f\n",cam->pos);
 
 
-	glm_perspective_rh_zo(
+	glm_perspective(
 		glm_rad(cam->fov),
 		cam->aspect_ratio, 
 		cam->near,
@@ -653,9 +660,9 @@ static void camera_perspective_init(
 
 	vec3 front_;
 
-	front_[0] = cos(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch));
-	front_[1] = sin(glm_rad(cam->pitch));
-	front_[2] = sin(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch));
+	front_[0] = sin(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch)); // X
+	front_[1] = sin(glm_rad(cam->pitch));                           // Y
+	front_[2] = cos(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch)); // Z
 
 	GLM_VEC3_COPY(cam->front, front_);
 
@@ -666,8 +673,9 @@ static void camera_perspective_init(
 		cam->front, 
 		cameraCenter
 	);
+
 	
-	glm_lookat_rh(
+	glm_lookat(
 		cam->pos, 
 		cameraCenter, 
 		cam->up,
@@ -1890,13 +1898,14 @@ if(Input_IsKeyDown(input, GLFW_KEY_S)){
 //	if (input->keys[GLFW_KEY_A] == GLFW_PRESS) {
 		vec3 temp;
 		glm_vec3_crossn(cam->front, cam->up, temp);
-		glm_vec3_mulsubs(temp, cameraSpeed, cam->pos);
+		glm_vec3_muladds(temp, cameraSpeed, cam->pos);
 	}
 	if(Input_IsKeyDown(input, GLFW_KEY_D)){
 //	if (input->keys[GLFW_KEY_D] == GLFW_PRESS) {
 		vec3 temp;
 		glm_vec3_crossn(cam->front, cam->up, temp);
-		glm_vec3_muladds(temp, cameraSpeed, cam->pos);
+			glm_vec3_mulsubs(temp, cameraSpeed, cam->pos);
+	
 	}
 
 	if(Input_IsKeyDown(input, GLFW_KEY_SPACE)){
@@ -1920,9 +1929,9 @@ static void update_camera(
 
 	if(ref->ref_platform->cursor_state != GLFW_CURSOR_NORMAL)
 	{
-		cam->yaw -= ref->ref_input->mouseDeltaX;
+		cam->yaw += ref->ref_input->mouseDeltaX;
 
-		cam->pitch += ref->ref_input->mouseDeltaY;
+		cam->pitch -= ref->ref_input->mouseDeltaY;
 	}
 	
 	if (cam->pitch > 89.0f) {
@@ -1936,11 +1945,9 @@ static void update_camera(
 
 	vec3 front;
 
-	front[0] = cos(glm_rad(cam->yaw)) *
-			   cos(glm_rad(cam->pitch));
-	front[1] = sin(glm_rad(cam->pitch));
-	front[2] = sin(glm_rad(cam->yaw)) *
-			   cos(glm_rad(cam->pitch));
+	front[0] = sin(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch)); // X
+	front[1] = sin(glm_rad(cam->pitch));                           // Y
+	front[2] = cos(glm_rad(cam->yaw)) * cos(glm_rad(cam->pitch)); // Z
 
 	GLM_VEC3_COPY(cam->front, front);
 
@@ -1952,7 +1959,7 @@ static void update_camera(
 		cameraCenter
 	);
 	
-	glm_lookat_rh(
+	glm_lookat(
 		cam->pos, 
 		cameraCenter, 
 		cam->up,
