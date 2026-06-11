@@ -1831,9 +1831,9 @@ void Mess_Update(struct Mess* ref){
 	
 	update_camera(ref,  ref->time_delta);
 
- printf("inv_view[3]: %+.2f %+.2f\n",
-        ref->cpu_data.camera_data.near,
-        ref->cpu_data.camera_data.far);
+ // printf("inv_view[3]: %+.2f %+.2f\n",
+ //        ref->cpu_data.camera_data.near,
+ //        ref->cpu_data.camera_data.far);
 
 
  // printf("inv_proj[2][2]: %.+4f  inv_proj[3][2]: %.+4f\n",

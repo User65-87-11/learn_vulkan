@@ -1,6 +1,8 @@
 #version 450
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_GOOGLE_include_directive : require
+
+#include "debug.glsl"
 #include "shader/common.h"
 #include "shader/binding_grid.h"
 
@@ -12,89 +14,101 @@ layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_GLOBAL) unifor
 layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_CAMERA) uniform Global_Camera { CameraData camera; };
 layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_LIGHT)  uniform Global_Lights { LightData  light;  };
 
-const float FADE_START = 60.0;
-const float FADE_END   = 300.0;
-const float FADE_POWER  = 2.5;
-
-
+const float AXIS_GLOW_WIDTH = 8.0;
 
 const float GRID_SCALE_1  = 1.0;
 const float GRID_SCALE_10 = 10.0;
 
-const vec4 COLOR_GRID  = vec4(1.0, 1.0, 1.0, 1.0);
-const vec4 COLOR_XAXIS = vec4(0.90, 0.25, 0.25, 1.0);
-const vec4 COLOR_ZAXIS = vec4(0.25, 0.55, 0.90, 1.0);
+const vec4 COLOR_GRID = vec4(1.0, 1.0, 1.0, 1.0);
 
-float gridLine(vec2 p, float s) {
+float gridLine(vec2 p, float s)
+{
     vec2 coord = p / s;
     vec2 grid  = abs(fract(coord - 0.5) - 0.5) / fwidth(coord);
     float line = min(grid.x, grid.y);
     return 1.0 - min(line, 1.0);
 }
 
-float computeDepth(vec3 pos) {
+float computeDepth(vec3 pos)
+{
     vec4 clip = camera.proj * camera.view * vec4(pos, 1.0);
     return clip.z / clip.w;
 }
 
-void main() {
-
-
+void main()
+{
     // -------------------------------
-    // ray-plane intersection (y = 0)
+    // ray-plane intersection
     // -------------------------------
-    float t = -nearPoint.y / (farPoint.y - nearPoint.y);
+    float denom = (farPoint.y - nearPoint.y);
+    if (abs(denom) < 1e-6) discard;
+
+    float t = -nearPoint.y / denom;
     if (t <= 0.0 || t > 1.0) discard;
 
     vec3 pos = nearPoint + t * (farPoint - nearPoint);
 
-    // optional depth reject (kept, but not used for fading)
+    // -------------------------------
+    // depth
+    // -------------------------------
     float depth = computeDepth(pos);
     if (depth < 0.0 || depth > 1.0) discard;
 
     gl_FragDepth = depth;
-    outColor = vec4(1.0,0.0,0.0,1.0);
-	
-		return;
+
     // -------------------------------
-    // GRID LINES
+    // GRID (screen-space)
     // -------------------------------
     float g1  = gridLine(pos.xz, GRID_SCALE_1);
     float g10 = gridLine(pos.xz, GRID_SCALE_10);
 
-    vec4 gridColor = mix(COLOR_GRID * 0.7, COLOR_GRID, max(g1, g10 * 1.3));
+    float gridMask = max(g1, g10);
+    vec3 grid = COLOR_GRID.rgb * (0.20 + 0.60 * gridMask);
 
     // -------------------------------
-    // FADE (FIXED)
+    // FADE
     // -------------------------------
-
     vec3 camPos = camera.pos.xyz;
 
     float dist = distance(camPos, pos);
 
-    vec3 viewDir = normalize(pos - camPos);
+    float horizon = abs(dot(normalize(pos - camPos), vec3(0.0, 1.0, 0.0)));
+    float horizonFade = pow(horizon, 1.2);
 
-    float horizonFade =
-        pow(abs(dot(viewDir, vec3(0.0, 1.0, 0.0))), 1.0);
+    float distanceFade = 1.0 / (1.0 + dist * dist * 0.002);
 
-
-    float fade =  horizonFade;
-
+    float fade = horizonFade * distanceFade;
 
     // -------------------------------
-    // AXIS HIGHLIGHT
+    // AXIS (FIXED: screen-space width)
     // -------------------------------
-    float xAxis = max(0.0, 1.0 - abs(pos.z) / max(fwidth(pos.z) * 2.0, 0.008));
-    float zAxis = max(0.0, 1.0 - abs(pos.x) / max(fwidth(pos.x) * 2.0, 0.008));
+    float axisW = AXIS_GLOW_WIDTH;
 
-    vec4 color = gridColor;
+    float xAxis = 1.0 - min(abs(pos.z) / fwidth(pos.z) / axisW, 1.0);
+    float zAxis = 1.0 - min(abs(pos.x) / fwidth(pos.x) / axisW, 1.0);
 
-    color = mix(color, COLOR_XAXIS, xAxis * fade);
-    color = mix(color, COLOR_ZAXIS, zAxis * fade);
+    float xCore = xAxis * xAxis;
+    float zCore = zAxis * zAxis;
 
-    float alpha = max(g1, g10) * fade;
+    float xGlow = xCore * 0.5;
+    float zGlow = zCore * 0.5;
 
-    outColor = vec4(color.rgb, alpha);
+    vec3 xCol = vec3(1.8, 0.25, 0.25);
+    vec3 zCol = vec3(0.25, 0.55, 1.8);
+
+    vec3 axis = vec3(0.0);
+    axis += xCol * (xCore + xGlow) * 4.0;
+    axis += zCol * (zCore + zGlow) * 4.0;
+
+    // -------------------------------
+    // COMBINE
+    // -------------------------------
+    vec3 color = grid * fade;
+    color += axis * fade;
+
+    float alpha = gridMask * fade;
+
+    outColor = vec4(color, alpha);
 
     if (outColor.a < 0.001) discard;
 }
