@@ -128,6 +128,7 @@ struct CameraData {
     
     vec3 up;
     float _pad2;
+    
     float fov;
 
     float near;

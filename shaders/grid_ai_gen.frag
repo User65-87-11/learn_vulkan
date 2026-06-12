@@ -53,23 +53,31 @@ float computeDepth(vec3 pos)
     vec4 clip = camera.proj * camera.view * vec4(pos, 1.0);
     return clip.z / clip.w;
 }
-
 void main()
 {
     // -------------------------------
-    // ray-plane intersection
+    // 1. RAY-PLANE INTERSECTION
+    // line equation 
+    // x(t) = x0 + tx1
+    // P(t) = P0 + t * (P1 - P0)
+    // LERP
+    // t = (P - P0) / (P1 - P0)
+    // t = Interpolation factor 
+    // P(t) = 0 , reaches 0
     // -------------------------------
     float denom = (farPoint.y - nearPoint.y);
     
     if (abs(denom) < 0.001) discard;
 
+    // t = (0 - P0) / (P1 - P0) the angle of the line (Interpolation factor )
     float t = -nearPoint.y / denom;
     if (t <= 0.0 || t > 1.0) discard;
 
+    // interpolation
     vec3 pos = nearPoint + t * (farPoint - nearPoint);
 
     // -------------------------------
-    // depth
+    // 2. DEPTH CALCULATION
     // -------------------------------
     float depth = computeDepth(pos);
     if (depth < 0.0 || depth > 1.0) discard;
@@ -77,60 +85,44 @@ void main()
     gl_FragDepth = depth;
 
     // -------------------------------
-    // GRID (screen-space)
-    // -------------------------------
-    float g1  = gridLine(pos.xz, GRID_SCALE_1,1);
-    float g10 = gridLine(pos.xz, GRID_SCALE_10,1);
-
-    float gridMask = max(g1, g10);
+        // 3. GRID GENERATION
+        // -------------------------------
+        float g1  = gridLine(pos.xz, GRID_SCALE_1, 1);
+        float g10 = gridLine(pos.xz, GRID_SCALE_10, 1);
     
-    vec3 grid = COLOR_GRID.rgb * (0.20 + 0.60 * gridMask);
+        float gridMask = max(g1, g10);
+        
+        // FIX: Use 1.0 for the line intensity to get pure white
+        vec3 grid = vec3(1.0) *gridMask; 
 
-    
     // -------------------------------
-    // FADE
+    // 4. FADING LOGIC
     // -------------------------------
     vec3 camPos = camera.pos.xyz;
-
     float dist = distance(camPos, pos);
-
+    
+    // Horizon fade: makes the grid disappear as it gets flat against the screen
     float horizon = abs(dot(normalize(pos - camPos), vec3(0.0, 1.0, 0.0)));
-    float horizonFade = pow(horizon, 1.2);
+    float horizonFade = pow(horizon, 0.8);
 
-    float distanceFade = 1.0 / (1.0 + dist * dist * 0.002);
-
+    // Distance fade: makes the grid disappear as it gets far away
+    float distanceFade = 1.0; // Default to fully visible
+    
+    // Check if there is actually a range to fade over
+    if (abs(FADE_END - FADE_START) > 0.001) {
+        // There is a difference: Apply smooth fade
+        distanceFade = 1.0 - smoothstep(FADE_START, FADE_END, dist);
+    } 
+    
     float fade = horizonFade * distanceFade;
 
     // -------------------------------
-    // AXIS (FIXED: screen-space width)
+    // 5. FINAL OUTPUT
     // -------------------------------
-    float axisW = AXIS_GLOW_WIDTH;
+    vec3 finalColor = vec3(1.0);
+    float finalAlpha = gridMask * fade;
 
-    float xAxis = 1.0 - min(abs(pos.z) / fwidth(pos.z) / axisW, 1.0);
-    float zAxis = 1.0 - min(abs(pos.x) / fwidth(pos.x) / axisW, 1.0);
-
-    float xCore = xAxis * xAxis;
-    float zCore = zAxis * zAxis;
-
-    float xGlow = xCore * 0.5;
-    float zGlow = zCore * 0.5;
-
-    vec3 xCol = vec3(1.8, 0.25, 0.25);
-    vec3 zCol = vec3(0.25, 0.55, 1.8);
-
-    vec3 axis = vec3(0.0);
-    axis += xCol * (xCore + xGlow) * 4.0;
-    axis += zCol * (zCore + zGlow) * 4.0;
-
-    // -------------------------------
-    // COMBINE
-    // -------------------------------
-    vec3 color = grid * fade;
-    color += axis * fade;
-
-    float alpha = gridMask * fade;
-
-    outColor = vec4(color, alpha);
+    outColor = vec4(finalColor, finalAlpha);
 
     if (outColor.a < 0.001) discard;
 }

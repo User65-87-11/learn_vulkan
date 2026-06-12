@@ -53,6 +53,12 @@ static void Swapchain_createImageView(
 
 static void  Renderer_callback_FrameBuffer_Resize(void * mess,uint32_t w,uint32_t h);
 
+static void render_axis(	
+	struct Mess * ref,
+	uint32_t frame_index,
+	uint32_t imageIndex
+);
+
 static void Swapchain_Destroy(struct Mess* ref);
 
 static void update_camera(
@@ -177,6 +183,8 @@ void Mess_Clean(
 	
 
 	Pipeline_destory(ref->ref_device,&ref->pipeline_grid);
+
+	Pipeline_destory(ref->ref_device,&ref->pipeline_axis);
 
 
 	
@@ -321,6 +329,8 @@ void Mess_Init(
 	Pipeline_Create_Main(ref);
 	
 	Pipeline_Create_Grid(ref) ;
+
+	Pipeline_Create_Axis(ref);
 }
 
 
@@ -1587,17 +1597,9 @@ static void recordCommandBuffer(
 	
 	render_grid(ref, frameIndex, imageIndex);
 
-	// Resource_transitionImageLayout(ref->ref_device,
-	// 		commandBuffer,
-	// 		&ref->swapchain.images[imageIndex], 
-	// 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	// 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 0,
-	// 		VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-	// 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-	// 		VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-	// 		VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	render_axis(ref,frameIndex,imageIndex);
 
-	
+
 		
 	renderMainPass(ref, frameIndex, imageIndex);
 	
@@ -1704,58 +1706,71 @@ static void renderMainPass(
 
 }
 
+static void render_axis(	
+	struct Mess * ref,
+	uint32_t frame_index,
+	uint32_t imageIndex
+)
+{
 
+	
+		struct Frame* frame = &ref->frame[frame_index];
+		struct GPU_Objects* gpu_o = &ref->gpu_objects;
+
+		VkViewport viewPort = {.x = 0,
+			.y = 0,
+			.width = ref->swapchain.extent.width,
+			.height = ref->swapchain.extent.height,
+			.minDepth = 0.0f,
+			.maxDepth = 1.0f};
+
+		vkCmdSetViewport(frame->commandBuffer, 0, 1, &viewPort);
+
+		VkRect2D scissor = {.extent = ref->swapchain.extent, .offset = {0, 0}};
+		vkCmdSetScissor(frame->commandBuffer, 0, 1, &scissor);
+		
+		vkCmdBindPipeline(
+			frame->commandBuffer, 
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			ref->pipeline_axis.handle
+		);
+
+
+		VkDeviceSize offset = 0;
+
+
+		VkDescriptorSet dset[] = {
+			ref->sets.set_global[frame_index],
+
+		};
+
+
+
+		vkCmdBindDescriptorSets(
+			frame->commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			ref->pipeline_axis.layout, 
+			0,
+			ARR_LEN(dset), dset, 0, NULL
+		);
+
+
+
+		vkCmdDraw(frame->commandBuffer, 12, 1, 0, 0);
+
+
+
+}
 
 static void render_grid(
 	struct Mess * ref,
 	uint32_t frame_index,
 	uint32_t imageIndex) {
 
-	// VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-	// VkClearValue clearDepth = {{{1.0f, 0}}};
+
 
 	struct Frame* frame = &ref->frame[frame_index];
 	struct GPU_Objects* gpu_o = &ref->gpu_objects;
-
-	// VkRenderingAttachmentInfo colorAttachmentsInfos[] = {
-
-	// 	colorAttachmentsInfos[0] =
-	// 		(VkRenderingAttachmentInfo){
-
-	// 			.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-	// 			.imageView = ref->swapchain.image_views[imageIndex],
-	// 			.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	// 			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-	// 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-	// 			.clearValue = clearColor
-
-	// 		}
-
-	// };
-
-	// VkRenderingAttachmentInfo depthAttachmentInfo = {
-	// 	.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-	// 	.imageView = gpu_o->depth_image[frame_index].view,
-	// 	.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-	// 	.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-	// 	.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-	// 	.clearValue = clearDepth};
-
-	// VkRenderingInfo renderingInfo = {
-	// 	.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-	// 	.renderArea = 
-	// 	{
-	// 		.offset = {0, 0}, 
-	// 		.extent = ref->swapchain.extent
-	// 	},
-	// 	.layerCount = 1,
-	// 	.colorAttachmentCount = ARR_LEN(colorAttachmentsInfos),
-	// 	.pColorAttachments = colorAttachmentsInfos,
-
-	// 	.pDepthAttachment = &depthAttachmentInfo,
-	// };
-
-	// vkCmdBeginRendering(frame->commandBuffer, &renderingInfo);
 
 	VkViewport viewPort = {.x = 0,
 		.y = 0,
@@ -1789,7 +1804,8 @@ static void render_grid(
 	vkCmdBindDescriptorSets(
 		frame->commandBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS, 
-		ref->pipeline_grid.layout, 0,
+		ref->pipeline_grid.layout, 
+		0,
 		ARR_LEN(dset), dset, 0, NULL
 	);
 

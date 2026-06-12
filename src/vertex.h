@@ -12,3 +12,9 @@ struct Vertex2D{
 	vec2 texCoords;
 	vec4 color;
 };
+
+
+struct VertexColor{
+	vec3 pos;
+	vec4 color;
+};

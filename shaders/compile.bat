@@ -8,3 +8,8 @@ glslangValidator -Isrc -D__SHADERS__   -V -S vert ./shaders/main.vert -o ./shade
 glslangValidator -Isrc -D__SHADERS__  -V -S frag ./shaders/grid.frag -o ./shaders/out/grid.frag.spv -e main
 
 glslangValidator -Isrc -D__SHADERS__   -V -S vert ./shaders/grid.vert -o ./shaders/out/grid.vert.spv -e main
+
+
+glslangValidator -Isrc -D__SHADERS__  -V -S frag ./shaders/axis.frag -o ./shaders/out/axis.frag.spv -e main
+
+glslangValidator -Isrc -D__SHADERS__   -V -S vert ./shaders/axis.vert -o ./shaders/out/axis.vert.spv -e main
