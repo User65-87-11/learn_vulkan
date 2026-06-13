@@ -53,11 +53,11 @@ float computeDepth(vec3 pos)
     vec4 clip = camera.proj * camera.view * vec4(pos, 1.0);
     return clip.z / clip.w;
 }
-const vec4 COL_RED = vec4(1.0,0.0,0.0,1.0);
-const vec4 COL_GREEN = vec4(0.0,1.0,0.0,1.0);
+const vec4 COL_RED = vec4(0.8,0.2,0.2,1.0);
+const vec4 COL_GREEN = vec4(0.2,0.8,0.2,1.0);
 const vec4 COL_ALPHA = vec4(1.0,1.0,1.0,0.0);
 
-const vec4 COL_GRID = vec4(0.15,0.15,0.15,0.1);
+const vec4 COL_GRID = vec4(0.35,0.25,0.15,0.1);
 /*
 
 vec3 gridPlane[3] = vec3[](
@@ -72,29 +72,73 @@ vec3 gridPlane[3] = vec3[](
 void main()
 {
     float denom = (farPoint.y - nearPoint.y);
+    
     outColor = COL_GRID;
 
     if (abs(denom) < 0.1)   discard;
 
     float t = -nearPoint.y / denom;
+    
     if (t <= 0.0 || t > 1.0) discard;
 
-    vec3 point  = nearPoint + t * (farPoint - nearPoint);
+    //from near to far values 1 :100 or something
+    vec3 point0  = nearPoint + t * (farPoint - nearPoint);
+
+ 
+    
     vec3 camPos = camera.pos.xyz;
 
  
-    float dist = distance(camPos, point);
+    float dist = distance(camPos, point0);
 
 
     float distanceFade = 1.0 - smoothstep(FADE_START, FADE_END, dist);
 
- 
-    vec3 cappedPoint = camPos + normalize(point - camPos) * min(dist, FADE_END);
-    gl_FragDepth = computeDepth(cappedPoint);         // Option B signature
-
-
-    float g1 = gridLine(point.xz, 1, 1);
+    //normalize(A - B) direction only from B to A?
+    vec3 cappedPoint = camPos + normalize(point0 - camPos) * min(dist, FADE_END);
     
-    outColor = vec4(outColor.xyz,min(outColor.w, g1 * distanceFade));
+    gl_FragDepth = computeDepth(cappedPoint);         
+
+
+    float g1 = gridLine(point0.xz, 1, 0.8);
+
+
+    // Determine if point is on axis lines
+    float epsilon = 0.01; // Threshold for axis detection
+    float onXAxis = (abs(point0.x) < epsilon) ? 1.0 : 0.0;  // X-axis (line along Z)
+    float onZAxis = (abs(point0.z) < epsilon) ? 1.0 : 0.0;  // Z-axis (line along X)
+    
+    // Calculate axis contribution
+    float axisAlpha = max(onXAxis, onZAxis);
+    
+    // Create axis colors
+    vec4 axisColor = vec4(0.0);
+    float lim = 0.5;
+    if (onXAxis > 0.5 && onZAxis < 0.5) {
+        axisColor = COL_RED;  // X-axis (red)
+   
+    } else if (onZAxis > 0.5 && onXAxis < 0.5) {
+        axisColor = COL_GREEN; // Z-axis (green)
+      
+    } else if (onXAxis > 0.5 && onZAxis > 0.5) {
+        axisColor = vec4(1.0, 1.0, 0.0, 1.0); // Origin (yellow)
+    }
+    
+    // Blend grid with axes
+    vec4 finalColor = COL_GRID;
+
+    
+    if (axisAlpha > 0.5) {
+        finalColor = axisColor;
+        finalColor.a = 0.5; // Make axes more visible
+    }
+    
+    outColor = vec4(finalColor.xyz, min(finalColor.w, (g1 + axisAlpha * 0.5) * distanceFade));
+
+    
+
+    // outColor = vec4(finalColor.xyz, min(finalColor.w, (g1) * distanceFade));
+
+    
     if (outColor.a < 0.1 && dist <= FADE_END) discard;
 }

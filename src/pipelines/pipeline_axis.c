@@ -97,7 +97,7 @@ void Pipeline_Create_Axis(struct Mess * ref){
 		pipelineInputAssemblyStateCreateInfo = {
 			.sType =
 				VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-			.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+			.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 		};
 
 	VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {

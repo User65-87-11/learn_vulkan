@@ -1597,7 +1597,7 @@ static void recordCommandBuffer(
 	
 	render_grid(ref, frameIndex, imageIndex);
 
-	render_axis(ref,frameIndex,imageIndex);
+	// render_axis(ref,frameIndex,imageIndex);
 
 
 		
@@ -1756,7 +1756,7 @@ static void render_axis(
 
 
 
-		vkCmdDraw(frame->commandBuffer, 12, 1, 0, 0);
+		vkCmdDraw(frame->commandBuffer, 6*4, 1, 0, 0);
 
 
 
