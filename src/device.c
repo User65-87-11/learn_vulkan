@@ -280,6 +280,9 @@ static void physicalDeviceFeatureCheck(struct Device_CreateInfo * info ,struct D
 				if (next->features.samplerAnisotropy) {
 					all_ok++;
 				}
+				if (next->features.sampleRateShading) {
+					all_ok++;
+				}
 				if (next->features.vertexPipelineStoresAndAtomics) {
 					all_ok++;
 				}
@@ -335,7 +338,7 @@ static void physicalDeviceFeatureCheck(struct Device_CreateInfo * info ,struct D
 		}
 		next = next->pNext;
 	}
-	if (all_ok != 7) {
+	if (all_ok != 8) {
 
 		printf("supported :%d \n", all_ok);
 
@@ -447,6 +450,7 @@ static void createLogicalDevice(struct Device_CreateInfo *into ,struct Device_St
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 		.features.samplerAnisotropy = VK_TRUE,
 		.features.fragmentStoresAndAtomics = VK_TRUE,
+		.features.sampleRateShading = VK_TRUE,
 
 	};
 

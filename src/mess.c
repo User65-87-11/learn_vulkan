@@ -86,6 +86,11 @@ static void render_grid(
 	uint32_t frame_index,
 	uint32_t imageIndex );
 
+
+static void render_hud(
+	struct Mess * ref,
+	uint32_t frame_index,
+	uint32_t imageIndex);
 static void recordCommandBuffer(
 	struct Mess * mess,
 	uint32_t imageIndex,
@@ -186,6 +191,7 @@ void Mess_Clean(
 
 	Pipeline_destory(ref->ref_device,&ref->pipeline_axis);
 
+	Pipeline_destory(ref->ref_device,&ref->pipeline_hud);
 
 	
 	for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -331,6 +337,8 @@ void Mess_Init(
 	Pipeline_Create_Grid(ref) ;
 
 	Pipeline_Create_Axis(ref);
+
+	Pipeline_Create_Hud(ref);
 }
 
 
@@ -1594,6 +1602,8 @@ static void recordCommandBuffer(
 	};
 
 	vkCmdBeginRendering(frame->commandBuffer, &renderingInfo);
+
+
 	
 	render_grid(ref, frameIndex, imageIndex);
 
@@ -1602,6 +1612,8 @@ static void recordCommandBuffer(
 
 		
 	renderMainPass(ref, frameIndex, imageIndex);
+
+	render_hud(ref, frameIndex, imageIndex);
 	
 	vkCmdEndRendering(frame->commandBuffer);
 
@@ -1817,6 +1829,62 @@ static void render_grid(
 	// vkCmdEndRendering(frame->commandBuffer);
 }
 
+
+
+static void render_hud(
+	struct Mess * ref,
+	uint32_t frame_index,
+	uint32_t imageIndex) {
+
+
+
+	struct Frame* frame = &ref->frame[frame_index];
+	struct GPU_Objects* gpu_o = &ref->gpu_objects;
+
+	VkViewport viewPort = {.x = 0,
+		.y = 0,
+		.width = ref->swapchain.extent.width,
+		.height = ref->swapchain.extent.height,
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f};
+
+	vkCmdSetViewport(frame->commandBuffer, 0, 1, &viewPort);
+
+	VkRect2D scissor = {.extent = ref->swapchain.extent, .offset = {0, 0}};
+	vkCmdSetScissor(frame->commandBuffer, 0, 1, &scissor);
+	
+	vkCmdBindPipeline(
+		frame->commandBuffer, 
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		ref->pipeline_hud.handle
+	);
+
+
+	VkDeviceSize offset = 0;
+
+
+	VkDescriptorSet dset[] = {
+		ref->sets.set_global[frame_index],
+
+	};
+
+
+
+	vkCmdBindDescriptorSets(
+		frame->commandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		ref->pipeline_hud.layout, 
+		0,
+		ARR_LEN(dset), dset, 0, NULL
+	);
+
+
+
+	vkCmdDraw(frame->commandBuffer, 3, 1, 0, 0);
+
+
+	// vkCmdEndRendering(frame->commandBuffer);
+}
 void Mess_Proc(struct Mess* ref){
 
 	
@@ -1855,9 +1923,6 @@ void Mess_Update(struct Mess* ref){
 	
 	update_camera(ref,  ref->time_delta);
 
- // printf("inv_view[3]: %+.2f %+.2f\n",
- //        ref->cpu_data.camera_data.near,
- //        ref->cpu_data.camera_data.far);
 
 
  // printf("inv_proj[2][2]: %.+4f  inv_proj[3][2]: %.+4f\n",

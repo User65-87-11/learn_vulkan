@@ -13,3 +13,8 @@ glslangValidator -Isrc -D__SHADERS__   -V -S vert ./shaders/grid.vert -o ./shade
 glslangValidator -Isrc -D__SHADERS__  -V -S frag ./shaders/axis.frag -o ./shaders/out/axis.frag.spv -e main
 
 glslangValidator -Isrc -D__SHADERS__   -V -S vert ./shaders/axis.vert -o ./shaders/out/axis.vert.spv -e main
+
+
+glslangValidator -Isrc -D__SHADERS__  -V -S frag ./shaders/hud.frag -o ./shaders/out/hud.frag.spv -e main
+
+glslangValidator -Isrc -D__SHADERS__   -V -S vert ./shaders/hud.vert -o ./shaders/out/hud.vert.spv -e main

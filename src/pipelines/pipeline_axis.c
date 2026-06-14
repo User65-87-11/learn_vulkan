@@ -60,7 +60,9 @@ void Pipeline_Create_Axis(struct Mess * ref){
 			vkCmdSetViewport
 	*/
 	VkDynamicState dynamicState[] = {
-		VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+		VK_DYNAMIC_STATE_VIEWPORT, 
+		VK_DYNAMIC_STATE_SCISSOR
+	};
 
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,

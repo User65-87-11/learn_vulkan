@@ -33,6 +33,7 @@ pub fn build(b: *std.Build) void {
         "src/pipelines/pipeline_main.c",
         "src/pipelines/pipeline_grid.c",
         "src/pipelines/pipeline_axis.c",
+        "src/pipelines/pipeline_hud.c",
         "src/pipelines/pipeline.c",
      
     },

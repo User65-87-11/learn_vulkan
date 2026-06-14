@@ -5,7 +5,7 @@
 
 void Pipeline_Create_Main(struct Mess * ref);
 
-void Pipeline_Create_HUD(struct Mess * ref);
+void Pipeline_Create_Hud(struct Mess * ref);
 
 void Pipeline_Create_Grid(struct Mess * ref);
 

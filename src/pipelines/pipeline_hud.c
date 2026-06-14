@@ -3,41 +3,35 @@
 #include "../config.h"
 
 
-void Pipeline_Create_Main(struct Mess * ref){
+void Pipeline_Create_Hud(struct Mess * ref){
 
 	PRINT_FNAME;
 
-	ref->pipeline_main.vertexShader =
-		Shader_CreateFromFile(ref->ref_device->logical_device, DEFAULT_SHADER_VERT);
-	ref->pipeline_main.fragmentShader =
-		Shader_CreateFromFile(ref->ref_device->logical_device, DEFAULT_SHADER_FRAG);
+	ref->pipeline_hud.vertexShader =
+		Shader_CreateFromFile(ref->ref_device->logical_device, HUD_SHADER_VERT);
+	ref->pipeline_hud.fragmentShader =
+		Shader_CreateFromFile(ref->ref_device->logical_device, HUD_SHADER_FRAG);
 
 	// struct DescriptorContext* ctx = info->ref_descriptor;
 
 	VkDescriptorSetLayout layouts[] = {
 		ref->Layout.globalLayout, 
-		ref->Layout.instanceLayout,
-		ref->Layout.materialLayout, 
-		ref->Layout.textureLayout, 
-		ref->Layout.samplerLayout,
-		ref->Layout.noiseTextureLayout,
-		ref->Layout.storageImageLayout
 	};
 
 	// pipe_info.descriptorSetLayouts = layouts;
 	// pipe_info.descriptorSetLayoutCount = ARR_LEN(layouts);
 
 
-	VkVertexInputAttributeDescription attributes [3]={
+	VkVertexInputAttributeDescription attributes []={
 		
-		(VkVertexInputAttributeDescription){
-			0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)},
+	// 	(VkVertexInputAttributeDescription){
+	// 		0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, pos)},
 		
-	(VkVertexInputAttributeDescription){
-			1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)},
+	// (VkVertexInputAttributeDescription){
+	// 		1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(struct Vertex, norm)},
 		
-		(VkVertexInputAttributeDescription){
-			2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)},
+	// 	(VkVertexInputAttributeDescription){
+	// 		2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(struct Vertex, texCoords)},
 	};
 	
 
@@ -46,7 +40,7 @@ void Pipeline_Create_Main(struct Mess * ref){
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoVert = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
-		.module = ref->pipeline_main.vertexShader,
+		.module = ref->pipeline_hud.vertexShader,
 		.pName = "main",
 
 	};
@@ -54,7 +48,7 @@ void Pipeline_Create_Main(struct Mess * ref){
 	VkPipelineShaderStageCreateInfo shaderStageCreateInfoFrag = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-		.module = ref->pipeline_main.fragmentShader,
+		.module = ref->pipeline_hud.fragmentShader,
 		.pName = "main",
 
 	};
@@ -93,7 +87,7 @@ void Pipeline_Create_Main(struct Mess * ref){
 
 	VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.vertexBindingDescriptionCount = 1,
+		.vertexBindingDescriptionCount = 0,
 		.pVertexBindingDescriptions = &vertexInputBindingDescription,
 		.vertexAttributeDescriptionCount = ARR_LEN(attributes),
 		.pVertexAttributeDescriptions = attributes,
@@ -140,6 +134,7 @@ void Pipeline_Create_Main(struct Mess * ref){
 	VkPipelineDepthStencilStateCreateInfo depthStencil = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		.depthTestEnable = VK_TRUE,
+	
 		.depthWriteEnable = VK_TRUE,
 		.depthCompareOp = VK_COMPARE_OP_LESS,
 		.depthBoundsTestEnable = VK_FALSE,
@@ -181,7 +176,7 @@ void Pipeline_Create_Main(struct Mess * ref){
 		.pPushConstantRanges = NULL};
 
 	vkCreatePipelineLayout(
-		ref->ref_device->logical_device, &pipelineLayoutCreateInfo, NULL, &ref->pipeline_main.layout);
+		ref->ref_device->logical_device, &pipelineLayoutCreateInfo, NULL, &ref->pipeline_hud.layout);
 
 	VkFormat formats[] = {
 		ref->swapchain.surfaceFormat
@@ -206,7 +201,7 @@ void Pipeline_Create_Main(struct Mess * ref){
 		.pMultisampleState = &multisampling,
 		.pColorBlendState = &colorBlendStateCreateInfo,
 		.pDynamicState = &dynamicStateCreateInfo,
-		.layout = ref->pipeline_main.layout,
+		.layout = ref->pipeline_hud.layout,
 		.renderPass = VK_NULL_HANDLE,
 		.basePipelineHandle = VK_NULL_HANDLE,
 		.basePipelineIndex = -1,
@@ -215,6 +210,6 @@ void Pipeline_Create_Main(struct Mess * ref){
 	};
 
 	vkCreateGraphicsPipelines(
-		ref->ref_device->logical_device, NULL, 1, &graphicsPipelineCreateInfo, NULL, &ref->pipeline_main.handle);
+		ref->ref_device->logical_device, NULL, 1, &graphicsPipelineCreateInfo, NULL, &ref->pipeline_hud.handle);
 	
 }

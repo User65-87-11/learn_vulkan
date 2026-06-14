@@ -1,60 +1,54 @@
 #version 450
-
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_GOOGLE_include_directive : require
 
 #include "shader/common.h"
-#include "shader/binding_hud.h"
-
-layout(location = 0) in vec2 in_position;
-layout(location = 1) in vec2 in_texCoord;
-layout(location = 2) in vec4 in_color;
-
-layout(location = 0) out vec2 out_texCoord;
-layout(location = 1) out vec4 out_color;
+#include "shader/binding_grid.h"
 
 
 
 
-
-layout(set = HUD_DESC_SET_GLOBALS, binding = HUD_BINDING_GLOBAL_GLOBAL) uniform Global
+layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_GLOBAL) uniform Global
 {
     GlobalData global;
 };
 
-layout(set = HUD_DESC_SET_GLOBALS, binding = HUD_BINDING_GLOBAL_CAMERA) uniform Global_Camera
+layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_CAMERA) uniform Global_Camera
 {
-    Camera2DData camera;
+    CameraData camera;
+};
+layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_LIGHT) uniform Global_Lights
+{
+    LightData light;
 };
 
-layout(set = HUD_DESC_SET_INSTANCES, binding = 0) readonly buffer Instance
-{
-    InstanceData instance[];
-};
-
-layout(set = HUD_DESC_SET_MATERIALS, binding = 0) readonly buffer Materials
-{
-    MaterialData material[];
-};
+layout(location = 0) out vec3 nearPoint;
+layout(location = 1) out vec3 farPoint;
 
 
+vec3 gridPlane[3] = vec3[](
+    vec3(-1.0, -1.0, 0.0),
+    vec3( 3.0, -1.0, 0.0),
+    vec3(-1.0,  3.0, 0.0)
+);
 
+vec3 unprojectPoint(vec3 p, float z) {
 
-// layout(location = 2) out vec2 out_fragPos;
-
-
+    vec4 unprojected = camera.inv_view * camera.inv_proj * vec4(p.x,p.y, z, 1.0);
+    return unprojected.xyz / unprojected.w;
+}
 
 void main() {
-	
-	vec4 tpos = models[gl_InstanceIndex] * vec4(in_position, 0.0 , 1.0);
+	vec3 p = gridPlane[gl_VertexIndex];
 
-	gl_Position = projection * view * tpos;
-	
-	out_texCoord = in_texCoord;
-	
-	out_color = in_color ;
-	
+	// those guys always move with the camera
+	// this one has z=0 and XY = maximum spread
+    nearPoint  = unprojectPoint(p, 0.0);
+    //this one is shrinked version XY/Z but it's not  0
+    farPoint   = unprojectPoint(p, 1.0);
 
+    
+   gl_Position = vec4(p,1.0);
 
 
 }

@@ -18,18 +18,19 @@ layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_LIGHT)  unifor
 
 
 
-const float FADE_START = 5.0;
+const float FADE_START = 15.0;
 const float FADE_END   = 20.0; 
 
 
 
-float gridLine(vec2 p, float s, float thickness)
+float gridLine(vec2 p, float size, float thickness)
 {
 
-    vec2 coord = p / s;
+    vec2 coord = p / size;
 
   
-    vec2 grid = abs(fract(coord - 0.5) - 0.5);
+    //vec2 grid = fract(coord ) ;
+     vec2 grid = abs(fract(coord - 0.5) - 0.5);
 
 
     vec2 fw = fwidth(coord);
@@ -66,6 +67,8 @@ vec3 gridPlane[3] = vec3[](
     vec3(-1.0,  3.0, 0.0)
 );
 
+It is a cone made of points 
+
 */
 
 
@@ -75,34 +78,40 @@ void main()
     
     outColor = COL_GRID;
 
-    if (abs(denom) < 0.1)   discard;
 
+
+     // if (abs(denom) < 0.1)   discard;
+
+    // t factor hits Y=0
     float t = -nearPoint.y / denom;
-    
-    if (t <= 0.0 || t > 1.0) discard;
 
-    //from near to far values 1 :100 or something
+
+    //discard nefore near and after far
+   // if (t <= 0.0 || t > 1.0) discard;
+
+
+   //ray vector towards that Y=0
+   //it doesn't matter waht the actual values are, sicne thwy ere taken from NDC
+   //
     vec3 point0  = nearPoint + t * (farPoint - nearPoint);
 
- 
     
     vec3 camPos = camera.pos.xyz;
 
- 
+
+    vec3 cappedPoint = camPos + normalize(point0 - camPos) * FADE_END;
+    
+    gl_FragDepth = computeDepth(cappedPoint);         
+
+    ///------------
+
+    float g1 = gridLine(point0.xz, 1, 1);
+
+
     float dist = distance(camPos, point0);
 
 
     float distanceFade = 1.0 - smoothstep(FADE_START, FADE_END, dist);
-
-    //normalize(A - B) direction only from B to A?
-    vec3 cappedPoint = camPos + normalize(point0 - camPos) * min(dist, FADE_END);
-    
-    gl_FragDepth = computeDepth(cappedPoint);         
-
-
-    float g1 = gridLine(point0.xz, 1, 0.8);
-
-
     // Determine if point is on axis lines
     float epsilon = 0.01; // Threshold for axis detection
     float onXAxis = (abs(point0.x) < epsilon) ? 1.0 : 0.0;  // X-axis (line along Z)
