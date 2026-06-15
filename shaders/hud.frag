@@ -75,7 +75,7 @@ float line(vec2 uv, vec2 p1, vec2 p2, float thickness) {
     vec2 closest = p1 + t * dir;
     
     // Calculate distance
-    float dist = length(uv - closest);
+    float dist = fwidth(uv - closest);
     
     // Return 1.0 for line, 0.0 for background
     return 1.0 - smoothstep(0.0, thickness, dist);
