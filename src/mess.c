@@ -1555,7 +1555,7 @@ static void recordCommandBuffer(
 
 
 	
-	VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+	VkClearValue clearColor = {{{0.01f, 0.01f, 0.01f, 1.0f}}};
 	VkClearValue clearDepth = {{{1.0f, 0}}};
 
 	// struct Frame* frame = &ref->frame[frame_index];
@@ -1605,13 +1605,14 @@ static void recordCommandBuffer(
 
 
 	
-	render_grid(ref, frameIndex, imageIndex);
 
 	// render_axis(ref,frameIndex,imageIndex);
 
 
 		
 	renderMainPass(ref, frameIndex, imageIndex);
+
+	render_grid(ref, frameIndex, imageIndex);
 
 	render_hud(ref, frameIndex, imageIndex);
 	

@@ -28,8 +28,8 @@ layout(location = 1) out vec3 farPoint;
 
 vec3 gridPlane[3] = vec3[](
     vec3(-1.0, -1.0, 0.0),
-    vec3( 3.0, -1.0, 0.0),
-    vec3(-1.0,  3.0, 0.0)
+    vec3( 0.0, -1.0, 0.0),
+    vec3(-1.0,  0.0, 0.0)
 );
 
 vec3 unprojectPoint(vec3 p, float z) {

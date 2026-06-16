@@ -64,21 +64,27 @@ const vec4 COL_GRID = vec4(0.35,0.25,0.15,0.1);
 
 float line(vec2 uv, vec2 p1, vec2 p2, float thickness) {
     // Calculate distance from point to line segment
+    // find a vector that will be added to the start of the p1
     vec2 dir = p2 - p1;
+    //find a vector that will be scalar projected onto p1
     vec2 toPoint = uv - p1;
     
-    // Project point onto line segment
+    // Project point along dir direction
     float t = dot(toPoint, dir) / dot(dir, dir);
+    //allow only those that project within the [dir] vector length
+    //makes all fragments below [0] to become [0]
+    //makes all fragments above [1] to become [1]
     t = clamp(t, 0.0, 1.0);
     
     // Find closest point on segment
     vec2 closest = p1 + t * dir;
     
     // Calculate distance
-    float dist = fwidth(uv - closest);
+    float dist = length(uv - closest);
     
     // Return 1.0 for line, 0.0 for background
-    return 1.0 - smoothstep(0.0, thickness, dist);
+
+   return 1.0 - smoothstep(thickness*0.5, thickness, dist);
 }
 
 
@@ -89,10 +95,25 @@ void main() {
     // Example: line from (0.2, 0.8) to (0.8, 0.2)
     vec2 p1 = vec2(0.2, 0.2);
     vec2 p2 = vec2(0.8, 0.8);
-    float thickness = 0.005;
+      vec2 p3 = vec2(0.8, 0.2);
+        vec2 p4 = vec2(0.2, 0.8);
+    float thickness = 0.002;
     
-    float lineMask = line(uv, p1, p2, thickness);
+    float lineMask1 = line(uv, p1, p2, thickness);
+
+    float lineMask2 = line(uv, p3, p4, thickness);
+
+     float lineMask3 = line(uv, p2, p3, thickness);
     
+     float lineMask4 = line(uv, p1, p4, thickness);
+
+     float lineMask = lineMask1;
+     lineMask = max(lineMask, lineMask2);
+     lineMask = max(lineMask, lineMask3);
+     lineMask = max(lineMask, lineMask4);
+
+    
+     
     vec3 bgColor = vec3(0.1, 0.1, 0.2);
     vec3 lineColor = vec3(1.0, 0.5, 0.0);
     
