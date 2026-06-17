@@ -109,12 +109,14 @@ struct CameraData {
     mat4 view;
     mat4 proj;
     mat4 view_proj;
+    mat4 inv_view_proj;
     mat4 inv_proj;
     mat4 inv_view;
     #else
     vec4 view[4];
     vec4 proj[4];
     vec4 view_proj[4];
+    vec4 inv_view_proj[4];
     vec4 inv_proj[4];
     vec4 inv_view[4];
     #endif

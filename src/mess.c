@@ -373,11 +373,20 @@ static void update_camera_perspective(struct CameraData * cam, float aspect){
 		cam->view_proj
 	);
 
+
+
+
 	glm_mat4_dup(cam->view, cam->inv_view);
 	glm_mat4_inv(cam->inv_view, cam->inv_view);
 	
 	glm_mat4_dup(cam->proj, cam->inv_proj);
 	glm_mat4_inv(cam->inv_proj, cam->inv_proj);
+
+	
+
+
+	// glm_mat4_inv(cam->inv_view_proj, cam->inv_view_proj);
+
 }
 
 
@@ -2054,6 +2063,9 @@ static void update_camera(
 		cam->view_proj
 	);
 
+	glm_mat4_copy(	cam->view_proj, cam->inv_view_proj);
+	glm_mat4_inv(cam->inv_view_proj, cam->inv_view_proj);
+	
 	glm_mat4_copy(cam->view, cam->inv_view);
 	glm_mat4_inv(cam->inv_view, cam->inv_view);
 	

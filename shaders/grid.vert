@@ -34,7 +34,8 @@ vec3 gridPlane[3] = vec3[](
 
 vec3 unprojectPoint(float x, float y, float z) {
 
-    vec4 unprojected = camera.inv_view * camera.inv_proj * vec4(x, y, z, 1.0);
+    vec4 unprojected = camera.inv_view_proj * vec4(x, y, z, 1.0);
+     // vec4 unprojected = camera.inv_view * camera.inv_proj * vec4(x, y, z, 1.0);
     return unprojected.xyz / unprojected.w;
 }
 

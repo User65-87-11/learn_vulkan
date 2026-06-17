@@ -11,19 +11,27 @@
 #include "shader/common.h"
 #include "shader/binding_grid.h"
 
-layout(location = 0) in  vec3 nearPoint;
-layout(location = 1) in  vec3 farPoint;
-layout(location = 0) out vec4 outColor;
 
 layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_GLOBAL) uniform Global       { GlobalData global; };
 layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_CAMERA) uniform Global_Camera { CameraData camera; };
 layout(set = GRID_DESC_SET_GLOBALS, binding = GRID_BINDING_GLOBAL_LIGHT)  uniform Global_Lights { LightData  light;  };
 
 
+layout(location = 0) in  vec3 nearPoint;
+layout(location = 1) in  vec3 farPoint;
+layout(location = 0) out vec4 outColor;
 
 const float FADE_START = 5.0;
-const float FADE_END   = 10.0; 
+const float FADE_END   = 12.0; 
 
+const float FADE_END_2   = 20.0; 
+
+const vec3 COL_RED = vec3(0.8, 0.2, 0.2);
+const vec3 COL_GRID_1 = vec3(0.04);
+const vec3 COL_GRID_10 = vec3(0.08);
+const vec3 COL_GREEN = vec3(0.0,1.0,0.0);
+const vec3 COL_BLUE = vec3(0.2, 0.6, 1.0);
+const vec3 COL_BG = vec3(0.01f);
 
 
 float gridLine(vec2 p, float s, float thickness)
@@ -31,55 +39,53 @@ float gridLine(vec2 p, float s, float thickness)
 
     vec2 coord = p / s;
 
-    //instead of 1-800 > 400/1/400/800
-     vec2 grid = abs(fract(coord - 0.5) - 0.5);
+    vec2 distGrid = abs(fract(coord - 0.5) - 0.5);
 
-
-
-    
-     //(abs(dFdx(gl_FragCoord.x))   < 1.001)
-     // (abs(dFdx(coord.x))+abs(dFdy(coord.y)))
     vec2 fw = fwidth(coord);
 
+    vec2 distFrag = distGrid / fw;
 
-    vec2 dist = grid / fw;
+    float line = min(distFrag.x, distFrag.y);
 
-
-    dist /= thickness;
-
-    float line = min(dist.x, dist.y);
-
-
-    float alpha = 1.0 - smoothstep(0.0, thickness, line);
+    
+    
+    float alpha = 1.0 - smoothstep( 0, thickness , line);
 
     return alpha;
 }
 
 float computeDepth(vec3 pos)
 {
-    vec4 clip = camera.proj * camera.view * vec4(pos, 1.0);
+    vec4 clip = camera.view_proj * vec4(pos, 1.0);
     return clip.z / clip.w;
 }
-const vec4 COL_RED = vec4(1.0,0.0,0.0,1.0);
-const vec4 COL_GRID_1 = vec4(0.1,0.1,0.1,1.0);
-const vec4 COL_GRID_10 = vec4(0.1,0.1,0.1,1.0);
-const vec4 COL_GREEN = vec4(0.0,1.0,0.0,1.0);
-const vec4 COL_BG = vec4(0.01f, 0.01f, 0.01f, 1.0f);
-/*
 
-vec3 gridPlane[3] = vec3[](
-    vec3(-1.0, -1.0, 0.0),
-    vec3( 3.0, -1.0, 0.0),
-    vec3(-1.0,  3.0, 0.0)
-);
+float axisLineX(vec2 p, float s)
+{
+    vec2 coord = p / s;
+    vec2 fw = fwidth(coord);
+    // this has to be 0
+    float d = abs(coord.x) / fw.x;
+    return 1.0 - smoothstep(0.0, 1.0, d);
+}
 
-*/
-
-
+float axisLineZ(vec2 p, float s)
+{
+    vec2 coord = p / s;
+    vec2 fw = fwidth(coord);
+    float d = abs(coord.y) / fw.y;
+    return 1.0 - smoothstep(0.0, 1.0, d);
+}
+bool equals_zero(float v){
+	if(abs(v) < 0.001){
+		return true;
+	}
+	return false;
+}
 void main()
 {
     float denom = (farPoint.y - nearPoint.y);
-    outColor = COL_GRID_1;
+    
 
 
     
@@ -94,13 +100,41 @@ void main()
     float dist = distance(camPos, point);
 
     float distanceFade = 1.0 - smoothstep(FADE_START, FADE_END, dist);
+     float distanceFade2 =1.0 - smoothstep(FADE_START, FADE_END_2, dist);
 
    
-    vec3 cappedPoint = camPos + normalize(point - camPos) * min(dist, FADE_END);
- 
-    float g1 = gridLine(point.xz, 0.5, 1);
-    
-    outColor = vec4(outColor.xyz, g1 * distanceFade);
+    vec3 cappedPoint = camPos + normalize(point - camPos) * min(dist, FADE_END_2);
 
     gl_FragDepth = computeDepth(cappedPoint);
+
+     
+    float g1 = gridLine(point.xz, 0.5, 1);
+    float g10 = gridLine(point.xz, 5, 1);
+
+  
+    
+    float axisX = axisLineX(point.xz, 0.5); 
+    float axisZ = axisLineZ(point.xz, 0.5); 
+
+
+    vec3 color = COL_GRID_1;
+    
+    color = mix(color,COL_GRID_10,g10);
+    color = mix(color, COL_RED, axisX);
+    color = mix(color, COL_BLUE, axisZ);
+
+    
+    if(equals_zero(g10) == false)
+    {
+    
+    	outColor = vec4(color, min(g10,distanceFade2));
+    }else
+    {
+    	outColor = vec4(color, min(g1,distanceFade));
+    }
+    
+    
+  
+
+   
 }
